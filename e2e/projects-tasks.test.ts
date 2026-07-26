@@ -51,7 +51,7 @@ test.describe('Projects and Tasks', () => {
 
     // Should redirect to project page
     await expect(page).toHaveURL(/\/projects\//, { timeout: 15000 });
-    await expect(page.getByText('E2E Test Project')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'E2E Test Project' })).toBeVisible();
   });
 
   test('create project via API and verify page', async ({ page }) => {
@@ -69,7 +69,7 @@ test.describe('Projects and Tasks', () => {
     expect(project.name).toBe('API Created Project');
 
     await page.goto(`/app/${workspaceSlug}/projects/${project.id}`);
-    await expect(page.getByText('API Created Project')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'API Created Project' })).toBeVisible();
   });
 
   test('create task in project', async ({ page }) => {
@@ -235,7 +235,7 @@ test.describe('Projects and Tasks', () => {
 
   test('my-tasks page loads', async ({ page }) => {
     await page.goto(`/app/${workspaceSlug}/my-tasks`);
-    await expect(page.getByText('My Tasks')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'My Tasks' })).toBeVisible();
   });
 
   test('search page loads', async ({ page }) => {

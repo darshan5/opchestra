@@ -50,7 +50,7 @@ test.describe('Workspace flow', () => {
 
     if (ws.slug) {
       await page.goto(`/app/${ws.slug}`);
-      await expect(page.getByText('Home')).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Home' })).toBeVisible();
       await expect(page.getByText('Welcome back')).toBeVisible();
     }
   });
