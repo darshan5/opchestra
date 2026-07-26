@@ -1,10 +1,10 @@
 import { Building2, FileText, LogOut, Settings, Shield, Users } from 'lucide-react';
 import Link from 'next/link';
 
-import { requireSaasAdmin } from '@/lib/auth/admin';
+import { requireAdmin } from '@/lib/auth/admin-session';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const admin = await requireSaasAdmin();
+  const admin = await requireAdmin();
 
   return (
     <div className="flex h-full">
@@ -47,17 +47,17 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
         <div className="border-t border-gray-200 p-3 dark:border-gray-800">
           <p className="truncate text-xs text-gray-500 dark:text-gray-400">{admin.email}</p>
-          <div className="mt-2 flex gap-2">
-            <Link className="text-xs text-blue-600 hover:underline dark:text-blue-400" href="/app">
-              App
-            </Link>
-            <Link
-              className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-              href="/api/auth/signout"
-            >
-              <LogOut className="h-3 w-3" />
-              Sign out
-            </Link>
+          <p className="text-xs text-blue-600 dark:text-blue-400">{admin.role}</p>
+          <div className="mt-2">
+            <form action="/api/admin/auth/logout" method="POST">
+              <button
+                className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                type="submit"
+              >
+                <LogOut className="h-3 w-3" />
+                Sign out
+              </button>
+            </form>
           </div>
         </div>
       </aside>

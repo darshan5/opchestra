@@ -12,9 +12,7 @@ const setupSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const existingAdmin = await prisma.user.findFirst({
-      where: { isSaasAdmin: true },
-    });
+    const existingAdmin = await prisma.adminUser.findFirst();
 
     if (existingAdmin) {
       return NextResponse.json(
@@ -33,24 +31,14 @@ export async function POST(request: Request) {
     const passwordHash = await bcrypt.hash(parsed.data.password, 12);
 
     const admin = await prisma.$transaction(async (tx) => {
-      let user = await tx.user.findUnique({ where: { email: parsed.data.email } });
-
-      if (user) {
-        user = await tx.user.update({
-          where: { id: user.id },
-          data: { isSaasAdmin: true, emailVerified: user.emailVerified ?? new Date() },
-        });
-      } else {
-        user = await tx.user.create({
-          data: {
-            email: parsed.data.email,
-            name: parsed.data.name,
-            passwordHash,
-            isSaasAdmin: true,
-            emailVerified: new Date(),
-          },
-        });
-      }
+      const adminUser = await tx.adminUser.create({
+        data: {
+          email: parsed.data.email,
+          name: parsed.data.name,
+          passwordHash,
+          role: 'SUPER_ADMIN',
+        },
+      });
 
       await tx.platformSettings.upsert({
         where: { id: 'platform' },
@@ -58,7 +46,7 @@ export async function POST(request: Request) {
         update: {},
       });
 
-      return user;
+      return adminUser;
     });
 
     return NextResponse.json(
@@ -74,13 +62,12 @@ export async function POST(request: Request) {
 }
 
 export async function GET() {
-  const existingAdmin = await prisma.user.findFirst({
-    where: { isSaasAdmin: true },
+  const existingAdmin = await prisma.adminUser.findFirst({
     select: { email: true },
   });
 
   return NextResponse.json({
-    hasAdmin: !!existingAdmin,
     adminEmail: existingAdmin?.email ?? null,
+    hasAdmin: !!existingAdmin,
   });
 }

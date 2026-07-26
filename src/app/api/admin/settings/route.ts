@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
 
 import { logAuditEvent } from '@/lib/audit';
-import { auth } from '@/lib/auth';
-import { isSaasAdmin } from '@/lib/auth/admin';
+import { hasPermission } from '@/lib/auth/admin-permissions';
+import { getAdminSession } from '@/lib/auth/admin-session';
 import { prisma } from '@/lib/db';
 
 export async function GET() {
   try {
-    const session = await auth();
-    if (!session?.user?.id || !(await isSaasAdmin(session.user.id))) {
+    const admin = await getAdminSession();
+    if (!admin || !hasPermission(admin.role, 'settings.read')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -33,8 +33,8 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   try {
-    const session = await auth();
-    if (!session?.user?.id || !(await isSaasAdmin(session.user.id))) {
+    const admin = await getAdminSession();
+    if (!admin || !hasPermission(admin.role, 'settings.read')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -73,7 +73,7 @@ export async function PATCH(request: Request) {
     const changedKeys = Object.keys(data).filter(
       (k) => !k.toLowerCase().includes('key') && !k.toLowerCase().includes('secret'),
     );
-    await logAuditEvent('UPDATE_SETTINGS', session.user.id, null, { changed: changedKeys });
+    await logAuditEvent('UPDATE_SETTINGS', admin.id, null, { changed: changedKeys });
 
     return NextResponse.json({
       ...settings,

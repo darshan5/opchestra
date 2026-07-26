@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
 
-import { auth } from '@/lib/auth';
-import { isSaasAdmin } from '@/lib/auth/admin';
+import { hasPermission } from '@/lib/auth/admin-permissions';
+import { getAdminSession } from '@/lib/auth/admin-session';
 import { prisma } from '@/lib/db';
 
 export async function GET() {
   try {
-    const session = await auth();
-    if (!session?.user?.id || !(await isSaasAdmin(session.user.id))) {
+    const admin = await getAdminSession();
+    if (!admin || !hasPermission(admin.role, 'workspaces.read')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

@@ -15,7 +15,6 @@ model User {
   passwordHash       String?
   emailVerified      DateTime?
   image              String?
-  isSaasAdmin        Boolean  @default(false)
   mustChangePassword Boolean  @default(false)
   themePreference    ThemePreference @default(SYSTEM)
   createdAt          DateTime @default(now())
@@ -30,7 +29,6 @@ model User {
   createdViews        View[]
   verificationTokens  VerificationToken[]
   passwordResetTokens PasswordResetToken[]
-  auditLogsAsAdmin    AuditLog[]         @relation("AuditAdmin")
   auditLogsAsTarget   AuditLog[]         @relation("AuditTarget")
 }
 
@@ -73,6 +71,29 @@ enum ThemePreference {
   SYSTEM
 }
 
+// ─── SaaS Admin Users ───────────────────────────────────────
+
+model AdminUser {
+  id                 String    @id @default(uuid())
+  email              String    @unique
+  name               String?
+  passwordHash       String
+  role               AdminRole @default(ADMIN)
+  mustChangePassword Boolean   @default(false)
+  lastLoginAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  auditLogs AuditLog[] @relation("AuditAdminUser")
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+  SUPPORT
+  VIEWER
+}
+
 // ─── Platform Settings (SaaS-level) ─────────────────────────
 
 model PlatformSettings {
@@ -99,16 +120,17 @@ model PlatformSettings {
 // ─── Audit Logging ──────────────────────────────────────────
 
 model AuditLog {
-  id           String   @id @default(uuid())
-  action       String
-  adminUserId  String?
-  targetUserId String?
-  details      Json?
-  ipAddress    String?
-  createdAt    DateTime @default(now())
+  id             String   @id @default(uuid())
+  action         String
+  adminUserId    String?
+  adminUserEmail String?
+  targetUserId   String?
+  details        Json?
+  ipAddress      String?
+  createdAt      DateTime @default(now())
 
-  adminUser  User? @relation("AuditAdmin", fields: [adminUserId], references: [id], onDelete: SetNull)
-  targetUser User? @relation("AuditTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+  adminUser  AdminUser? @relation("AuditAdminUser", fields: [adminUserId], references: [id], onDelete: SetNull)
+  targetUser User?      @relation("AuditTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
 
   @@index([createdAt])
   @@index([adminUserId])

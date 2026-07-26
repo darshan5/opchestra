@@ -45,14 +45,12 @@ export const fullAuthConfig: NextAuthConfig = {
           throw new Error('EMAIL_NOT_VERIFIED');
         }
 
-        if (!user.isSaasAdmin) {
-          const platformSettings = await prisma.platformSettings.findUnique({
-            where: { id: 'platform' },
-            select: { disableLogin: true },
-          });
-          if (platformSettings?.disableLogin) {
-            throw new Error('LOGIN_DISABLED');
-          }
+        const platformSettings = await prisma.platformSettings.findUnique({
+          where: { id: 'platform' },
+          select: { disableLogin: true },
+        });
+        if (platformSettings?.disableLogin) {
+          throw new Error('LOGIN_DISABLED');
         }
 
         return {

@@ -4,26 +4,25 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { logAuditEvent } from '@/lib/audit';
-import { auth } from '@/lib/auth';
-import { isSaasAdmin } from '@/lib/auth/admin';
+import { hasPermission } from '@/lib/auth/admin-permissions';
+import { getAdminSession } from '@/lib/auth/admin-session';
 import { prisma } from '@/lib/db';
 
 const createAdminSchema = z.object({
   email: z.string().email(),
   name: z.string().min(2),
-  role: z.enum(['ADMIN', 'SUPER_ADMIN']).default('ADMIN'),
+  role: z.enum(['SUPER_ADMIN', 'ADMIN', 'SUPPORT', 'VIEWER']).default('ADMIN'),
 });
 
 export async function GET() {
   try {
-    const session = await auth();
-    if (!session?.user?.id || !(await isSaasAdmin(session.user.id))) {
+    const admin = await getAdminSession();
+    if (!admin || !hasPermission(admin.role, 'admin-users.read')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const admins = await prisma.user.findMany({
-      where: { isSaasAdmin: true },
-      select: { id: true, email: true, name: true, createdAt: true },
+    const admins = await prisma.adminUser.findMany({
+      select: { id: true, email: true, name: true, role: true, lastLoginAt: true, createdAt: true },
       orderBy: { createdAt: 'asc' },
     });
 
@@ -35,9 +34,12 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const session = await auth();
-    if (!session?.user?.id || !(await isSaasAdmin(session.user.id))) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    const admin = await getAdminSession();
+    if (!admin || admin.role !== 'SUPER_ADMIN') {
+      return NextResponse.json(
+        { error: 'Only SUPER_ADMIN can create admin users' },
+        { status: 403 },
+      );
     }
 
     const body = await request.json();
@@ -47,48 +49,35 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
     }
 
-    const existing = await prisma.user.findUnique({ where: { email: parsed.data.email } });
+    const existing = await prisma.adminUser.findUnique({ where: { email: parsed.data.email } });
     if (existing) {
-      if (existing.isSaasAdmin) {
-        return NextResponse.json({ error: 'User is already an admin' }, { status: 409 });
-      }
-      await prisma.user.update({
-        where: { id: existing.id },
-        data: { isSaasAdmin: true },
-      });
-      await logAuditEvent('PROMOTE_TO_ADMIN', session.user.id, existing.id, {
-        email: parsed.data.email,
-      });
-      return NextResponse.json({
-        id: existing.id,
-        email: existing.email,
-        message: 'Existing user promoted to admin',
-      });
+      return NextResponse.json({ error: 'Admin user already exists' }, { status: 409 });
     }
 
     const tempPassword = crypto.randomBytes(6).toString('base64url');
     const passwordHash = await bcrypt.hash(tempPassword, 12);
 
-    const user = await prisma.user.create({
+    const newAdmin = await prisma.adminUser.create({
       data: {
         email: parsed.data.email,
         name: parsed.data.name,
         passwordHash,
-        isSaasAdmin: true,
-        emailVerified: new Date(),
+        role: parsed.data.role,
         mustChangePassword: true,
       },
     });
 
-    await logAuditEvent('CREATE_ADMIN', session.user.id, user.id, {
+    await logAuditEvent('CREATE_ADMIN', admin.id, null, {
       email: parsed.data.email,
       name: parsed.data.name,
+      role: parsed.data.role,
     });
 
     return NextResponse.json(
       {
-        email: user.email,
-        id: user.id,
+        email: newAdmin.email,
+        id: newAdmin.id,
+        role: newAdmin.role,
         tempPassword,
       },
       { status: 201 },

@@ -1,34 +1,30 @@
 import { NextResponse } from 'next/server';
 
 import { logAuditEvent } from '@/lib/audit';
-import { auth } from '@/lib/auth';
-import { isSaasAdmin } from '@/lib/auth/admin';
+import { getAdminSession } from '@/lib/auth/admin-session';
 import { prisma } from '@/lib/db';
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await auth();
-    if (!session?.user?.id || !(await isSaasAdmin(session.user.id))) {
+    const admin = await getAdminSession();
+    if (!admin || admin.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const { id } = await params;
 
-    if (id === session.user.id) {
+    if (id === admin.id) {
       return NextResponse.json({ error: 'Cannot remove yourself' }, { status: 400 });
     }
 
-    const target = await prisma.user.findUnique({ where: { id } });
-    if (!target || !target.isSaasAdmin) {
+    const target = await prisma.adminUser.findUnique({ where: { id } });
+    if (!target) {
       return NextResponse.json({ error: 'Admin not found' }, { status: 404 });
     }
 
-    await prisma.user.update({
-      where: { id },
-      data: { isSaasAdmin: false },
-    });
+    await prisma.adminUser.delete({ where: { id } });
 
-    await logAuditEvent('REMOVE_ADMIN', session.user.id, id, { email: target.email });
+    await logAuditEvent('REMOVE_ADMIN', admin.id, null, { email: target.email });
 
     return NextResponse.json({ message: 'Admin removed' });
   } catch {

@@ -76,7 +76,10 @@ test.describe('Auth flow', () => {
     await page.getByRole('button', { name: 'Create account' }).click();
 
     await expect(
-      page.getByText('already exists').or(page.getByText('disabled')).or(page.getByText('maintenance')),
+      page
+        .getByText('already exists')
+        .or(page.getByText('disabled'))
+        .or(page.getByText('maintenance')),
     ).toBeVisible({ timeout: 10000 });
   });
 

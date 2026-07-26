@@ -1,10 +1,10 @@
 import { formatDistanceToNow } from 'date-fns';
 
-import { requireSaasAdmin } from '@/lib/auth/admin';
+import { requireAdmin } from '@/lib/auth/admin-session';
 import { prisma } from '@/lib/db';
 
 export default async function AdminDashboardPage() {
-  await requireSaasAdmin();
+  await requireAdmin();
 
   const [workspaces, userCount, taskCount] = await Promise.all([
     prisma.workspace.findMany({

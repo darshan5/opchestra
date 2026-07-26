@@ -1,7 +1,6 @@
 'use client';
 
 import { Shield } from 'lucide-react';
-import { signIn, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -21,33 +20,20 @@ export default function AdminLoginPage() {
     setLoading(true);
 
     try {
-      const result = await signIn('credentials', {
-        email,
-        password,
-        redirect: false,
+      const res = await fetch('/api/admin/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
       });
 
-      if (result?.error) {
-        if (result.error.includes('EMAIL_NOT_VERIFIED')) {
-          setError('Please verify your email first.');
-        } else if (result.error.includes('LOGIN_DISABLED')) {
-          setError('Login is currently disabled.');
-        } else {
-          setError('Invalid email or password.');
-        }
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Invalid credentials');
         return;
       }
 
-      const checkRes = await fetch('/api/admin/check-access');
-      const checkData = await checkRes.json();
-
-      if (!checkData.isAdmin) {
-        await signOut({ redirect: false });
-        setError("You don't have admin access.");
-        return;
-      }
-
-      router.push('/admin');
+      router.push(data.redirect || '/admin');
       router.refresh();
     } catch {
       setError('Something went wrong. Please try again.');
@@ -69,7 +55,9 @@ export default function AdminLoginPage() {
           </p>
         </div>
         <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-          <h2 className="mb-6 text-xl font-semibold text-gray-900 dark:text-white">Admin Sign In</h2>
+          <h2 className="mb-6 text-xl font-semibold text-gray-900 dark:text-white">
+            Admin Sign In
+          </h2>
           <form className="space-y-4" onSubmit={handleSubmit}>
             <Input
               autoComplete="email"

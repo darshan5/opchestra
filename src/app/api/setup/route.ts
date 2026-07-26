@@ -12,6 +12,21 @@ const MIGRATIONS = [
   `CREATE TYPE "DependencyMode" AS ENUM ('STRICT', 'FLEXIBLE')`,
   `CREATE TYPE "ViewLayout" AS ENUM ('TABLE', 'LIST', 'KANBAN', 'CALENDAR', 'GANTT')`,
   `CREATE TYPE "NotificationType" AS ENUM ('TASK_ASSIGNED', 'TASK_UNASSIGNED', 'TASK_STATUS_CHANGED', 'TASK_COMMENTED', 'TASK_MENTIONED', 'TASK_DUE_SOON')`,
+  `CREATE TYPE "AdminRole" AS ENUM ('SUPER_ADMIN', 'ADMIN', 'SUPPORT', 'VIEWER')`,
+
+  `CREATE TABLE IF NOT EXISTS "AdminUser" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "email" TEXT NOT NULL,
+    "name" TEXT,
+    "passwordHash" TEXT NOT NULL,
+    "role" "AdminRole" NOT NULL DEFAULT 'ADMIN',
+    "mustChangePassword" BOOLEAN NOT NULL DEFAULT false,
+    "lastLoginAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "AdminUser_pkey" PRIMARY KEY ("id")
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "AdminUser_email_key" ON "AdminUser"("email")`,
 
   `CREATE TABLE IF NOT EXISTS "User" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
@@ -66,6 +81,7 @@ const MIGRATIONS = [
   )`,
   `CREATE INDEX IF NOT EXISTS "AuditLog_createdAt_idx" ON "AuditLog"("createdAt")`,
   `CREATE INDEX IF NOT EXISTS "AuditLog_adminUserId_idx" ON "AuditLog"("adminUserId")`,
+  `ALTER TABLE "AuditLog" ADD COLUMN IF NOT EXISTS "adminUserEmail" TEXT`,
 
   `CREATE TABLE IF NOT EXISTS "VerificationToken" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
