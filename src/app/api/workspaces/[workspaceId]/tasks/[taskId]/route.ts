@@ -1,0 +1,189 @@
+import { NextResponse } from 'next/server';
+
+import { auth } from '@/lib/auth';
+import { prisma } from '@/lib/db';
+import { updateTaskSchema } from '@/lib/validations/task';
+
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ workspaceId: string; taskId: string }> },
+) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { workspaceId, taskId } = await params;
+
+    const membership = await prisma.workspaceMember.findUnique({
+      where: { workspaceId_userId: { workspaceId, userId: session.user.id } },
+    });
+
+    if (!membership) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const task = await prisma.task.findUnique({
+      where: { id: taskId },
+      include: {
+        assignee: { select: { id: true, name: true, email: true, image: true } },
+        createdBy: { select: { id: true, name: true, email: true } },
+        project: { select: { id: true, name: true } },
+        taskLabels: { include: { label: true } },
+        subTasks: {
+          include: {
+            assignee: { select: { id: true, name: true, email: true, image: true } },
+            _count: { select: { subTasks: true } },
+          },
+          orderBy: { position: 'asc' },
+        },
+        dependsOn: {
+          include: {
+            dependsOn: { select: { id: true, title: true, status: true } },
+          },
+        },
+        dependedOnBy: {
+          include: {
+            task: { select: { id: true, title: true, status: true } },
+          },
+        },
+        files: true,
+        _count: { select: { comments: true, subTasks: true } },
+      },
+    });
+
+    if (!task || task.workspaceId !== workspaceId) {
+      return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+    }
+
+    return NextResponse.json(task);
+  } catch {
+    return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });
+  }
+}
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ workspaceId: string; taskId: string }> },
+) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { workspaceId, taskId } = await params;
+
+    const membership = await prisma.workspaceMember.findUnique({
+      where: { workspaceId_userId: { workspaceId, userId: session.user.id } },
+    });
+
+    if (!membership) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const existing = await prisma.task.findUnique({ where: { id: taskId } });
+    if (!existing || existing.workspaceId !== workspaceId) {
+      return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+    }
+
+    const body = await request.json();
+    const parsed = updateTaskSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
+    }
+
+    const data: Record<string, unknown> = { lastActivityAt: new Date() };
+
+    if (parsed.data.title !== undefined) {
+      data.title = parsed.data.title;
+    }
+    if (parsed.data.description !== undefined) {
+      data.description = parsed.data.description;
+    }
+    if (parsed.data.priority !== undefined) {
+      data.priority = parsed.data.priority;
+    }
+    if (parsed.data.assigneeId !== undefined) {
+      data.assigneeId = parsed.data.assigneeId;
+    }
+    if (parsed.data.projectId !== undefined) {
+      data.projectId = parsed.data.projectId;
+    }
+    if (parsed.data.startDate !== undefined) {
+      data.startDate = parsed.data.startDate ? new Date(parsed.data.startDate) : null;
+    }
+    if (parsed.data.endDate !== undefined) {
+      data.endDate = parsed.data.endDate ? new Date(parsed.data.endDate) : null;
+    }
+    if (parsed.data.timeEstimate !== undefined) {
+      data.timeEstimate = parsed.data.timeEstimate;
+    }
+    if (parsed.data.isMilestone !== undefined) {
+      data.isMilestone = parsed.data.isMilestone;
+    }
+    if (parsed.data.position !== undefined) {
+      data.position = parsed.data.position;
+    }
+
+    if (parsed.data.status !== undefined) {
+      data.status = parsed.data.status;
+      const doneStatuses = ['Done', 'Closed', 'Resolved'];
+      if (doneStatuses.includes(parsed.data.status) && !existing.completedAt) {
+        data.completedAt = new Date();
+      } else if (!doneStatuses.includes(parsed.data.status) && existing.completedAt) {
+        data.completedAt = null;
+      }
+    }
+
+    const task = await prisma.task.update({
+      where: { id: taskId },
+      data,
+      include: {
+        assignee: { select: { id: true, name: true, email: true, image: true } },
+        project: { select: { id: true, name: true } },
+        taskLabels: { include: { label: true } },
+        _count: { select: { subTasks: true, comments: true } },
+      },
+    });
+
+    return NextResponse.json(task);
+  } catch {
+    return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ workspaceId: string; taskId: string }> },
+) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { workspaceId, taskId } = await params;
+
+    const membership = await prisma.workspaceMember.findUnique({
+      where: { workspaceId_userId: { workspaceId, userId: session.user.id } },
+    });
+
+    if (!membership) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const existing = await prisma.task.findUnique({ where: { id: taskId } });
+    if (!existing || existing.workspaceId !== workspaceId) {
+      return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+    }
+
+    await prisma.task.delete({ where: { id: taskId } });
+
+    return NextResponse.json({ message: 'Task deleted' });
+  } catch {
+    return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });
+  }
+}

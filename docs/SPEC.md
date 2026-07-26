@@ -72,12 +72,12 @@ A single user account (one email, one password) can belong to multiple workspace
 
 Four roles, hierarchical:
 
-| Role | Capabilities |
-|------|-------------|
-| **Super Admin** | Everything — billing, delete workspace, manage roles, manage members, workspace settings |
-| **Admin** | Manage members, workspace settings. Cannot access billing or delete workspace. |
-| **Manager** | Create/edit/archive projects. Create/edit shared views. Assign/reassign tasks to any member. Set milestones and dependencies. View workload across team. Edit any task. |
-| **Member** | Create/edit tasks (own or assigned to them). Create personal views. Log time. |
+| Role            | Capabilities                                                                                                                                                            |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Super Admin** | Everything — billing, delete workspace, manage roles, manage members, workspace settings                                                                                |
+| **Admin**       | Manage members, workspace settings. Cannot access billing or delete workspace.                                                                                          |
+| **Manager**     | Create/edit/archive projects. Create/edit shared views. Assign/reassign tasks to any member. Set milestones and dependencies. View workload across team. Edit any task. |
+| **Member**      | Create/edit tasks (own or assigned to them). Create personal views. Log time.                                                                                           |
 
 No per-project permissions in v1. All workspace members can see all projects.
 
@@ -122,24 +122,24 @@ Members (people icon)
 
 ### Built-In Fields
 
-| Field | Type | Notes |
-|-------|------|-------|
-| `title` | string | Required |
-| `description` | rich text | Tiptap block editor with @mentions |
-| `status` | enum | Customizable per workspace (default: Todo, In Progress, Done) |
-| `priority` | enum | None, Low, Medium, High, Urgent |
-| `assigneeId` | user ref | Single workspace member |
-| `startDate` | date | Optional. Combined with endDate for timeline/Gantt. |
-| `endDate` | date | Optional. If only endDate is set, acts as a due date. |
-| `labels` | tag[] | Multiple, customizable per workspace |
-| `projectId` | project ref | Optional. Which project this task belongs to. |
-| `parentTaskId` | task ref | Self-referential. Max depth: 4 levels (task > sub > sub > sub). |
-| `timeEstimate` | duration | Hours. Used for workload calculations. |
-| `isMilestone` | boolean | Default false. Renders as diamond in Gantt/Timeline views. |
-| `completedAt` | timestamp | System field. Auto-set when status changes to a "done" state. |
-| `createdAt` | timestamp | System field. |
-| `updatedAt` | timestamp | System field. |
-| `lastActivityAt` | timestamp | Updated on any change (status, comment, assignment). Used for age/staleness. |
+| Field            | Type        | Notes                                                                        |
+| ---------------- | ----------- | ---------------------------------------------------------------------------- |
+| `title`          | string      | Required                                                                     |
+| `description`    | rich text   | Tiptap block editor with @mentions                                           |
+| `status`         | enum        | Customizable per workspace (default: Todo, In Progress, Done)                |
+| `priority`       | enum        | None, Low, Medium, High, Urgent                                              |
+| `assigneeId`     | user ref    | Single workspace member                                                      |
+| `startDate`      | date        | Optional. Combined with endDate for timeline/Gantt.                          |
+| `endDate`        | date        | Optional. If only endDate is set, acts as a due date.                        |
+| `labels`         | tag[]       | Multiple, customizable per workspace                                         |
+| `projectId`      | project ref | Optional. Which project this task belongs to.                                |
+| `parentTaskId`   | task ref    | Self-referential. Max depth: 4 levels (task > sub > sub > sub).              |
+| `timeEstimate`   | duration    | Hours. Used for workload calculations.                                       |
+| `isMilestone`    | boolean     | Default false. Renders as diamond in Gantt/Timeline views.                   |
+| `completedAt`    | timestamp   | System field. Auto-set when status changes to a "done" state.                |
+| `createdAt`      | timestamp   | System field.                                                                |
+| `updatedAt`      | timestamp   | System field.                                                                |
+| `lastActivityAt` | timestamp   | Updated on any change (status, comment, assignment). Used for age/staleness. |
 
 ### Sub-Tasks
 
@@ -189,6 +189,7 @@ Slide-over panel from the right side (like Linear/Asana). Keeps the view context
 Tiptap (ProseMirror-based), integrated with React.
 
 **Supported blocks:**
+
 - Headings (H1, H2, H3)
 - Paragraphs with inline formatting (bold, italic, strikethrough, inline code, links)
 - Bullet lists and numbered lists
@@ -210,26 +211,26 @@ Workspace-level definitions. A custom field is defined once for the workspace an
 
 ### Custom Field Types (17)
 
-| Category | Type | Description |
-|----------|------|-------------|
-| **Basic** | Text | Single-line string |
-| | Long Text | Multi-line / rich text |
-| | Number | Integer or decimal, optional unit suffix |
-| | Checkbox | Boolean toggle |
-| **Selection** | Dropdown | Single-select from defined options with colors |
-| | Multi-select | Multiple selections from defined options |
-| **Date/Time** | Date | Calendar date picker |
-| | Hour | Time of day |
-| **People** | Person | Reference to a workspace member |
-| **Links** | URL | Clickable link with optional display text |
-| | Email | Email address, clickable |
-| | Phone | Phone number |
-| **Media** | Files | File attachments (uploaded to R2) |
-| **Advanced** | Rating | 1-5 stars |
-| | Currency | Number with currency symbol |
-| | Formula | Computed from other fields |
-| | Location | Address / coordinates |
-| | Color | Color picker |
+| Category      | Type         | Description                                    |
+| ------------- | ------------ | ---------------------------------------------- |
+| **Basic**     | Text         | Single-line string                             |
+|               | Long Text    | Multi-line / rich text                         |
+|               | Number       | Integer or decimal, optional unit suffix       |
+|               | Checkbox     | Boolean toggle                                 |
+| **Selection** | Dropdown     | Single-select from defined options with colors |
+|               | Multi-select | Multiple selections from defined options       |
+| **Date/Time** | Date         | Calendar date picker                           |
+|               | Hour         | Time of day                                    |
+| **People**    | Person       | Reference to a workspace member                |
+| **Links**     | URL          | Clickable link with optional display text      |
+|               | Email        | Email address, clickable                       |
+|               | Phone        | Phone number                                   |
+| **Media**     | Files        | File attachments (uploaded to R2)              |
+| **Advanced**  | Rating       | 1-5 stars                                      |
+|               | Currency     | Number with currency symbol                    |
+|               | Formula      | Computed from other fields                     |
+|               | Location     | Address / coordinates                          |
+|               | Color        | Color picker                                   |
 
 ### Data Model
 
@@ -255,17 +256,18 @@ CustomFieldValue
 
 ### Layout Types (5)
 
-| Layout | Description |
-|--------|-------------|
-| **Table** | Spreadsheet-style rows with visible columns. Sortable, groupable. Default for "all tasks" views. |
-| **List** | Compact, minimal — task title + key fields. Good for personal "my tasks" views. |
-| **Kanban** | Cards grouped by status or any single-select field. Drag-and-drop between columns. |
-| **Calendar** | Tasks plotted on month/week/day grid by their dates. |
-| **Gantt** | Timeline bars with dependencies (arrow connectors) and milestones (diamonds). |
+| Layout       | Description                                                                                      |
+| ------------ | ------------------------------------------------------------------------------------------------ |
+| **Table**    | Spreadsheet-style rows with visible columns. Sortable, groupable. Default for "all tasks" views. |
+| **List**     | Compact, minimal — task title + key fields. Good for personal "my tasks" views.                  |
+| **Kanban**   | Cards grouped by status or any single-select field. Drag-and-drop between columns.               |
+| **Calendar** | Tasks plotted on month/week/day grid by their dates.                                             |
+| **Gantt**    | Timeline bars with dependencies (arrow connectors) and milestones (diamonds).                    |
 
 ### View Configuration
 
 Each saved view stores:
+
 - Layout type
 - Filters (field + operator + value, combinable with AND/OR)
 - Sort order (field + direction, multi-level)
@@ -274,11 +276,11 @@ Each saved view stores:
 
 ### Ownership & Sharing
 
-| Type | Visibility | Who can create | Who can edit |
-|------|-----------|----------------|-------------|
-| **Personal** | Only the creator | Any member | Only the creator |
-| **Shared** | Everyone in workspace | Manager+ | Manager+ |
-| **Default** | Auto-opens when entering a project | Set by Manager+ | Manager+ |
+| Type         | Visibility                         | Who can create  | Who can edit     |
+| ------------ | ---------------------------------- | --------------- | ---------------- |
+| **Personal** | Only the creator                   | Any member      | Only the creator |
+| **Shared**   | Everyone in workspace              | Manager+        | Manager+         |
+| **Default**  | Auto-opens when entering a project | Set by Manager+ | Manager+         |
 
 Any member can duplicate a shared view into a personal one to customize it.
 
@@ -308,15 +310,15 @@ Tasks reference a project via `projectId`. A task can belong to zero or one proj
 
 ### Triggers
 
-| Event | Who gets notified |
-|-------|-------------------|
-| Assigned to a task | The assignee |
-| Unassigned from a task | The previously assigned user |
-| Task status changed | The assignee |
-| Comment on a task | The assignee + anyone who commented before (watching) |
-| @mentioned in comment or description | The mentioned user |
-| Task they're watching has activity | Watchers |
-| Due date approaching (1 day before) | The assignee |
+| Event                                | Who gets notified                                     |
+| ------------------------------------ | ----------------------------------------------------- |
+| Assigned to a task                   | The assignee                                          |
+| Unassigned from a task               | The previously assigned user                          |
+| Task status changed                  | The assignee                                          |
+| Comment on a task                    | The assignee + anyone who commented before (watching) |
+| @mentioned in comment or description | The mentioned user                                    |
+| Task they're watching has activity   | Watchers                                              |
+| Due date approaching (1 day before)  | The assignee                                          |
 
 ### Channels
 
@@ -326,6 +328,7 @@ Tasks reference a project via `projectId`. A task can belong to zero or one proj
 ### User Preferences
 
 Each user can toggle on/off per trigger type, per channel. Defaults:
+
 - In-app: all triggers on
 - Email: only mentions and assignments
 
@@ -417,6 +420,7 @@ Custom fields (same system as tasks) can be extended to Companies and Contacts i
 ### Auto-Matching
 
 When an inbound email arrives from `john@acme.com`:
+
 1. Search Contacts by email. If found, link the ticket to that Contact and their Company.
 2. If not found, create a new Contact. Match the domain (`acme.com`) to an existing Company. If no Company match, create a new Company from the domain.
 
@@ -428,14 +432,14 @@ Tickets are tasks with a ticket-specific configuration layer. No separate data m
 
 ### Additional Ticket Fields
 
-| Field | Type | Notes |
-|-------|------|-------|
-| `ticketNumber` | string | Auto-incrementing per workspace (e.g., `OPC-142`). Prefix configurable. |
-| `source` | enum | email, form, portal, manual |
-| `contactId` | contact ref | The external requester |
-| `companyId` | company ref | Auto-derived from contact, or set manually |
-| `slaResponseDue` | timestamp | Calculated from priority-based SLA rules |
-| `slaResolutionDue` | timestamp | Calculated from priority-based SLA rules |
+| Field              | Type        | Notes                                                                   |
+| ------------------ | ----------- | ----------------------------------------------------------------------- |
+| `ticketNumber`     | string      | Auto-incrementing per workspace (e.g., `OPC-142`). Prefix configurable. |
+| `source`           | enum        | email, form, portal, manual                                             |
+| `contactId`        | contact ref | The external requester                                                  |
+| `companyId`        | company ref | Auto-derived from contact, or set manually                              |
+| `slaResponseDue`   | timestamp   | Calculated from priority-based SLA rules                                |
+| `slaResolutionDue` | timestamp   | Calculated from priority-based SLA rules                                |
 
 ### Status Workflows
 
@@ -452,6 +456,7 @@ StatusWorkflow
 Status category is one of: `todo`, `in_progress`, `done`, `closed`. This lets the system know which statuses represent completion (for `completedAt`, SLA tracking, etc.) regardless of custom naming.
 
 Default workflows:
+
 - **Task:** Todo → In Progress → Done
 - **Ticket:** Open → In Progress → Waiting on Customer → Resolved → Closed
 
@@ -482,6 +487,7 @@ Inbound emails are received at a workspace-specific address. Processing:
 3. **If no ticket number:** Place in the **Ticket Inbox** queue for triage.
 
 **Ticket Inbox** — a dedicated triage screen for Managers:
+
 - See all unprocessed inbound emails
 - For each email, choose:
   - **Assign as new ticket** — creates a ticket with auto-assigned number
@@ -519,6 +525,7 @@ Supported from day one. Tailwind CSS `dark:` variants throughout. Defaults to sy
 ## Responsive Design
 
 Responsive but not mobile-optimized. Layouts don't break on small screens:
+
 - Sidebar collapses to hamburger menu
 - Task detail panel goes full-screen on mobile
 - Table view gets horizontal scroll
