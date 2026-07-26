@@ -12,6 +12,8 @@ const MIGRATIONS = [
   `CREATE TYPE "DependencyMode" AS ENUM ('STRICT', 'FLEXIBLE')`,
   `CREATE TYPE "ViewLayout" AS ENUM ('TABLE', 'LIST', 'KANBAN', 'CALENDAR', 'GANTT')`,
   `CREATE TYPE "NotificationType" AS ENUM ('TASK_ASSIGNED', 'TASK_UNASSIGNED', 'TASK_STATUS_CHANGED', 'TASK_COMMENTED', 'TASK_MENTIONED', 'TASK_DUE_SOON')`,
+  `CREATE TYPE "DiscountType" AS ENUM ('LIFETIME', 'FIRST_YEAR')`,
+  `CREATE TYPE "DiscountScope" AS ENUM ('BOTH', 'MONTHLY', 'ANNUAL')`,
   `CREATE TYPE "AdminRole" AS ENUM ('SUPER_ADMIN', 'ADMIN', 'SUPPORT', 'VIEWER')`,
 
   `CREATE TABLE IF NOT EXISTS "AdminUser" (
@@ -358,6 +360,24 @@ const MIGRATIONS = [
     CONSTRAINT "SupportMessage_ticketId_fkey" FOREIGN KEY ("ticketId") REFERENCES "SupportTicket"("id") ON DELETE CASCADE ON UPDATE CASCADE
   )`,
   `CREATE INDEX IF NOT EXISTS "SupportMessage_ticketId_idx" ON "SupportMessage"("ticketId")`,
+
+  `CREATE TABLE IF NOT EXISTS "DiscountCode" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "code" TEXT NOT NULL,
+    "description" TEXT,
+    "type" "DiscountType" NOT NULL DEFAULT 'LIFETIME',
+    "percentOff" INTEGER NOT NULL,
+    "billingScope" "DiscountScope" NOT NULL DEFAULT 'BOTH',
+    "maxUses" INTEGER,
+    "usedCount" INTEGER NOT NULL DEFAULT 0,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "startsAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "expiresAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "DiscountCode_pkey" PRIMARY KEY ("id")
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "DiscountCode_code_key" ON "DiscountCode"("code")`,
 ];
 
 export async function POST() {

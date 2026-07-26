@@ -10,6 +10,10 @@ const PERMISSIONS: Record<string, string[]> = {
     'admin-users.read',
     'support.read',
     'support.write',
+    'discounts.read',
+    'discounts.write',
+    'reports.read',
+    'provisioning.write',
   ],
   SUPER_ADMIN: ['*'],
   SUPPORT: [
@@ -20,7 +24,7 @@ const PERMISSIONS: Record<string, string[]> = {
     'support.read',
     'support.write',
   ],
-  VIEWER: ['dashboard.read'],
+  VIEWER: ['dashboard.read', 'reports.read'],
 };
 
 export function hasPermission(role: string, permission: string): boolean {

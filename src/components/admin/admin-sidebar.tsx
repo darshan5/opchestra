@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  BarChart3,
   FileText,
   LayoutDashboard,
   LogOut,
@@ -8,7 +9,9 @@ import {
   Moon,
   Settings,
   Sun,
+  Tag,
   UserCog,
+  UserPlus,
   Users,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -26,8 +29,11 @@ const navItems = [
   { href: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/admin/users', icon: Users, label: 'App Users' },
   { href: '/admin/admin-users', icon: UserCog, label: 'Admin Users' },
+  { href: '/admin/discounts', icon: Tag, label: 'Discounts' },
+  { href: '/admin/reports', icon: BarChart3, label: 'Reports' },
   { href: '/admin/logs', icon: FileText, label: 'Audit Logs' },
   { badge: true, href: '/admin/support', icon: MessageCircle, label: 'Support' },
+  { href: '/admin/provisioning', icon: UserPlus, label: 'Provisioning' },
   { href: '/admin/settings', icon: Settings, label: 'Settings' },
 ];
 
