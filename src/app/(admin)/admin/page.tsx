@@ -1,104 +1,154 @@
-import { formatDistanceToNow } from 'date-fns';
+import { format, subMonths } from 'date-fns';
 import Link from 'next/link';
 
+import { MetricCard } from '@/components/admin/MetricCard';
+import { UserGrowthChart } from '@/components/admin/UserGrowthChart';
 import { requireAdmin } from '@/lib/auth/admin-session';
 import { prisma } from '@/lib/db';
+
+async function getSignupsByMonth(months: number) {
+  const data: Array<{ month: string; count: number }> = [];
+  const now = new Date();
+
+  for (let i = months - 1; i >= 0; i--) {
+    const start = subMonths(now, i);
+    const monthStart = new Date(start.getFullYear(), start.getMonth(), 1);
+    const monthEnd = new Date(start.getFullYear(), start.getMonth() + 1, 1);
+
+    const count = await prisma.user.count({
+      where: { createdAt: { gte: monthStart, lt: monthEnd } },
+    });
+
+    data.push({
+      count,
+      month: format(monthStart, 'yyyy-MM'),
+    });
+  }
+
+  return data;
+}
 
 export default async function AdminDashboardPage() {
   await requireAdmin();
 
-  const [workspaces, userCount, taskCount] = await Promise.all([
-    prisma.workspace.findMany({
-      include: {
-        _count: { select: { members: true, projects: true, tasks: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    }),
+  const now = new Date();
+  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+  const [
+    totalWorkspaces,
+    totalUsers,
+    totalTasks,
+    activeProjects,
+    signupsThisMonth,
+    signupsLastMonth,
+    activeWorkspaces,
+    recentSignups,
+    growthData,
+  ] = await Promise.all([
+    prisma.workspace.count(),
     prisma.user.count(),
     prisma.task.count(),
+    prisma.project.count({ where: { status: 'ACTIVE' } }),
+    prisma.user.count({ where: { createdAt: { gte: thisMonthStart } } }),
+    prisma.user.count({
+      where: { createdAt: { gte: lastMonthStart, lt: thisMonthStart } },
+    }),
+    prisma.workspace.count({
+      where: { tasks: { some: { updatedAt: { gte: thirtyDaysAgo } } } },
+    }),
+    prisma.user.findMany({
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        createdAt: true,
+        memberships: {
+          select: {
+            role: true,
+            workspace: { select: { id: true, name: true } },
+          },
+          take: 1,
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+    }),
+    getSignupsByMonth(12),
   ]);
 
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+  const signupChange =
+    signupsLastMonth > 0
+      ? Math.round(((signupsThisMonth - signupsLastMonth) / signupsLastMonth) * 100)
+      : signupsThisMonth > 0
+        ? 100
+        : 0;
 
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Total Users</p>
-          <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{userCount}</p>
-        </div>
-        <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Workspaces</p>
-          <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
-            {workspaces.length}
-          </p>
-        </div>
-        <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Total Tasks</p>
-          <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{taskCount}</p>
-        </div>
+  return (
+    <div className="p-8">
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+
+      <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <MetricCard title="Total Workspaces" value={totalWorkspaces} />
+        <MetricCard title="Total Users" value={totalUsers} />
+        <MetricCard
+          subtitle={`${activeWorkspaces} active in last 30 days`}
+          title="Active Workspaces"
+          value={activeWorkspaces}
+        />
+        <MetricCard
+          change={signupChange}
+          title="Signups This Month"
+          value={signupsThisMonth}
+        />
       </div>
 
-      <h2 className="mt-8 text-lg font-semibold text-gray-900 dark:text-white">Workspaces</h2>
-      <div className="mt-3 overflow-x-auto">
-        <table className="w-full">
-          <thead className="border-b border-gray-200 dark:border-gray-800">
-            <tr>
-              <th className="px-4 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
-                Name
-              </th>
-              <th className="px-4 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
-                Slug
-              </th>
-              <th className="px-4 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
-                Members
-              </th>
-              <th className="px-4 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
-                Projects
-              </th>
-              <th className="px-4 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
-                Tasks
-              </th>
-              <th className="px-4 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
-                Created
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-            {workspaces.map((ws) => (
-              <tr className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-900" key={ws.id}>
-                <td className="px-4 py-2.5">
-                  <Link
-                    className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
-                    href={`/admin/workspaces/${ws.id}`}
-                  >
-                    {ws.name}
-                  </Link>
-                </td>
-                <td className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400">{ws.slug}</td>
-                <td className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400">
-                  {ws._count.members}
-                </td>
-                <td className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400">
-                  {ws._count.projects}
-                </td>
-                <td className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400">
-                  {ws._count.tasks}
-                </td>
-                <td className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400">
-                  {formatDistanceToNow(ws.createdAt, { addSuffix: true })}
-                </td>
-              </tr>
+      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <MetricCard title="Total Tasks" value={totalTasks} />
+        <MetricCard title="Active Projects" value={activeProjects} />
+      </div>
+
+      <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <UserGrowthChart data={growthData} />
+        </div>
+
+        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+          <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+            Recent Signups
+          </h2>
+          <div className="space-y-3">
+            {recentSignups.map((user) => (
+              <div className="flex items-center justify-between text-sm" key={user.id}>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-gray-900 dark:text-white">
+                    {user.name || user.email}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {user.memberships[0]?.workspace.name ?? 'No workspace'}
+                  </p>
+                </div>
+                <div className="ml-3 text-right">
+                  {user.memberships[0] && (
+                    <Link
+                      className="text-xs text-blue-600 hover:underline dark:text-blue-400"
+                      href={`/admin/workspaces/${user.memberships[0].workspace.id}`}
+                    >
+                      View
+                    </Link>
+                  )}
+                  <p className="text-xs text-gray-400 dark:text-gray-500">
+                    {format(user.createdAt, 'M/d/yyyy')}
+                  </p>
+                </div>
+              </div>
             ))}
-            {workspaces.length === 0 && (
-              <tr>
-                <td className="px-4 py-8 text-center text-sm text-gray-500" colSpan={6}>
-                  No workspaces yet
-                </td>
-              </tr>
+            {recentSignups.length === 0 && (
+              <p className="text-sm text-gray-500 dark:text-gray-400">No recent signups.</p>
             )}
-          </tbody>
-        </table>
+          </div>
+        </div>
       </div>
     </div>
   );

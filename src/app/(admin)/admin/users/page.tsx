@@ -5,48 +5,57 @@ import { Search } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-interface AppUser {
+interface Subscriber {
   id: string;
-  email: string;
-  name: string | null;
-  emailVerified: string | null;
+  role: string;
   createdAt: string;
-  _count: { memberships: number; createdTasks: number };
+  user: {
+    id: string;
+    email: string;
+    name: string | null;
+    createdAt: string;
+  };
+  workspace: {
+    id: string;
+    name: string;
+    slug: string;
+    _count: { members: number; tasks: number };
+  };
 }
 
-export default function AppUsersPage() {
-  const [users, setUsers] = useState<AppUser[]>([]);
+export default function SubscribersPage() {
+  const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  const loadUsers = useCallback(async (q?: string) => {
+  const loadSubscribers = useCallback(async (q?: string) => {
     setLoading(true);
     const url = q ? `/api/admin/users?search=${encodeURIComponent(q)}` : '/api/admin/users';
     const res = await fetch(url);
     if (res.ok) {
-      setUsers(await res.json());
+      setSubscribers(await res.json());
     }
     setLoading(false);
   }, []);
 
   useEffect(() => {
-    loadUsers();
-  }, [loadUsers]);
+    loadSubscribers();
+  }, [loadSubscribers]);
 
   function handleSearch(value: string) {
     setSearch(value);
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
     }
-    debounceRef.current = setTimeout(() => loadUsers(value), 300);
+    debounceRef.current = setTimeout(() => loadSubscribers(value), 300);
   }
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white">App Users</h1>
+    <div className="p-8">
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Subscribers</h1>
       <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-        All registered workspace users
+        Manage workspace owners
       </p>
 
       <div className="mt-6 flex items-center gap-3">
@@ -76,55 +85,71 @@ export default function AppUsersPage() {
                   Email
                 </th>
                 <th className="px-4 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
-                  Workspaces
+                  Workspace
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+                  Plan
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+                  Members
                 </th>
                 <th className="px-4 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                   Tasks
                 </th>
                 <th className="px-4 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
-                  Joined
+                  Signed Up
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-              {users.map((user) => (
+              {subscribers.map((sub) => (
                 <tr
                   className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-900"
-                  key={user.id}
+                  key={sub.id}
                 >
+                  <td className="px-4 py-2.5 text-sm font-medium text-gray-900 dark:text-white">
+                    {sub.user.name ?? '—'}
+                  </td>
+                  <td className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400">
+                    {sub.user.email}
+                  </td>
                   <td className="px-4 py-2.5">
                     <Link
                       className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
-                      href={`/admin/users/${user.id}`}
+                      href={`/admin/workspaces/${sub.workspace.id}`}
                     >
-                      {user.name ?? '—'}
+                      {sub.workspace.name}
                     </Link>
                   </td>
-                  <td className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400">
-                    {user.email}
+                  <td className="px-4 py-2.5">
+                    <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900 dark:text-green-300">
+                      Free
+                    </span>
                   </td>
                   <td className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400">
-                    {user._count.memberships}
+                    {sub.workspace._count.members}
                   </td>
                   <td className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400">
-                    {user._count.createdTasks}
+                    {sub.workspace._count.tasks}
                   </td>
                   <td className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400">
-                    {format(new Date(user.createdAt), 'M/d/yyyy')}
+                    {format(new Date(sub.user.createdAt), 'M/d/yyyy')}
                   </td>
                 </tr>
               ))}
-              {users.length === 0 && (
+              {subscribers.length === 0 && (
                 <tr>
-                  <td className="px-4 py-8 text-center text-sm text-gray-500" colSpan={5}>
-                    No users found
+                  <td className="px-4 py-8 text-center text-sm text-gray-500" colSpan={7}>
+                    No subscribers found
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         )}
-        <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">{users.length} users total</p>
+        <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">
+          {subscribers.length} subscribers total
+        </p>
       </div>
     </div>
   );
