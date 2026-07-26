@@ -75,6 +75,7 @@ enum ThemePreference {
 model PlatformSettings {
   id               String  @id @default("platform")
   siteName         String  @default("Opchestra")
+  signupEnabled    Boolean @default(true)
   emailProvider    String  @default("resend")
   emailApiKey      String?
   emailFromAddress String  @default("noreply@opchestra.com")

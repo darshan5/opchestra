@@ -8,6 +8,18 @@ import { sendVerificationEmail } from '@/lib/email';
 
 export async function POST(request: Request) {
   try {
+    const platformSettings = await prisma.platformSettings.findUnique({
+      where: { id: 'platform' },
+      select: { signupEnabled: true },
+    });
+
+    if (platformSettings && !platformSettings.signupEnabled) {
+      return NextResponse.json(
+        { error: 'Signup is currently disabled. Contact your administrator.' },
+        { status: 403 },
+      );
+    }
+
     const body = await request.json();
     const parsed = signupSchema.safeParse(body);
 

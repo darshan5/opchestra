@@ -41,6 +41,7 @@ export async function PATCH(request: Request) {
 
     const allowedFields = [
       'siteName',
+      'signupEnabled',
       'emailProvider',
       'emailApiKey',
       'emailFromAddress',

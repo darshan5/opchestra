@@ -32,6 +32,7 @@ const MIGRATIONS = [
   `CREATE TABLE IF NOT EXISTS "PlatformSettings" (
     "id" TEXT NOT NULL DEFAULT 'platform',
     "siteName" TEXT NOT NULL DEFAULT 'Opchestra',
+    "signupEnabled" BOOLEAN NOT NULL DEFAULT true,
     "emailProvider" TEXT NOT NULL DEFAULT 'resend',
     "emailApiKey" TEXT,
     "emailFromAddress" TEXT NOT NULL DEFAULT 'noreply@opchestra.com',

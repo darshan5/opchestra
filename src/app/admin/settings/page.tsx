@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 
 interface Settings {
   siteName: string;
+  signupEnabled: boolean;
   emailProvider: string;
   emailApiKey: string | null;
   emailFromAddress: string;
@@ -34,12 +35,14 @@ export default function AdminSettingsPage() {
   const [r2BucketName, setR2BucketName] = useState('');
   const [r2PublicUrl, setR2PublicUrl] = useState('');
   const [maxFreeUsers, setMaxFreeUsers] = useState('3');
+  const [signupEnabled, setSignupEnabled] = useState(true);
 
   useEffect(() => {
     fetch('/api/admin/settings')
       .then((r) => r.json())
       .then((data) => {
         setSettings(data);
+        setSignupEnabled(data.signupEnabled ?? true);
         setEmailFromAddress(data.emailFromAddress || '');
         setEmailFromName(data.emailFromName || '');
         setR2AccountId(data.r2AccountId || '');
@@ -136,6 +139,52 @@ export default function AdminSettingsPage() {
           {message}
         </p>
       )}
+
+      <section className="mt-8">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">General</h2>
+        <div className="mt-4 space-y-3">
+          <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-gray-900">
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                Public Signup
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Allow new users to create accounts via the signup page
+              </p>
+            </div>
+            <button
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                signupEnabled
+                  ? 'bg-blue-600'
+                  : 'bg-gray-300 dark:bg-gray-700'
+              }`}
+              data-testid="signup-toggle"
+              onClick={async () => {
+                const newVal = !signupEnabled;
+                setSignupEnabled(newVal);
+                const res = await fetch('/api/admin/settings', {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ signupEnabled: newVal }),
+                });
+                if (res.ok) {
+                  setMessage(newVal ? 'Signup enabled' : 'Signup disabled');
+                } else {
+                  setSignupEnabled(!newVal);
+                  setMessage('Failed to update');
+                }
+              }}
+              type="button"
+            >
+              <span
+                className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${
+                  signupEnabled ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+      </section>
 
       <section className="mt-8">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Email (Resend)</h2>
