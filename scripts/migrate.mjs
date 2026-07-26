@@ -1,22 +1,20 @@
 import { execSync } from 'child_process';
-import { existsSync } from 'fs';
-import path from 'path';
 
-const prismaPath = path.join(process.cwd(), 'node_modules', 'prisma', 'build', 'index.js');
-
-if (!existsSync(prismaPath)) {
-  console.log('Prisma CLI not found, skipping migration');
+if (!process.env.DATABASE_URL) {
+  console.log('DATABASE_URL not set, skipping migration');
   process.exit(0);
 }
 
 try {
-  execSync(`node ${prismaPath} db push --skip-generate --accept-data-loss`, {
+  execSync('node node_modules/prisma/build/index.js db push --skip-generate --accept-data-loss', {
     stdio: 'inherit',
     env: {
       ...process.env,
+      DATABASE_URL: process.env.DATABASE_URL,
     },
   });
   console.log('Database schema pushed successfully');
-} catch {
-  console.log('Warning: prisma db push failed, continuing anyway');
+} catch (e) {
+  console.error('prisma db push failed:', e.message);
+  console.log('Continuing startup anyway...');
 }
