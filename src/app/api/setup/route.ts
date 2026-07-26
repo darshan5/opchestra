@@ -328,6 +328,36 @@ const MIGRATIONS = [
   )`,
   `CREATE INDEX IF NOT EXISTS "Notification_userId_read_idx" ON "Notification"("userId", "read")`,
   `CREATE INDEX IF NOT EXISTS "Notification_workspaceId_idx" ON "Notification"("workspaceId")`,
+
+  `CREATE TYPE "SupportTicketStatus" AS ENUM ('OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED')`,
+  `CREATE TYPE "SupportTicketPriority" AS ENUM ('LOW', 'MEDIUM', 'HIGH', 'URGENT')`,
+
+  `CREATE TABLE IF NOT EXISTS "SupportTicket" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "userId" TEXT NOT NULL,
+    "subject" TEXT NOT NULL,
+    "status" "SupportTicketStatus" NOT NULL DEFAULT 'OPEN',
+    "priority" "SupportTicketPriority" NOT NULL DEFAULT 'MEDIUM',
+    "category" TEXT NOT NULL DEFAULT 'OTHER',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "SupportTicket_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "SupportTicket_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON UPDATE CASCADE
+  )`,
+  `CREATE INDEX IF NOT EXISTS "SupportTicket_status_idx" ON "SupportTicket"("status")`,
+  `CREATE INDEX IF NOT EXISTS "SupportTicket_userId_idx" ON "SupportTicket"("userId")`,
+
+  `CREATE TABLE IF NOT EXISTS "SupportMessage" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "ticketId" TEXT NOT NULL,
+    "content" TEXT NOT NULL,
+    "isAdmin" BOOLEAN NOT NULL DEFAULT false,
+    "adminUserEmail" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "SupportMessage_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "SupportMessage_ticketId_fkey" FOREIGN KEY ("ticketId") REFERENCES "SupportTicket"("id") ON DELETE CASCADE ON UPDATE CASCADE
+  )`,
+  `CREATE INDEX IF NOT EXISTS "SupportMessage_ticketId_idx" ON "SupportMessage"("ticketId")`,
 ];
 
 export async function POST() {

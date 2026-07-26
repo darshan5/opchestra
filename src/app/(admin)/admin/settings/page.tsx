@@ -363,6 +363,167 @@ export default function AdminSettingsPage() {
           </Button>
         </div>
       </section>
+
+      <hr className="my-10 border-gray-200 dark:border-gray-800" />
+
+      <AdminProfileSection />
+      <AdminChangePasswordSection />
+      <TestEmailSection />
     </div>
+  );
+}
+
+function AdminProfileSection() {
+  const [name, setName] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  async function save() {
+    setSaving(true);
+    const res = await fetch('/api/admin/auth/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    setMsg(res.ok ? 'Profile updated' : 'Failed');
+    setSaving(false);
+  }
+
+  return (
+    <section className="mt-8">
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Admin Profile</h2>
+      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Update your display name.</p>
+      <div className="mt-4 space-y-3">
+        <Input
+          id="adminName"
+          label="Name"
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Your name"
+          type="text"
+          value={name}
+        />
+        {msg && <p className="text-sm text-blue-600 dark:text-blue-400">{msg}</p>}
+        <Button loading={saving} onClick={save} size="sm">
+          Save Changes
+        </Button>
+      </div>
+    </section>
+  );
+}
+
+function AdminChangePasswordSection() {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  async function save() {
+    if (newPassword !== confirmPassword) {
+      setMsg('Passwords do not match');
+      return;
+    }
+    setSaving(true);
+    const res = await fetch('/api/admin/auth/change-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    const data = await res.json();
+    setMsg(res.ok ? 'Password changed' : data.error || 'Failed');
+    if (res.ok) {
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    }
+    setSaving(false);
+  }
+
+  return (
+    <section className="mt-10">
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Change Password</h2>
+      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        Enter your current password and choose a new one.
+      </p>
+      <div className="mt-4 space-y-3">
+        <Input
+          id="currentPw"
+          label="Current Password"
+          onChange={(e) => setCurrentPassword(e.target.value)}
+          type="password"
+          value={currentPassword}
+        />
+        <Input
+          id="newPw"
+          label="New Password"
+          onChange={(e) => setNewPassword(e.target.value)}
+          placeholder="At least 8 characters"
+          type="password"
+          value={newPassword}
+        />
+        <Input
+          id="confirmPw"
+          label="Confirm New Password"
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          type="password"
+          value={confirmPassword}
+        />
+        {msg && (
+          <p
+            className={`text-sm ${msg.includes('changed') ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}
+          >
+            {msg}
+          </p>
+        )}
+        <Button loading={saving} onClick={save} size="sm">
+          Change Password
+        </Button>
+      </div>
+    </section>
+  );
+}
+
+function TestEmailSection() {
+  const [to, setTo] = useState('');
+  const [sending, setSending] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  async function send() {
+    if (!to) {
+      return;
+    }
+    setSending(true);
+    const res = await fetch('/api/admin/test-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to }),
+    });
+    const data = await res.json();
+    setMsg(res.ok ? `Test email sent (${data.messageId ?? 'ok'})` : data.error || 'Failed');
+    setSending(false);
+  }
+
+  return (
+    <section className="mt-10 mb-10">
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Test Email</h2>
+      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        Test that your email integration is working. Sends a test email via Resend.
+      </p>
+      <div className="mt-4 flex items-end gap-3">
+        <div className="flex-1">
+          <Input
+            id="testEmailTo"
+            onChange={(e) => setTo(e.target.value)}
+            placeholder="Recipient email address"
+            type="email"
+            value={to}
+          />
+        </div>
+        <Button disabled={!to} loading={sending} onClick={send} size="sm">
+          Send Test Email
+        </Button>
+      </div>
+      {msg && <p className="mt-2 text-sm text-blue-600 dark:text-blue-400">{msg}</p>}
+    </section>
   );
 }

@@ -8,9 +8,18 @@ const PERMISSIONS: Record<string, string[]> = {
     'settings.read',
     'logs.read',
     'admin-users.read',
+    'support.read',
+    'support.write',
   ],
   SUPER_ADMIN: ['*'],
-  SUPPORT: ['dashboard.read', 'users.read', 'workspaces.read', 'logs.read'],
+  SUPPORT: [
+    'dashboard.read',
+    'users.read',
+    'workspaces.read',
+    'logs.read',
+    'support.read',
+    'support.write',
+  ],
   VIEWER: ['dashboard.read'],
 };
 

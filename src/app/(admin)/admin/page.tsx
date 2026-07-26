@@ -1,4 +1,5 @@
 import { formatDistanceToNow } from 'date-fns';
+import Link from 'next/link';
 
 import { requireAdmin } from '@/lib/auth/admin-session';
 import { prisma } from '@/lib/db';
@@ -19,7 +20,7 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
 
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
@@ -65,9 +66,14 @@ export default async function AdminDashboardPage() {
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
             {workspaces.map((ws) => (
-              <tr key={ws.id}>
-                <td className="px-4 py-2.5 text-sm font-medium text-gray-900 dark:text-white">
-                  {ws.name}
+              <tr className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-900" key={ws.id}>
+                <td className="px-4 py-2.5">
+                  <Link
+                    className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+                    href={`/admin/workspaces/${ws.id}`}
+                  >
+                    {ws.name}
+                  </Link>
                 </td>
                 <td className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400">{ws.slug}</td>
                 <td className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400">

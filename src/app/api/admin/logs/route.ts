@@ -17,10 +17,25 @@ export async function GET() {
         targetUser: { select: { id: true, email: true, name: true } },
       },
       orderBy: { createdAt: 'desc' },
-      take: 100,
+      take: 200,
     });
 
     return NextResponse.json(logs);
+  } catch {
+    return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });
+  }
+}
+
+export async function DELETE() {
+  try {
+    const admin = await getAdminSession();
+    if (!admin || admin.role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ error: 'Forbidden — SUPER_ADMIN only' }, { status: 403 });
+    }
+
+    await prisma.auditLog.deleteMany();
+
+    return NextResponse.json({ message: 'All audit logs cleared' });
   } catch {
     return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });
   }
