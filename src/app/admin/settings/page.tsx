@@ -99,7 +99,12 @@ export default function AdminSettingsPage() {
       body: JSON.stringify({ [field]: newVal }),
     });
     if (res.ok) {
-      const label = field.replace(/([A-Z])/g, ' $1').toLowerCase();
+      const labels: Record<string, string> = {
+        disableLogin: 'Login disable',
+        maintenanceMode: 'Maintenance mode',
+        signupEnabled: 'Signup',
+      };
+      const label = labels[field] || field;
       setMessage(newVal ? `${label} enabled` : `${label} disabled`);
     } else {
       setter(currentValue);

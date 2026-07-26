@@ -41,7 +41,7 @@ test.describe('SaaS Admin Flow', () => {
     await toggle.click();
 
     // Wait for confirmation message
-    await expect(page.getByText('Signup disabled')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/[Ss]ignup disabled/)).toBeVisible({ timeout: 10000 });
 
     // Verify signup is blocked
     const signupRes = await page.request.post('/api/auth/signup', {
@@ -53,7 +53,7 @@ test.describe('SaaS Admin Flow', () => {
 
     // Re-enable signups
     await toggle.click();
-    await expect(page.getByText('Signup enabled')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/[Ss]ignup enabled/)).toBeVisible({ timeout: 10000 });
   });
 
   test('admin sidebar navigation works', async ({ page }) => {

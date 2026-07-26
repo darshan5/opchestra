@@ -36,7 +36,7 @@ test.describe.serial('Admin Actions (sequential)', () => {
     // Disable signups
     const toggle = page.getByTestId('signup-toggle');
     await toggle.click();
-    await expect(page.getByText('Signup disabled')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/[Ss]ignup disabled/)).toBeVisible({ timeout: 10000 });
 
     // Take screenshot
     await page.screenshot({ path: 'test-results/signup-disabled.png' });
@@ -99,7 +99,7 @@ test.describe.serial('Admin Actions (sequential)', () => {
 
     const toggle = page.getByTestId('signup-toggle');
     await toggle.click();
-    await expect(page.getByText('Signup enabled')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/[Ss]ignup enabled/)).toBeVisible({ timeout: 10000 });
 
     await page.screenshot({ path: 'test-results/signup-re-enabled.png' });
   });

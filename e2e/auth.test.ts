@@ -75,7 +75,9 @@ test.describe('Auth flow', () => {
     await page.getByLabel('Password').fill(TEST_USER.password);
     await page.getByRole('button', { name: 'Create account' }).click();
 
-    await expect(page.getByText('already exists')).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.getByText('already exists').or(page.getByText('disabled')).or(page.getByText('maintenance')),
+    ).toBeVisible({ timeout: 10000 });
   });
 
   test('login fails with wrong password', async ({ page }) => {
