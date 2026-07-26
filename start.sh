@@ -1,3 +1,5 @@
 #!/bin/sh
-npx prisma db push --skip-generate 2>&1 || echo "Prisma db push failed (may be expected on first run)"
-node server.js
+echo "Running database schema push..."
+node scripts/migrate.mjs || true
+echo "Starting server..."
+exec node server.js
