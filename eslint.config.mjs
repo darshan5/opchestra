@@ -19,7 +19,7 @@ const eslintConfig = defineConfig([
       curly: 'error',
     },
   },
-  globalIgnores(['.next/**', 'out/**', 'build/**', 'next-env.d.ts']),
+  globalIgnores(['.next/**', 'out/**', 'build/**', 'next-env.d.ts', 'prisma.config.js']),
 ]);
 
 export default eslintConfig;
