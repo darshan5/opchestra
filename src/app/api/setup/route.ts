@@ -20,12 +20,32 @@ const MIGRATIONS = [
     "passwordHash" TEXT,
     "emailVerified" TIMESTAMP(3),
     "image" TEXT,
+    "isSaasAdmin" BOOLEAN NOT NULL DEFAULT false,
     "themePreference" "ThemePreference" NOT NULL DEFAULT 'SYSTEM',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
   )`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "User_email_key" ON "User"("email")`,
+  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "isSaasAdmin" BOOLEAN NOT NULL DEFAULT false`,
+
+  `CREATE TABLE IF NOT EXISTS "PlatformSettings" (
+    "id" TEXT NOT NULL DEFAULT 'platform',
+    "siteName" TEXT NOT NULL DEFAULT 'Opchestra',
+    "emailProvider" TEXT NOT NULL DEFAULT 'resend',
+    "emailApiKey" TEXT,
+    "emailFromAddress" TEXT NOT NULL DEFAULT 'noreply@opchestra.com',
+    "emailFromName" TEXT NOT NULL DEFAULT 'Opchestra',
+    "r2AccountId" TEXT,
+    "r2AccessKeyId" TEXT,
+    "r2SecretAccessKey" TEXT,
+    "r2BucketName" TEXT NOT NULL DEFAULT 'opchestra',
+    "r2PublicUrl" TEXT,
+    "maxFreeUsers" INTEGER NOT NULL DEFAULT 3,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "PlatformSettings_pkey" PRIMARY KEY ("id")
+  )`,
 
   `CREATE TABLE IF NOT EXISTS "VerificationToken" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid(),

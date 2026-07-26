@@ -15,6 +15,7 @@ model User {
   passwordHash   String?
   emailVerified  DateTime?
   image          String?
+  isSaasAdmin    Boolean  @default(false)
   themePreference ThemePreference @default(SYSTEM)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -67,6 +68,25 @@ enum ThemePreference {
   LIGHT
   DARK
   SYSTEM
+}
+
+// ─── Platform Settings (SaaS-level) ─────────────────────────
+
+model PlatformSettings {
+  id               String  @id @default("platform")
+  siteName         String  @default("Opchestra")
+  emailProvider    String  @default("resend")
+  emailApiKey      String?
+  emailFromAddress String  @default("noreply@opchestra.com")
+  emailFromName    String  @default("Opchestra")
+  r2AccountId      String?
+  r2AccessKeyId    String?
+  r2SecretAccessKey String?
+  r2BucketName     String  @default("opchestra")
+  r2PublicUrl      String?
+  maxFreeUsers     Int     @default(3)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @default(now()) @updatedAt
 }
 
 // ─── Workspaces ─────────────────────────────────────────────
