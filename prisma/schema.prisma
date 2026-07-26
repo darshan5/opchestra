@@ -9,26 +9,29 @@ datasource db {
 // ─── Auth & Users ───────────────────────────────────────────
 
 model User {
-  id             String   @id @default(uuid())
-  email          String   @unique
-  name           String?
-  passwordHash   String?
-  emailVerified  DateTime?
-  image          String?
-  isSaasAdmin    Boolean  @default(false)
-  themePreference ThemePreference @default(SYSTEM)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                 String   @id @default(uuid())
+  email              String   @unique
+  name               String?
+  passwordHash       String?
+  emailVerified      DateTime?
+  image              String?
+  isSaasAdmin        Boolean  @default(false)
+  mustChangePassword Boolean  @default(false)
+  themePreference    ThemePreference @default(SYSTEM)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
-  memberships       WorkspaceMember[]
-  assignedTasks     Task[]             @relation("TaskAssignee")
-  createdTasks      Task[]             @relation("TaskCreator")
-  comments          Comment[]
-  timeEntries       TimeEntry[]
-  notifications     Notification[]
-  createdViews      View[]
-  verificationTokens VerificationToken[]
+  memberships         WorkspaceMember[]
+  assignedTasks       Task[]             @relation("TaskAssignee")
+  createdTasks        Task[]             @relation("TaskCreator")
+  comments            Comment[]
+  timeEntries         TimeEntry[]
+  notifications       Notification[]
+  createdViews        View[]
+  verificationTokens  VerificationToken[]
   passwordResetTokens PasswordResetToken[]
+  auditLogsAsAdmin    AuditLog[]         @relation("AuditAdmin")
+  auditLogsAsTarget   AuditLog[]         @relation("AuditTarget")
 }
 
 model VerificationToken {
@@ -73,21 +76,42 @@ enum ThemePreference {
 // ─── Platform Settings (SaaS-level) ─────────────────────────
 
 model PlatformSettings {
-  id               String  @id @default("platform")
-  siteName         String  @default("Opchestra")
-  signupEnabled    Boolean @default(true)
-  emailProvider    String  @default("resend")
-  emailApiKey      String?
-  emailFromAddress String  @default("noreply@opchestra.com")
-  emailFromName    String  @default("Opchestra")
-  r2AccountId      String?
-  r2AccessKeyId    String?
-  r2SecretAccessKey String?
-  r2BucketName     String  @default("opchestra")
-  r2PublicUrl      String?
-  maxFreeUsers     Int     @default(3)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @default(now()) @updatedAt
+  id                          String  @id @default("platform")
+  siteName                    String  @default("Opchestra")
+  signupEnabled               Boolean @default(true)
+  maintenanceMode             Boolean @default(false)
+  maintenanceWhitelistDomains String  @default("")
+  disableLogin                Boolean @default(false)
+  emailProvider               String  @default("resend")
+  emailApiKey                 String?
+  emailFromAddress            String  @default("noreply@opchestra.com")
+  emailFromName               String  @default("Opchestra")
+  r2AccountId                 String?
+  r2AccessKeyId               String?
+  r2SecretAccessKey            String?
+  r2BucketName                String  @default("opchestra")
+  r2PublicUrl                 String?
+  maxFreeUsers                Int     @default(3)
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @default(now()) @updatedAt
+}
+
+// ─── Audit Logging ──────────────────────────────────────────
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  action       String
+  adminUserId  String?
+  targetUserId String?
+  details      Json?
+  ipAddress    String?
+  createdAt    DateTime @default(now())
+
+  adminUser  User? @relation("AuditAdmin", fields: [adminUserId], references: [id], onDelete: SetNull)
+  targetUser User? @relation("AuditTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([adminUserId])
 }
 
 // ─── Workspaces ─────────────────────────────────────────────

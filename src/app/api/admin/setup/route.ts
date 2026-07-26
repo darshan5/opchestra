@@ -7,11 +7,7 @@ import { prisma } from '@/lib/db';
 const setupSchema = z.object({
   email: z.string().email(),
   name: z.string().min(2),
-  password: z
-    .string()
-    .min(8)
-    .regex(/[A-Z]/)
-    .regex(/[0-9]/),
+  password: z.string().min(8).regex(/[A-Z]/).regex(/[0-9]/),
 });
 
 export async function POST(request: Request) {
@@ -65,10 +61,13 @@ export async function POST(request: Request) {
       return user;
     });
 
-    return NextResponse.json({
-      email: admin.email,
-      message: 'SaaS admin created. Login at /login, then access /admin.',
-    }, { status: 201 });
+    return NextResponse.json(
+      {
+        email: admin.email,
+        message: 'SaaS admin created. Login at /login, then access /admin.',
+      },
+      { status: 201 },
+    );
   } catch {
     return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });
   }

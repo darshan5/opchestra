@@ -14,7 +14,9 @@ test.describe('SaaS Admin Flow', () => {
 
   test('admin dashboard loads with stats', async ({ page }) => {
     await page.goto('/admin');
-    await expect(page.getByRole('heading', { name: 'Admin Dashboard' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Admin Dashboard' })).toBeVisible({
+      timeout: 10000,
+    });
     await expect(page.getByText('Total Users')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Workspaces' })).toBeVisible();
     await expect(page.getByText('Total Tasks')).toBeVisible();
@@ -22,7 +24,9 @@ test.describe('SaaS Admin Flow', () => {
 
   test('admin settings page loads', async ({ page }) => {
     await page.goto('/admin/settings');
-    await expect(page.getByRole('heading', { name: 'Platform Settings' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Platform Settings' })).toBeVisible({
+      timeout: 10000,
+    });
     await expect(page.getByText('Public Signup')).toBeVisible();
     await expect(page.getByText('Email (Resend)')).toBeVisible();
   });
@@ -54,20 +58,28 @@ test.describe('SaaS Admin Flow', () => {
 
   test('admin sidebar navigation works', async ({ page }) => {
     await page.goto('/admin');
-    await expect(page.getByRole('heading', { name: 'Admin Dashboard' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Admin Dashboard' })).toBeVisible({
+      timeout: 10000,
+    });
 
     // Navigate to settings via sidebar
     await page.getByRole('link', { name: 'Platform Settings' }).click();
-    await expect(page.getByRole('heading', { name: 'Platform Settings' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Platform Settings' })).toBeVisible({
+      timeout: 10000,
+    });
 
     // Navigate back to workspaces
     await page.getByRole('link', { name: 'Workspaces' }).click();
-    await expect(page.getByRole('heading', { name: 'Admin Dashboard' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Admin Dashboard' })).toBeVisible({
+      timeout: 10000,
+    });
   });
 
   test('admin can access app via link', async ({ page }) => {
     await page.goto('/admin');
-    await expect(page.getByRole('heading', { name: 'Admin Dashboard' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Admin Dashboard' })).toBeVisible({
+      timeout: 10000,
+    });
 
     // Click "App" link in sidebar
     await page.getByRole('link', { name: 'App' }).click();

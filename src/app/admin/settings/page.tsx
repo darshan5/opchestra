@@ -8,6 +8,9 @@ import { Input } from '@/components/ui/input';
 interface Settings {
   siteName: string;
   signupEnabled: boolean;
+  maintenanceMode: boolean;
+  maintenanceWhitelistDomains: string;
+  disableLogin: boolean;
   emailProvider: string;
   emailApiKey: string | null;
   emailFromAddress: string;
@@ -20,12 +23,43 @@ interface Settings {
   maxFreeUsers: number;
 }
 
+function Toggle({
+  enabled,
+  onToggle,
+  testId,
+}: {
+  enabled: boolean;
+  onToggle: () => void;
+  testId?: string;
+}) {
+  return (
+    <button
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+        enabled ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-700'
+      }`}
+      data-testid={testId}
+      onClick={onToggle}
+      type="button"
+    >
+      <span
+        className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${
+          enabled ? 'translate-x-6' : 'translate-x-1'
+        }`}
+      />
+    </button>
+  );
+}
+
 export default function AdminSettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
 
+  const [signupEnabled, setSignupEnabled] = useState(true);
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [maintenanceWhitelistDomains, setMaintenanceWhitelistDomains] = useState('');
+  const [disableLogin, setDisableLogin] = useState(false);
   const [emailApiKey, setEmailApiKey] = useState('');
   const [emailFromAddress, setEmailFromAddress] = useState('');
   const [emailFromName, setEmailFromName] = useState('');
@@ -35,7 +69,6 @@ export default function AdminSettingsPage() {
   const [r2BucketName, setR2BucketName] = useState('');
   const [r2PublicUrl, setR2PublicUrl] = useState('');
   const [maxFreeUsers, setMaxFreeUsers] = useState('3');
-  const [signupEnabled, setSignupEnabled] = useState(true);
 
   useEffect(() => {
     fetch('/api/admin/settings')
@@ -43,6 +76,9 @@ export default function AdminSettingsPage() {
       .then((data) => {
         setSettings(data);
         setSignupEnabled(data.signupEnabled ?? true);
+        setMaintenanceMode(data.maintenanceMode ?? false);
+        setMaintenanceWhitelistDomains(data.maintenanceWhitelistDomains ?? '');
+        setDisableLogin(data.disableLogin ?? false);
         setEmailFromAddress(data.emailFromAddress || '');
         setEmailFromName(data.emailFromName || '');
         setR2AccountId(data.r2AccountId || '');
@@ -54,6 +90,34 @@ export default function AdminSettingsPage() {
       .catch(() => setLoading(false));
   }, []);
 
+  async function toggleSetting(field: string, currentValue: boolean, setter: (v: boolean) => void) {
+    const newVal = !currentValue;
+    setter(newVal);
+    const res = await fetch('/api/admin/settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [field]: newVal }),
+    });
+    if (res.ok) {
+      const label = field.replace(/([A-Z])/g, ' $1').toLowerCase();
+      setMessage(newVal ? `${label} enabled` : `${label} disabled`);
+    } else {
+      setter(currentValue);
+      setMessage('Failed to update');
+    }
+  }
+
+  async function saveMaintenanceWhitelist() {
+    setSaving(true);
+    const res = await fetch('/api/admin/settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ maintenanceWhitelistDomains }),
+    });
+    setMessage(res.ok ? 'Whitelist saved' : 'Failed to save');
+    setSaving(false);
+  }
+
   async function saveEmailSettings() {
     setSaving(true);
     setMessage('');
@@ -61,13 +125,11 @@ export default function AdminSettingsPage() {
     if (emailApiKey) {
       data.emailApiKey = emailApiKey;
     }
-
     const res = await fetch('/api/admin/settings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-
     if (res.ok) {
       setMessage('Email settings saved');
       setEmailApiKey('');
@@ -87,13 +149,11 @@ export default function AdminSettingsPage() {
     if (r2SecretAccessKey) {
       data.r2SecretAccessKey = r2SecretAccessKey;
     }
-
     const res = await fetch('/api/admin/settings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-
     if (res.ok) {
       setMessage('Storage settings saved');
       setR2AccessKeyId('');
@@ -107,18 +167,12 @@ export default function AdminSettingsPage() {
   async function savePlanSettings() {
     setSaving(true);
     setMessage('');
-
     const res = await fetch('/api/admin/settings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ maxFreeUsers: parseInt(maxFreeUsers, 10) }),
     });
-
-    if (res.ok) {
-      setMessage('Plan settings saved');
-    } else {
-      setMessage('Failed to save');
-    }
+    setMessage(res.ok ? 'Plan settings saved' : 'Failed to save');
     setSaving(false);
   }
 
@@ -141,47 +195,64 @@ export default function AdminSettingsPage() {
       )}
 
       <section className="mt-8">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">General</h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Access Control</h2>
         <div className="mt-4 space-y-3">
           <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-gray-900">
             <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">
-                Public Signup
-              </p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">Public Signup</p>
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 Allow new users to create accounts via the signup page
               </p>
             </div>
-            <button
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                signupEnabled
-                  ? 'bg-blue-600'
-                  : 'bg-gray-300 dark:bg-gray-700'
-              }`}
-              data-testid="signup-toggle"
-              onClick={async () => {
-                const newVal = !signupEnabled;
-                setSignupEnabled(newVal);
-                const res = await fetch('/api/admin/settings', {
-                  method: 'PATCH',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ signupEnabled: newVal }),
-                });
-                if (res.ok) {
-                  setMessage(newVal ? 'Signup enabled' : 'Signup disabled');
-                } else {
-                  setSignupEnabled(!newVal);
-                  setMessage('Failed to update');
-                }
-              }}
-              type="button"
-            >
-              <span
-                className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${
-                  signupEnabled ? 'translate-x-6' : 'translate-x-1'
-                }`}
+            <Toggle
+              enabled={signupEnabled}
+              onToggle={() => toggleSetting('signupEnabled', signupEnabled, setSignupEnabled)}
+              testId="signup-toggle"
+            />
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-gray-900">
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">Maintenance Mode</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Block signups except for whitelisted domains
+              </p>
+            </div>
+            <Toggle
+              enabled={maintenanceMode}
+              onToggle={() => toggleSetting('maintenanceMode', maintenanceMode, setMaintenanceMode)}
+              testId="maintenance-toggle"
+            />
+          </div>
+
+          {maintenanceMode && (
+            <div className="ml-4 space-y-2 border-l-2 border-blue-200 pl-4 dark:border-blue-800">
+              <Input
+                id="whitelist"
+                label="Whitelisted domains (comma-separated)"
+                onChange={(e) => setMaintenanceWhitelistDomains(e.target.value)}
+                placeholder="company.com, partner.org"
+                type="text"
+                value={maintenanceWhitelistDomains}
               />
-            </button>
+              <Button loading={saving} onClick={saveMaintenanceWhitelist} size="sm">
+                Save Whitelist
+              </Button>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-gray-900">
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">Disable Login</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Block all non-admin logins. Admins can still sign in.
+              </p>
+            </div>
+            <Toggle
+              enabled={disableLogin}
+              onToggle={() => toggleSetting('disableLogin', disableLogin, setDisableLogin)}
+              testId="disable-login-toggle"
+            />
           </div>
         </div>
       </section>

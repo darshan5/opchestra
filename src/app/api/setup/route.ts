@@ -28,6 +28,7 @@ const MIGRATIONS = [
   )`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "User_email_key" ON "User"("email")`,
   `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "isSaasAdmin" BOOLEAN NOT NULL DEFAULT false`,
+  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "mustChangePassword" BOOLEAN NOT NULL DEFAULT false`,
 
   `CREATE TABLE IF NOT EXISTS "PlatformSettings" (
     "id" TEXT NOT NULL DEFAULT 'platform',
@@ -47,6 +48,24 @@ const MIGRATIONS = [
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "PlatformSettings_pkey" PRIMARY KEY ("id")
   )`,
+  `ALTER TABLE "PlatformSettings" ADD COLUMN IF NOT EXISTS "maintenanceMode" BOOLEAN NOT NULL DEFAULT false`,
+  `ALTER TABLE "PlatformSettings" ADD COLUMN IF NOT EXISTS "maintenanceWhitelistDomains" TEXT NOT NULL DEFAULT ''`,
+  `ALTER TABLE "PlatformSettings" ADD COLUMN IF NOT EXISTS "disableLogin" BOOLEAN NOT NULL DEFAULT false`,
+
+  `CREATE TABLE IF NOT EXISTS "AuditLog" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "action" TEXT NOT NULL,
+    "adminUserId" TEXT,
+    "targetUserId" TEXT,
+    "details" JSONB,
+    "ipAddress" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "AuditLog_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "AuditLog_adminUserId_fkey" FOREIGN KEY ("adminUserId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT "AuditLog_targetUserId_fkey" FOREIGN KEY ("targetUserId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE
+  )`,
+  `CREATE INDEX IF NOT EXISTS "AuditLog_createdAt_idx" ON "AuditLog"("createdAt")`,
+  `CREATE INDEX IF NOT EXISTS "AuditLog_adminUserId_idx" ON "AuditLog"("adminUserId")`,
 
   `CREATE TABLE IF NOT EXISTS "VerificationToken" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid(),

@@ -6,28 +6,10 @@ import { z } from 'zod';
 
 import { prisma } from '@/lib/db';
 
-export const authConfig: NextAuthConfig = {
-  pages: {
-    signIn: '/login',
-    newUser: '/signup',
-  },
-  session: {
-    strategy: 'jwt',
-  },
-  callbacks: {
-    jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-      }
-      return token;
-    },
-    session({ session, token }) {
-      if (token.id) {
-        session.user.id = token.id as string;
-      }
-      return session;
-    },
-  },
+import { authConfig } from './auth.config';
+
+export const fullAuthConfig: NextAuthConfig = {
+  ...authConfig,
   providers: [
     Credentials({
       credentials: {
@@ -61,6 +43,16 @@ export const authConfig: NextAuthConfig = {
 
         if (!user.emailVerified) {
           throw new Error('EMAIL_NOT_VERIFIED');
+        }
+
+        if (!user.isSaasAdmin) {
+          const platformSettings = await prisma.platformSettings.findUnique({
+            where: { id: 'platform' },
+            select: { disableLogin: true },
+          });
+          if (platformSettings?.disableLogin) {
+            throw new Error('LOGIN_DISABLED');
+          }
         }
 
         return {

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 
+import { logAuditEvent } from '@/lib/audit';
 import { auth } from '@/lib/auth';
 import { isSaasAdmin } from '@/lib/auth/admin';
 import { prisma } from '@/lib/db';
@@ -42,6 +43,9 @@ export async function PATCH(request: Request) {
     const allowedFields = [
       'siteName',
       'signupEnabled',
+      'maintenanceMode',
+      'maintenanceWhitelistDomains',
+      'disableLogin',
       'emailProvider',
       'emailApiKey',
       'emailFromAddress',
@@ -65,6 +69,11 @@ export async function PATCH(request: Request) {
       where: { id: 'platform' },
       data,
     });
+
+    const changedKeys = Object.keys(data).filter(
+      (k) => !k.toLowerCase().includes('key') && !k.toLowerCase().includes('secret'),
+    );
+    await logAuditEvent('UPDATE_SETTINGS', session.user.id, null, { changed: changedKeys });
 
     return NextResponse.json({
       ...settings,

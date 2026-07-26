@@ -1,4 +1,4 @@
-import { Building2, LogOut, Settings, Shield } from 'lucide-react';
+import { Building2, FileText, LogOut, Settings, Shield, Users } from 'lucide-react';
 import Link from 'next/link';
 
 import { requireSaasAdmin } from '@/lib/auth/admin';
@@ -24,6 +24,20 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </Link>
           <Link
             className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-800"
+            href="/admin/admin-users"
+          >
+            <Users className="h-4 w-4" />
+            Admin Users
+          </Link>
+          <Link
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-800"
+            href="/admin/logs"
+          >
+            <FileText className="h-4 w-4" />
+            Audit Logs
+          </Link>
+          <Link
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-800"
             href="/admin/settings"
           >
             <Settings className="h-4 w-4" />
@@ -34,10 +48,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <div className="border-t border-gray-200 p-3 dark:border-gray-800">
           <p className="truncate text-xs text-gray-500 dark:text-gray-400">{admin.email}</p>
           <div className="mt-2 flex gap-2">
-            <Link
-              className="text-xs text-blue-600 hover:underline dark:text-blue-400"
-              href="/app"
-            >
+            <Link className="text-xs text-blue-600 hover:underline dark:text-blue-400" href="/app">
               App
             </Link>
             <Link

@@ -109,17 +109,14 @@ test.describe('Projects and Tasks', () => {
     const project = await projRes.json();
 
     // Create task
-    const createRes = await page.request.post(
-      `${BASE_URL}/api/workspaces/${workspaceId}/tasks`,
-      {
-        data: {
-          title: 'CRUD Test Task',
-          projectId: project.id,
-          priority: 'HIGH',
-          status: 'Todo',
-        },
+    const createRes = await page.request.post(`${BASE_URL}/api/workspaces/${workspaceId}/tasks`, {
+      data: {
+        title: 'CRUD Test Task',
+        projectId: project.id,
+        priority: 'HIGH',
+        status: 'Todo',
       },
-    );
+    });
     expect(createRes.ok()).toBeTruthy();
     const task = await createRes.json();
     expect(task.title).toBe('CRUD Test Task');

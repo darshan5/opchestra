@@ -1,25 +1,9 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import NextAuth from 'next-auth';
 
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+import { authConfig } from '@/lib/auth/auth.config';
 
-  if (
-    pathname.startsWith('/api/auth') ||
-    pathname.startsWith('/api/setup') ||
-    pathname.startsWith('/api/health') ||
-    pathname.startsWith('/login') ||
-    pathname.startsWith('/signup') ||
-    pathname.startsWith('/verify-email') ||
-    pathname.startsWith('/reset-password') ||
-    pathname.startsWith('/invite')
-  ) {
-    return NextResponse.next();
-  }
-
-  return NextResponse.next();
-}
+export default NextAuth(authConfig).auth;
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/admin/:path*', '/app/:path*'],
 };

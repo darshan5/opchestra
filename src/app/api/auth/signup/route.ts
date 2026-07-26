@@ -8,23 +8,40 @@ import { sendVerificationEmail } from '@/lib/email';
 
 export async function POST(request: Request) {
   try {
-    const platformSettings = await prisma.platformSettings.findUnique({
-      where: { id: 'platform' },
-      select: { signupEnabled: true },
-    });
-
-    if (platformSettings && !platformSettings.signupEnabled) {
-      return NextResponse.json(
-        { error: 'Signup is currently disabled. Contact your administrator.' },
-        { status: 403 },
-      );
-    }
-
     const body = await request.json();
     const parsed = signupSchema.safeParse(body);
 
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
+    }
+
+    const platformSettings = await prisma.platformSettings.findUnique({
+      where: { id: 'platform' },
+      select: { signupEnabled: true, maintenanceMode: true, maintenanceWhitelistDomains: true },
+    });
+
+    if (platformSettings) {
+      if (!platformSettings.signupEnabled) {
+        return NextResponse.json(
+          { error: 'Signup is currently disabled. Contact your administrator.' },
+          { status: 403 },
+        );
+      }
+
+      if (platformSettings.maintenanceMode) {
+        const emailDomain = parsed.data.email.split('@')[1];
+        const whitelist = (platformSettings.maintenanceWhitelistDomains || '')
+          .split(',')
+          .map((d) => d.trim().toLowerCase())
+          .filter(Boolean);
+
+        if (!whitelist.includes(emailDomain.toLowerCase())) {
+          return NextResponse.json(
+            { error: 'System is under maintenance. Please try again later.' },
+            { status: 503 },
+          );
+        }
+      }
     }
 
     const { email, name, password } = parsed.data;
