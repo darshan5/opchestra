@@ -25,7 +25,7 @@ export const authConfig: NextAuthConfig = {
       const isLoggedIn = !!auth?.user;
 
       if (nextUrl.pathname.startsWith('/admin')) {
-        return isLoggedIn || Response.redirect(new URL('/login', nextUrl));
+        return isLoggedIn || Response.redirect(new URL('/admin-login', nextUrl));
       }
 
       if (nextUrl.pathname.startsWith('/app')) {

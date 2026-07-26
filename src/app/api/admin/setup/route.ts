@@ -64,7 +64,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         email: admin.email,
-        message: 'SaaS admin created. Login at /login, then access /admin.',
+        message: 'SaaS admin created. Login at /admin-login to access the admin portal.',
       },
       { status: 201 },
     );

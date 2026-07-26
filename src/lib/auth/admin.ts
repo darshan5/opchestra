@@ -7,7 +7,7 @@ import { auth } from '.';
 export async function requireSaasAdmin() {
   const session = await auth();
   if (!session?.user?.id) {
-    redirect('/login');
+    redirect('/admin-login');
   }
 
   const user = await prisma.user.findUnique({
@@ -16,7 +16,7 @@ export async function requireSaasAdmin() {
   });
 
   if (!user?.isSaasAdmin) {
-    redirect('/app');
+    redirect('/admin-login');
   }
 
   return user;
