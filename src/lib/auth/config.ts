@@ -27,31 +27,6 @@ export const authConfig: NextAuthConfig = {
       }
       return session;
     },
-    authorized({ auth, request: { nextUrl } }) {
-      const isLoggedIn = !!auth?.user;
-      const isAuthPage =
-        nextUrl.pathname.startsWith('/login') ||
-        nextUrl.pathname.startsWith('/signup') ||
-        nextUrl.pathname.startsWith('/verify-email') ||
-        nextUrl.pathname.startsWith('/reset-password') ||
-        nextUrl.pathname.startsWith('/invite');
-
-      if (isAuthPage) {
-        if (isLoggedIn) {
-          return Response.redirect(new URL('/app', nextUrl));
-        }
-        return true;
-      }
-
-      if (nextUrl.pathname.startsWith('/app')) {
-        if (!isLoggedIn) {
-          return Response.redirect(new URL('/login', nextUrl));
-        }
-        return true;
-      }
-
-      return true;
-    },
   },
   providers: [
     Credentials({

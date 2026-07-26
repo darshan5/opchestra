@@ -1,7 +1,25 @@
-export { auth as middleware } from '@/lib/auth';
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  if (
+    pathname.startsWith('/api/auth') ||
+    pathname.startsWith('/api/setup') ||
+    pathname.startsWith('/api/health') ||
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/signup') ||
+    pathname.startsWith('/verify-email') ||
+    pathname.startsWith('/reset-password') ||
+    pathname.startsWith('/invite')
+  ) {
+    return NextResponse.next();
+  }
+
+  return NextResponse.next();
+}
 
 export const config = {
-  matcher: [
-    '/((?!api/auth|api/setup|api/health|_next/static|_next/image|favicon.ico).*)',
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };
