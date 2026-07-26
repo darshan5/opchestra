@@ -40,12 +40,17 @@ const navItems = [
 export function AdminSidebar({ adminEmail, adminRole }: AdminSidebarProps) {
   const pathname = usePathname();
   const [ticketCount, setTicketCount] = useState(0);
-  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>(() => {
-    if (typeof window === 'undefined') {
-      return 'system';
-    }
-    return (localStorage.getItem('admin-theme') as 'light' | 'dark' | 'system') ?? 'system';
-  });
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('admin-theme');
+    const isDark =
+      stored === 'dark' ||
+      (!stored && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    setTheme(isDark ? 'dark' : 'light');
+    setMounted(true);
+  }, []);
 
   const fetchTicketCount = useCallback(async () => {
     try {
@@ -66,14 +71,10 @@ export function AdminSidebar({ adminEmail, adminRole }: AdminSidebarProps) {
   }, [fetchTicketCount]);
 
   function toggleTheme() {
-    const next = theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light';
+    const next = theme === 'light' ? 'dark' : 'light';
     setTheme(next);
     localStorage.setItem('admin-theme', next);
     if (next === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else if (next === 'light') {
-      document.documentElement.classList.remove('dark');
-    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
@@ -126,18 +127,20 @@ export function AdminSidebar({ adminEmail, adminRole }: AdminSidebarProps) {
               Logout
             </button>
           </form>
-          <button
-            className="rounded p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-            onClick={toggleTheme}
-            title={`Theme: ${theme}`}
-            type="button"
-          >
-            {theme === 'dark' ? (
-              <Moon className="h-3.5 w-3.5" />
-            ) : (
-              <Sun className={cn('h-3.5 w-3.5', theme === 'system' && 'opacity-60')} />
-            )}
-          </button>
+          {mounted && (
+            <button
+              className="rounded p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+              onClick={toggleTheme}
+              title={`Theme: ${theme}`}
+              type="button"
+            >
+              {theme === 'dark' ? (
+                <Sun className="h-3.5 w-3.5" />
+              ) : (
+                <Moon className="h-3.5 w-3.5" />
+              )}
+            </button>
+          )}
         </div>
       </div>
     </aside>
