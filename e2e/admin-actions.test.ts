@@ -69,12 +69,13 @@ test.describe.serial('Admin Actions (sequential)', () => {
     await page.waitForURL(/\/app/, { timeout: 15000 });
 
     // Create a workspace for the admin
+    const wsSlug = `admin-ws-${Date.now()}`;
     await page.goto('/app/onboarding');
-    await page.getByLabel('Workspace name').fill('Opchestra HQ');
+    await page.getByLabel('Workspace name').fill('Admin Workspace');
     await page.getByLabel('URL').clear();
-    await page.getByLabel('URL').fill('opchestra-hq');
+    await page.getByLabel('URL').fill(wsSlug);
     await page.getByRole('button', { name: 'Create workspace' }).click();
-    await expect(page).toHaveURL(/\/app\/opchestra-hq/, { timeout: 15000 });
+    await expect(page).toHaveURL(new RegExp(`/app/${wsSlug}`), { timeout: 15000 });
 
     await page.screenshot({ path: 'test-results/workspace-created.png' });
 
