@@ -44,6 +44,27 @@ export async function POST() {
       }
     }
 
+    // Also clean up users with zero workspace memberships (except main admin)
+    const orphanedUsers = await prisma.user.findMany({
+      where: {
+        memberships: { none: {} },
+        email: { not: 'darshanpatel@gmail.com' },
+      },
+      select: { id: true, email: true },
+    });
+
+    for (const u of orphanedUsers) {
+      try {
+        await prisma.supportTicket.deleteMany({ where: { userId: u.id } });
+        await prisma.verificationToken.deleteMany({ where: { userId: u.id } });
+        await prisma.passwordResetToken.deleteMany({ where: { userId: u.id } });
+        await prisma.user.delete({ where: { id: u.id } });
+        usersDeleted++;
+      } catch {
+        // skip if still referenced
+      }
+    }
+
     const remainingWorkspaces = await prisma.workspace.count();
     const remainingUsers = await prisma.user.count();
 
