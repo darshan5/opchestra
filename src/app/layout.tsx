@@ -12,6 +12,9 @@ const inter = Inter({
 export const metadata: Metadata = {
   description:
     'Your business operating system — project management, tasks, tickets, time tracking, and invoicing.',
+  icons: {
+    icon: '/favicon.svg',
+  },
   title: 'Opchestra',
 };
 
