@@ -11,6 +11,7 @@ import {
   FolderKanban,
   Plus,
   Send,
+  Ticket,
   X,
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
@@ -115,6 +116,7 @@ export function TaskDetailPanel({
   const [newSubTaskTitle, setNewSubTaskTitle] = useState('');
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState('');
+  const [openTickets, setOpenTickets] = useState<Array<{ id: string; ticketNumber: string; title: string }>>([]);
 
   const fetchTask = useCallback(async () => {
     const res = await fetch(`/api/workspaces/${workspaceId}/tasks/${taskId}`);
@@ -136,9 +138,18 @@ export function TaskDetailPanel({
   useEffect(() => {
     const load = async () => {
       await Promise.all([fetchTask(), fetchComments()]);
+      // Fetch open tickets for the ticket dropdown
+      fetch(`/api/workspaces/${workspaceId}/tickets`)
+        .then((r) => r.ok ? r.json() : [])
+        .then((data) => {
+          const open = (data as Array<{ id: string; ticketNumber: string; title: string; status: string }>)
+            .filter((t) => t.status !== 'Closed' && t.status !== 'Resolved');
+          setOpenTickets(open);
+        })
+        .catch(() => {});
     };
     load();
-  }, [fetchTask, fetchComments]);
+  }, [fetchTask, fetchComments, workspaceId]);
 
   async function updateField(field: string, value: unknown) {
     const res = await fetch(`/api/workspaces/${workspaceId}/tasks/${taskId}`, {
@@ -315,6 +326,7 @@ export function TaskDetailPanel({
               addSubTask={addSubTask}
               members={members}
               newSubTaskTitle={newSubTaskTitle}
+              openTickets={openTickets}
               projects={projects}
               setNewSubTaskTitle={setNewSubTaskTitle}
               task={task}
@@ -356,6 +368,7 @@ function DetailsTab({
   addSubTask,
   members,
   newSubTaskTitle,
+  openTickets,
   projects,
   setNewSubTaskTitle,
   task,
@@ -367,6 +380,7 @@ function DetailsTab({
   updateField: (field: string, value: unknown) => void;
   projects: Array<{ id: string; name: string }>;
   members: TaskUser[];
+  openTickets: Array<{ id: string; ticketNumber: string; title: string }>;
   workspaceId: string;
   taskId: string;
   newSubTaskTitle: string;
@@ -456,6 +470,19 @@ function DetailsTab({
               type="number"
             />
             <span className="text-xs text-gray-400">hours</span>
+          </FieldRow>
+
+          <FieldRow icon={Ticket} label="Ticket">
+            <select
+              className="w-full truncate rounded border-0 bg-transparent py-0.5 text-sm text-gray-700 cursor-pointer dark:text-gray-300"
+              onChange={(e) => updateField('sourceTicketId', e.target.value || null)}
+              value={(task as unknown as { sourceTicketId?: string }).sourceTicketId ?? ''}
+            >
+              <option value="">None</option>
+              {openTickets.map((t) => (
+                <option key={t.id} value={t.id}>{t.ticketNumber} — {t.title}</option>
+              ))}
+            </select>
           </FieldRow>
         </div>
       </section>

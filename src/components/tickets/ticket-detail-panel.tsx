@@ -56,6 +56,8 @@ export function TicketDetailPanel({
   const [editingDesc, setEditingDesc] = useState(false);
   const [descDraft, setDescDraft] = useState('');
   const [creatingTask, setCreatingTask] = useState(false);
+  const [showCreateTask, setShowCreateTask] = useState(false);
+  const [newTaskName, setNewTaskName] = useState('');
   const [tab, setTab] = useState<'details' | 'activity'>('details');
 
   const fetchTicket = useCallback(async () => {
@@ -122,13 +124,13 @@ export function TicketDetailPanel({
   }
 
   async function createTaskFromTicket() {
-    if (!ticket) return;
+    if (!ticket || !newTaskName.trim()) return;
     setCreatingTask(true);
     const res = await fetch(`/api/workspaces/${workspaceId}/tasks`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        title: ticket.title,
+        title: newTaskName.trim(),
         description: ticket.description,
         priority: ticket.priority,
         assigneeId: ticket.assignee?.id,
@@ -137,6 +139,8 @@ export function TicketDetailPanel({
     });
     if (res.ok) {
       fetchTicket();
+      setShowCreateTask(false);
+      setNewTaskName('');
     }
     setCreatingTask(false);
   }
@@ -347,14 +351,32 @@ export function TicketDetailPanel({
                 ) : (
                   <p className="mt-1 text-xs text-gray-400">No linked tasks</p>
                 )}
-                <button
-                  className="mt-2 flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700 disabled:opacity-50 dark:text-blue-400"
-                  disabled={creatingTask}
-                  onClick={createTaskFromTicket}
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  {creatingTask ? 'Creating...' : 'Create Task from Ticket'}
-                </button>
+                {showCreateTask ? (
+                  <div className="mt-2 rounded-lg border border-blue-200 bg-blue-50 p-2 dark:border-blue-800 dark:bg-blue-950">
+                    <input
+                      autoFocus
+                      className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-white"
+                      onChange={(e) => setNewTaskName(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && createTaskFromTicket()}
+                      placeholder="Task name"
+                      value={newTaskName}
+                    />
+                    <div className="mt-1.5 flex gap-2">
+                      <button className="rounded bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50" disabled={!newTaskName.trim() || creatingTask} onClick={createTaskFromTicket}>
+                        {creatingTask ? 'Creating...' : 'Create'}
+                      </button>
+                      <button className="text-xs text-gray-500 hover:text-gray-700" onClick={() => { setShowCreateTask(false); setNewTaskName(''); }}>Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    className="mt-2 flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400"
+                    onClick={() => { setShowCreateTask(true); setNewTaskName(ticket.title); }}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Create Task from Ticket
+                  </button>
+                )}
               </div>
             </div>
           )}
