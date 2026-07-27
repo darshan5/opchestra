@@ -5,6 +5,7 @@ import { ListPlus, Plus, Ticket } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
+import { TaskDetailPanel } from '@/components/tasks/task-detail-panel';
 import { TicketDetailPanel } from '@/components/tickets/ticket-detail-panel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -77,6 +78,7 @@ export default function TicketsPage() {
   const [workspaceId, setWorkspaceId] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  const [openTaskId, setOpenTaskId] = useState<string | null>(null);
   const [members, setMembers] = useState<MemberData[]>([]);
   const [contacts, setContacts] = useState<ContactData[]>([]);
   const [createTaskFor, setCreateTaskFor] = useState<TicketData | null>(null);
@@ -311,8 +313,19 @@ export default function TicketsPage() {
         <TicketDetailPanel
           members={members}
           onClose={() => setSelectedTicketId(null)}
+          onOpenTask={(taskId) => setOpenTaskId(taskId)}
           onUpdate={loadTickets}
           ticketId={selectedTicketId}
+          workspaceId={workspaceId}
+        />
+      )}
+
+      {openTaskId && workspaceId && (
+        <TaskDetailPanel
+          members={members.map((m) => ({ ...m, image: null }))}
+          onClose={() => setOpenTaskId(null)}
+          projects={[]}
+          taskId={openTaskId}
           workspaceId={workspaceId}
         />
       )}

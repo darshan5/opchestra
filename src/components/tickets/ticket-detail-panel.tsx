@@ -12,6 +12,7 @@ interface TicketDetailPanelProps {
   members: Array<{ id: string; name: string | null; email: string }>;
   onClose: () => void;
   onUpdate?: () => void;
+  onOpenTask?: (taskId: string) => void;
 }
 
 interface TicketDetail {
@@ -43,6 +44,7 @@ const STATUSES = ['Open', 'In Progress', 'Waiting on Customer', 'Resolved', 'Clo
 export function TicketDetailPanel({
   members,
   onClose,
+  onOpenTask,
   onUpdate,
   ticketId,
   workspaceId,
@@ -341,11 +343,16 @@ export function TicketDetailPanel({
                 {ticket.linkedTasks?.length > 0 ? (
                   <div className="mt-1 space-y-1">
                     {ticket.linkedTasks.map((t) => (
-                      <div className="flex items-center gap-2 rounded border border-gray-200 px-2 py-1.5 text-sm dark:border-gray-700" key={t.id}>
-                        <ExternalLink className="h-3.5 w-3.5 text-gray-400" />
+                      <button
+                        className="flex w-full items-center gap-2 rounded border border-gray-200 px-2 py-1.5 text-sm transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+                        key={t.id}
+                        onClick={() => { if (onOpenTask) { onClose(); onOpenTask(t.id); } }}
+                        type="button"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5 text-blue-500" />
                         <span className="text-gray-900 dark:text-white">{t.title}</span>
                         <span className="ml-auto rounded-full bg-gray-100 px-2 py-0.5 text-xs dark:bg-gray-800">{t.status}</span>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 ) : (
