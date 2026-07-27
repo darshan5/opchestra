@@ -459,6 +459,13 @@ const MIGRATIONS = [
   `CREATE UNIQUE INDEX IF NOT EXISTS "SlaRule_workspaceId_priority_key" ON "SlaRule"("workspaceId", "priority")`,
   `CREATE INDEX IF NOT EXISTS "SlaRule_workspaceId_idx" ON "SlaRule"("workspaceId")`,
 
+  `ALTER TABLE "Workspace" ADD COLUMN IF NOT EXISTS "stripeCustomerId" TEXT`,
+  `ALTER TABLE "Workspace" ADD COLUMN IF NOT EXISTS "stripeSubscriptionId" TEXT`,
+  `ALTER TABLE "Workspace" ADD COLUMN IF NOT EXISTS "stripePlanId" TEXT`,
+  `ALTER TABLE "Workspace" ADD COLUMN IF NOT EXISTS "subscriptionStatus" TEXT`,
+  `ALTER TABLE "Workspace" ADD COLUMN IF NOT EXISTS "currentPeriodEnd" TIMESTAMP(3)`,
+  `ALTER TABLE "Workspace" ADD COLUMN IF NOT EXISTS "seatLimit" INTEGER NOT NULL DEFAULT 3`,
+
   `CREATE TYPE "InvoiceStatus" AS ENUM ('DRAFT', 'SENT', 'PAID', 'OVERDUE', 'CANCELLED')`,
 
   `CREATE TABLE IF NOT EXISTS "Invoice" (

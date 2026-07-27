@@ -27,6 +27,18 @@ export async function POST(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    const ws = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { seatLimit: true },
+    });
+    const memberCount = await prisma.workspaceMember.count({ where: { workspaceId } });
+    if (ws && memberCount >= ws.seatLimit) {
+      return NextResponse.json(
+        { error: `Seat limit reached (${ws.seatLimit}). Upgrade your plan to add more members.` },
+        { status: 403 },
+      );
+    }
+
     const body = await request.json();
     const parsed = inviteMemberSchema.safeParse(body);
 

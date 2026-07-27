@@ -256,13 +256,19 @@ model Contact {
 // ─── Workspaces ─────────────────────────────────────────────
 
 model Workspace {
-  id          String   @id @default(uuid())
-  name        String
-  slug        String   @unique
-  staleThresholdDays Int @default(14)
-  ticketPrefix String  @default("TKT")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                  String   @id @default(uuid())
+  name                String
+  slug                String   @unique
+  staleThresholdDays  Int      @default(14)
+  ticketPrefix        String   @default("TKT")
+  stripeCustomerId    String?
+  stripeSubscriptionId String?
+  stripePlanId        String?
+  subscriptionStatus  String?
+  currentPeriodEnd    DateTime?
+  seatLimit           Int      @default(3)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   members              WorkspaceMember[]
   projects             Project[]
