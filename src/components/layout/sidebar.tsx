@@ -221,11 +221,11 @@ export function Sidebar({ projects, slug, taskGroups = [], views = [], workspace
                 <Link
                   className={cn(
                     'flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-colors',
-                    pathname === `${base}/my-tasks`
+                    pathname === `${base}/all-tasks`
                       ? 'bg-blue-50 font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
                       : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800',
                   )}
-                  href={`${base}/my-tasks`}
+                  href={`${base}/all-tasks`}
                 >
                   <LayoutList className="h-4 w-4 shrink-0" />
                   <span>All Tasks</span>

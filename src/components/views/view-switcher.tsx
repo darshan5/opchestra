@@ -59,6 +59,8 @@ interface PhaseData {
   color: string;
 }
 
+type GroupByOption = 'group' | 'status' | 'priority' | 'person' | 'project' | 'phase';
+
 interface ViewSwitcherProps {
   tasks: TaskData[];
   workspaceId: string;
@@ -69,6 +71,7 @@ interface ViewSwitcherProps {
   projects?: Array<{ id: string; name: string }>;
   taskGroups?: TaskGroupData[];
   phases?: PhaseData[];
+  defaultGroupBy?: GroupByOption;
 }
 
 interface FilterRow {
@@ -109,7 +112,16 @@ const PRIORITY_OPTIONS = [
   { color: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300', label: 'Urgent', value: 'URGENT' },
 ];
 
+const GROUP_BY_OPTIONS: Array<{ label: string; value: GroupByOption }> = [
+  { label: 'Group', value: 'group' },
+  { label: 'Status', value: 'status' },
+  { label: 'Priority', value: 'priority' },
+  { label: 'Person', value: 'person' },
+  { label: 'Project', value: 'project' },
+];
+
 export function ViewSwitcher({
+  defaultGroupBy = 'status',
   members,
   phases = [],
   projectId,
@@ -121,6 +133,7 @@ export function ViewSwitcher({
   workspaceId,
 }: ViewSwitcherProps) {
   const [layout, setLayout] = useState<Layout>('TABLE');
+  const [groupBy, setGroupBy] = useState<GroupByOption>(defaultGroupBy);
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
   const [activeViewId, setActiveViewId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
@@ -330,23 +343,40 @@ export function ViewSwitcher({
           ))}
         </div>
 
-        <button
-          className={cn(
-            'flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs transition-colors',
-            filters.length > 0
-              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
-              : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800',
+        <div className="flex items-center gap-2">
+          {layout === 'TABLE' && (
+            <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+              <span>Group by:</span>
+              <select
+                className="rounded border border-gray-300 bg-white px-1.5 py-1 text-xs font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
+                onChange={(e) => setGroupBy(e.target.value as GroupByOption)}
+                value={groupBy}
+              >
+                {GROUP_BY_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+                {phases.length > 0 && <option value="phase">Phase</option>}
+              </select>
+            </div>
           )}
-          onClick={() => setShowFilters(!showFilters)}
-        >
-          <Filter className="h-3.5 w-3.5" />
-          Filter
-          {filters.length > 0 && (
-            <span className="rounded-full bg-blue-600 px-1 text-[10px] text-white">
-              {filters.length}
-            </span>
-          )}
-        </button>
+          <button
+            className={cn(
+              'flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs transition-colors',
+              filters.length > 0
+                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800',
+            )}
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            <Filter className="h-3.5 w-3.5" />
+            Filter
+            {filters.length > 0 && (
+              <span className="rounded-full bg-blue-600 px-1 text-[10px] text-white">
+                {filters.length}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Row 2: Saved views as tabs */}
@@ -487,6 +517,7 @@ export function ViewSwitcher({
       <div className="flex-1 overflow-hidden">
         {layout === 'TABLE' && (
           <TaskTableView
+            groupBy={groupBy}
             members={members}
             projectId={projectId}
             projects={projects}

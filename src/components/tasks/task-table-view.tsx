@@ -56,6 +56,8 @@ interface SubTaskData {
   _count: { subTasks: number };
 }
 
+type GroupByOption = 'group' | 'status' | 'priority' | 'person' | 'project' | 'phase';
+
 interface TaskTableViewProps {
   tasks: TaskData[];
   workspaceId: string;
@@ -65,6 +67,7 @@ interface TaskTableViewProps {
   members: TaskUser[];
   projects?: Array<{ id: string; name: string }>;
   taskGroups?: TaskGroupData[];
+  groupBy?: GroupByOption;
 }
 
 const STATUS_ORDER = ['Todo', 'In Progress', 'Done'];
@@ -159,6 +162,79 @@ function groupTasksByStatus(tasks: TaskData[]): Record<string, TaskData[]> {
     groups[key].push(task);
   }
   return groups;
+}
+
+function groupTasksBy(tasks: TaskData[], mode: GroupByOption, members: TaskUser[]): { groups: Record<string, TaskData[]>; colors: Record<string, string> } {
+  const groups: Record<string, TaskData[]> = {};
+  const colors: Record<string, string> = {};
+
+  if (mode === 'status') {
+    for (const status of STATUS_ORDER) {
+      groups[status] = [];
+    }
+    for (const task of tasks) {
+      const key = STATUS_ORDER.includes(task.status) ? task.status : 'Todo';
+      groups[key].push(task);
+    }
+    colors['Todo'] = '#9CA3AF';
+    colors['In Progress'] = '#F59E0B';
+    colors['Done'] = '#10B981';
+  } else if (mode === 'group') {
+    for (const task of tasks) {
+      const key = task.taskGroup?.name ?? 'Ungrouped';
+      if (!groups[key]) {
+        groups[key] = [];
+        colors[key] = task.taskGroup?.color ?? '#9CA3AF';
+      }
+      groups[key].push(task);
+    }
+    if (!groups['Ungrouped']) {
+      groups['Ungrouped'] = [];
+      colors['Ungrouped'] = '#9CA3AF';
+    }
+  } else if (mode === 'priority') {
+    const order = ['URGENT', 'HIGH', 'MEDIUM', 'LOW', 'NONE'];
+    for (const p of order) {
+      groups[p] = [];
+    }
+    const pColors: Record<string, string> = { URGENT: '#EF4444', HIGH: '#F97316', MEDIUM: '#EAB308', LOW: '#3B82F6', NONE: '#9CA3AF' };
+    for (const task of tasks) {
+      const key = order.includes(task.priority) ? task.priority : 'NONE';
+      groups[key].push(task);
+      colors[key] = pColors[key];
+    }
+  } else if (mode === 'person') {
+    for (const task of tasks) {
+      const key = task.assignee?.name ?? task.assignee?.email ?? 'Unassigned';
+      if (!groups[key]) {
+        groups[key] = [];
+        colors[key] = '#6366F1';
+      }
+      groups[key].push(task);
+    }
+    if (!groups['Unassigned']) {
+      groups['Unassigned'] = [];
+      colors['Unassigned'] = '#9CA3AF';
+    }
+  } else if (mode === 'project') {
+    for (const task of tasks) {
+      const key = task.project?.name ?? 'No Project';
+      if (!groups[key]) {
+        groups[key] = [];
+        colors[key] = '#3B82F6';
+      }
+      groups[key].push(task);
+    }
+    if (!groups['No Project']) {
+      groups['No Project'] = [];
+      colors['No Project'] = '#9CA3AF';
+    }
+  } else {
+    groups['All'] = [...tasks];
+    colors['All'] = '#6B7280';
+  }
+
+  return { colors, groups };
 }
 
 // ── Context Menu ─────────────────────────────────────────────
@@ -411,6 +487,7 @@ function SubItemsSection({
 // ── Main Table ───────────────────────────────────────────────
 
 export function TaskTableView({
+  groupBy = 'status',
   members,
   projectId,
   projects = [],
@@ -429,13 +506,13 @@ export function TaskTableView({
   const [saving, setSaving] = useState(false);
   const [contextMenu, setContextMenu] = useState<{
     taskId: string;
-    status: string;
+    groupKey: string;
     x: number;
     y: number;
   } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
-  const grouped = groupTasksByStatus(tasks);
+  const { colors: groupColors, groups: grouped } = groupTasksBy(tasks, groupBy, members);
 
   function toggleGroup(status: string) {
     setCollapsedGroups((prev) => {
@@ -461,14 +538,32 @@ export function TaskTableView({
     });
   }
 
-  async function createTask(status: string) {
+  async function createTask(groupKey: string) {
     if (!newTaskTitle.trim()) {
       return;
     }
     setSaving(true);
+    const taskData: Record<string, unknown> = { title: newTaskTitle.trim(), projectId: projectId || undefined };
+
+    if (groupBy === 'status') {
+      taskData.status = groupKey;
+    } else if (groupBy === 'group') {
+      const tg = taskGroups.find((g) => g.name === groupKey);
+      if (tg) {
+        taskData.taskGroupId = tg.id;
+      }
+    } else if (groupBy === 'priority') {
+      taskData.priority = groupKey;
+    } else if (groupBy === 'project') {
+      const proj = projects.find((p) => p.name === groupKey);
+      if (proj) {
+        taskData.projectId = proj.id;
+      }
+    }
+
     try {
       const res = await fetch(`/api/workspaces/${workspaceId}/tasks`, {
-        body: JSON.stringify({ projectId: projectId || undefined, status, title: newTaskTitle.trim() }),
+        body: JSON.stringify(taskData),
         headers: { 'Content-Type': 'application/json' },
         method: 'POST',
       });
@@ -534,17 +629,18 @@ export function TaskTableView({
   return (
     <div className="flex-1 overflow-auto">
       <div className="min-w-[800px]">
-        {STATUS_ORDER.map((status) => {
-          const groupTasks = grouped[status] || [];
-          const isCollapsed = collapsedGroups.has(status);
-          const gc = GROUP_COLORS[status] || GROUP_COLORS.Todo;
+        {Object.keys(grouped).map((groupKey) => {
+          const groupTasks = grouped[groupKey] || [];
+          const isCollapsed = collapsedGroups.has(groupKey);
+          const color = groupColors[groupKey] || '#9CA3AF';
 
           return (
-            <div className="mb-2" key={status}>
+            <div className="mb-2" key={groupKey}>
               {/* ── Group Header ─────────────── */}
               <button
-                className={cn('flex w-full items-center gap-2 border-l-4 px-3 py-2', gc.border)}
-                onClick={() => toggleGroup(status)}
+                className="flex w-full items-center gap-2 border-l-4 px-3 py-2"
+                onClick={() => toggleGroup(groupKey)}
+                style={{ borderLeftColor: color }}
                 type="button"
               >
                 {isCollapsed ? (
@@ -552,7 +648,7 @@ export function TaskTableView({
                 ) : (
                   <ChevronDown className="h-4 w-4 text-gray-400" />
                 )}
-                <span className={cn('text-sm font-bold', gc.header)}>{status}</span>
+                <span className="text-sm font-bold" style={{ color }}>{groupKey}</span>
                 <span className="text-xs text-gray-400">({groupTasks.length})</span>
               </button>
 
@@ -603,7 +699,7 @@ export function TaskTableView({
                                 e.stopPropagation();
                                 const rect = (e.target as HTMLElement).getBoundingClientRect();
                                 setContextMenu({
-                                  status,
+                                  groupKey,
                                   taskId: task.id,
                                   x: rect.left,
                                   y: rect.bottom + 4,
@@ -858,12 +954,12 @@ export function TaskTableView({
 
                   {/* Add Item Row */}
                   <div className="border-b border-gray-100 dark:border-gray-800/50">
-                    {addingInGroup === status ? (
+                    {addingInGroup === groupKey ? (
                       <form
                         className="flex items-center py-1 pl-[96px] pr-4"
                         onSubmit={(e) => {
                           e.preventDefault();
-                          createTask(status);
+                          createTask(groupKey);
                         }}
                       >
                         <input
@@ -904,7 +1000,7 @@ export function TaskTableView({
                       <button
                         className="flex w-full items-center gap-1.5 py-2 pl-[96px] text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                         onClick={() => {
-                          setAddingInGroup(status);
+                          setAddingInGroup(groupKey);
                           setNewTaskTitle('');
                         }}
                         type="button"
@@ -992,7 +1088,7 @@ export function TaskTableView({
           }}
           onClose={() => setContextMenu(null)}
           onCreateBelow={() => {
-            setAddingInGroup(contextMenu.status);
+            setAddingInGroup(contextMenu.groupKey);
             setNewTaskTitle('');
           }}
           onDelete={() => setConfirmDelete(contextMenu.taskId)}
