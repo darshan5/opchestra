@@ -804,6 +804,23 @@ function TimeLogTab({ currentUserRole, members, taskId, workspaceId }: { taskId:
   // Editing state
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
   const [editNotesValue, setEditNotesValue] = useState('');
+  const [editingDuration, setEditingDuration] = useState<string | null>(null);
+
+  async function saveEntryDuration(entryId: string, newMinutes: number) {
+    if (newMinutes <= 0) { setEditingDuration(null); return; }
+    const res = await fetch(`/api/workspaces/${workspaceId}/tasks/${taskId}/time-entries/${entryId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ duration: newMinutes }),
+    });
+    if (res.ok) {
+      const old = entries.find((e: TimeEntryData) => e.id === entryId);
+      const diff = old ? newMinutes - old.duration : 0;
+      setEntries((prev: TimeEntryData[]) => prev.map((e: TimeEntryData) => (e.id === entryId ? { ...e, duration: newMinutes } : e)));
+      setTotalMinutes((prev: number) => prev + diff);
+    }
+    setEditingDuration(null);
+  }
 
   const fetchEntries = useCallback(async () => {
     const res = await fetch(`/api/workspaces/${workspaceId}/tasks/${taskId}/time-entries`);
@@ -911,6 +928,7 @@ function TimeLogTab({ currentUserRole, members, taskId, workspaceId }: { taskId:
       setTimerBillable(true);
       setAutoStopped(false);
       fetchEntries();
+      window.dispatchEvent(new Event('timer-started'));
     }
   }
 
@@ -950,6 +968,7 @@ function TimeLogTab({ currentUserRole, members, taskId, workspaceId }: { taskId:
       setTimerNotes('');
       setTimerBillable(true);
       fetchEntries();
+      window.dispatchEvent(new Event('timer-stopped'));
     }
   }
 
@@ -1209,9 +1228,29 @@ function TimeLogTab({ currentUserRole, members, taskId, workspaceId }: { taskId:
                 {formatTime(e.startTime)}
               </span>
             )}
-            <span className="w-14 shrink-0 text-sm font-medium text-gray-900 dark:text-white">
-              {formatDuration(e.duration)}
-            </span>
+            {editingDuration === e.id ? (
+              <input
+                autoFocus
+                className="w-16 shrink-0 rounded border border-blue-300 bg-white px-1 py-0.5 text-xs font-medium dark:border-blue-700 dark:bg-gray-800 dark:text-white"
+                defaultValue={e.duration}
+                onBlur={(ev) => saveEntryDuration(e.id, parseInt(ev.target.value, 10) || e.duration)}
+                onKeyDown={(ev) => {
+                  if (ev.key === 'Enter') { saveEntryDuration(e.id, parseInt((ev.target as HTMLInputElement).value, 10) || e.duration); }
+                  if (ev.key === 'Escape') { setEditingDuration(null); }
+                }}
+                placeholder="min"
+                type="number"
+              />
+            ) : (
+              <button
+                className="w-14 shrink-0 text-left text-sm font-medium text-gray-900 hover:text-blue-600 dark:text-white dark:hover:text-blue-400"
+                onClick={() => setEditingDuration(e.id)}
+                title="Click to adjust minutes"
+                type="button"
+              >
+                {formatDuration(e.duration)}
+              </button>
+            )}
             <div className="min-w-0 flex-1">
               {editingNotes === e.id ? (
                 <input

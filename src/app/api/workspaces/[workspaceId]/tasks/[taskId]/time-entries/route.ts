@@ -74,6 +74,17 @@ export async function POST(
       include: { user: { select: { id: true, name: true, email: true } } },
     });
 
+    const h = Math.floor(duration / 60);
+    const m = duration % 60;
+    const durStr = h > 0 ? (m > 0 ? `${h}h ${m}m` : `${h}h`) : `${m}m`;
+    await prisma.comment.create({
+      data: {
+        taskId,
+        userId: session.user.id,
+        content: { type: 'system', text: `logged ${durStr}` },
+      },
+    });
+
     return NextResponse.json(entry, { status: 201 });
   } catch {
     return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });

@@ -30,7 +30,14 @@ export function ActiveTimerIndicator({ workspaceId }: { workspaceId: string }) {
   useEffect(() => {
     fetchTimer();
     const interval = setInterval(fetchTimer, 30000);
-    return () => clearInterval(interval);
+    const handler = () => fetchTimer();
+    window.addEventListener('timer-stopped', handler);
+    window.addEventListener('timer-started', handler);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('timer-stopped', handler);
+      window.removeEventListener('timer-started', handler);
+    };
   }, [fetchTimer]);
 
   useEffect(() => {

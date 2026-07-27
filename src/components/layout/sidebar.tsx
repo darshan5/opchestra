@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  BarChart3,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -74,6 +75,7 @@ export function Sidebar({ projects, slug, taskGroups = [], views = [], workspace
 
   const bottomItems = [
     { href: `${base}/time-tracking`, icon: Clock, label: 'Time Tracking' },
+    { href: `${base}/reports`, icon: BarChart3, label: 'Reports' },
     { href: `${base}/invoicing`, icon: Receipt, label: 'Invoicing' },
     { href: `${base}/settings`, icon: Settings, label: 'Settings' },
   ];

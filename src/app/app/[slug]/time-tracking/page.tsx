@@ -135,7 +135,9 @@ function groupBy<T>(arr: T[], keyFn: (item: T) => string): Record<string, T[]> {
 
 export default function TimeTrackingPage() {
   const params = useParams<{ slug: string }>();
-  const [tab, setTab] = useState<'in-progress' | 'my-time'>('in-progress');
+  const [tab, setTab] = useState<'in-progress' | 'my-time'>('my-time');
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [stoppingTimer, setStoppingTimer] = useState<string | null>(null);
   const [entries, setEntries] = useState<TimeEntryData[]>([]);
   const [totalMinutes, setTotalMinutes] = useState(0);
   const [billableMinutes, setBillableMinutes] = useState(0);
@@ -173,6 +175,10 @@ export default function TimeTrackingPage() {
           setWorkspaceId(w.id);
         }
       });
+    fetch('/api/auth/session')
+      .then((r) => r.json())
+      .then((s) => { if (s?.user?.id) { setCurrentUserId(s.user.id); } })
+      .catch(() => {});
   }, [params.slug]);
 
   useEffect(() => {
@@ -296,6 +302,19 @@ export default function TimeTrackingPage() {
         <button
           className={cn(
             'flex items-center gap-1.5 border-b-2 px-4 py-2 text-sm font-medium transition-colors',
+            tab === 'my-time'
+              ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+              : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400',
+          )}
+          onClick={() => setTab('my-time')}
+          type="button"
+        >
+          <Clock className="h-3.5 w-3.5" />
+          {isAdmin ? 'Time Log' : 'My Time'}
+        </button>
+        <button
+          className={cn(
+            'flex items-center gap-1.5 border-b-2 px-4 py-2 text-sm font-medium transition-colors',
             tab === 'in-progress'
               ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
               : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400',
@@ -310,19 +329,6 @@ export default function TimeTrackingPage() {
               {activeTimers.length}
             </span>
           )}
-        </button>
-        <button
-          className={cn(
-            'flex items-center gap-1.5 border-b-2 px-4 py-2 text-sm font-medium transition-colors',
-            tab === 'my-time'
-              ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
-              : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400',
-          )}
-          onClick={() => setTab('my-time')}
-          type="button"
-        >
-          <Clock className="h-3.5 w-3.5" />
-          {isAdmin ? 'Time Log' : 'My Time'}
         </button>
       </div>
 
@@ -345,10 +351,13 @@ export default function TimeTrackingPage() {
                     <th className="px-4 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Started</th>
                     <th className="px-4 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Elapsed</th>
                     <th className="px-4 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Billable</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                  {activeTimers.map((timer) => (
+                  {activeTimers.map((timer) => {
+                    const canStop = currentUserId === timer.user.id || isAdmin;
+                    return (
                     <tr key={timer.id}>
                       <td className="px-4 py-2.5">
                         <div className="flex items-center gap-2">
@@ -360,7 +369,13 @@ export default function TimeTrackingPage() {
                           </span>
                         </div>
                       </td>
-                      <td className="px-4 py-2.5 text-sm font-medium text-gray-900 dark:text-white">{timer.task.title}</td>
+                      <td className="px-4 py-2.5 text-sm font-medium">
+                        {timer.task.project ? (
+                          <a className="text-blue-600 hover:underline dark:text-blue-400" href={`/app/${params.slug}/projects/${timer.task.project.id}`}>{timer.task.title}</a>
+                        ) : (
+                          <span className="text-gray-900 dark:text-white">{timer.task.title}</span>
+                        )}
+                      </td>
                       <td className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400">{timer.task.project?.name ?? '—'}</td>
                       <td className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400">{format(new Date(timer.startedAt), 'h:mm a')}</td>
                       <td className="px-4 py-2.5">
@@ -372,8 +387,29 @@ export default function TimeTrackingPage() {
                       <td className="px-4 py-2.5">
                         <span className={timer.billable ? 'text-green-600 dark:text-green-400' : 'text-gray-300 dark:text-gray-600'}>$</span>
                       </td>
+                      <td className="px-4 py-2.5">
+                        {canStop && stoppingTimer !== timer.id && (
+                          <button
+                            className="rounded bg-red-100 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-200 dark:bg-red-900/40 dark:text-red-300 dark:hover:bg-red-900/60"
+                            onClick={async () => {
+                              setStoppingTimer(timer.id);
+                              await fetch(`/api/workspaces/${workspaceId}/tasks/${timer.task.id}/timer/stop`, { method: 'POST' });
+                              setActiveTimers((prev) => prev.filter((t) => t.id !== timer.id));
+                              setStoppingTimer(null);
+                              window.dispatchEvent(new Event('timer-stopped'));
+                            }}
+                            type="button"
+                          >
+                            Stop
+                          </button>
+                        )}
+                        {stoppingTimer === timer.id && (
+                          <span className="text-xs text-gray-400">Stopping...</span>
+                        )}
+                      </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
