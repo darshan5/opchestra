@@ -47,9 +47,23 @@ export default async function WorkspaceLayout({
     redirect('/app');
   }
 
+  const views = await prisma.view.findMany({
+    where: {
+      workspaceId: workspace.id,
+      isShared: true,
+    },
+    select: { id: true, name: true },
+    orderBy: { name: 'asc' },
+  });
+
   return (
     <div className="flex h-full">
-      <Sidebar projects={workspace.projects} slug={slug} workspaceName={workspace.name} />
+      <Sidebar
+        projects={workspace.projects}
+        slug={slug}
+        views={views}
+        workspaceName={workspace.name}
+      />
       <div className="flex flex-1 flex-col lg:pl-64">
         <TopBar slug={slug} userName={session.user.name} />
         <main className="flex-1 overflow-auto">{children}</main>

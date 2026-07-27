@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 
-import { TaskTableView } from '@/components/tasks/task-table-view';
+import { ViewSwitcher } from '@/components/views/view-switcher';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 
@@ -60,7 +60,7 @@ export default async function MyTasksPage({ params }: { params: Promise<{ slug: 
           All tasks assigned to you across projects
         </p>
       </div>
-      <TaskTableView
+      <ViewSwitcher
         members={members.map((m) => m.user)}
         projects={projects}
         slug={slug}

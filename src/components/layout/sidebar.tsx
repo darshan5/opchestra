@@ -3,6 +3,7 @@
 import {
   ChevronLeft,
   Clock,
+  Eye,
   FolderKanban,
   Home,
   LayoutList,
@@ -23,9 +24,10 @@ interface SidebarProps {
   slug: string;
   workspaceName: string;
   projects: Array<{ id: string; name: string }>;
+  views?: Array<{ id: string; name: string }>;
 }
 
-export function Sidebar({ projects, slug, workspaceName }: SidebarProps) {
+export function Sidebar({ projects, slug, views = [], workspaceName }: SidebarProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -156,6 +158,30 @@ export function Sidebar({ projects, slug, workspaceName }: SidebarProps) {
               )}
             </nav>
           </div>
+
+          {views.length > 0 && (
+            <div className="mt-6">
+              <div className="px-3 py-1">
+                {!collapsed && (
+                  <span className="text-xs font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">
+                    Views
+                  </span>
+                )}
+              </div>
+              <nav className="mt-1 space-y-0.5">
+                {views.map((view) => (
+                  <Link
+                    className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                    href={`${base}/views/${view.id}`}
+                    key={view.id}
+                  >
+                    <Eye className="h-4 w-4 shrink-0" />
+                    {!collapsed && <span className="truncate">{view.name}</span>}
+                  </Link>
+                ))}
+              </nav>
+            </div>
+          )}
         </div>
 
         <div className="border-t border-gray-200 px-2 py-3 dark:border-gray-800">

@@ -1,6 +1,6 @@
 import { notFound, redirect } from 'next/navigation';
 
-import { TaskTableView } from '@/components/tasks/task-table-view';
+import { ViewSwitcher } from '@/components/views/view-switcher';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 
@@ -68,7 +68,7 @@ export default async function ProjectPage({
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{project.description}</p>
         )}
       </div>
-      <TaskTableView
+      <ViewSwitcher
         members={members.map((m) => m.user)}
         projectId={projectId}
         projects={allProjects}
