@@ -24,11 +24,19 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const from = searchParams.get('from');
     const to = searchParams.get('to');
+    const userId = searchParams.get('userId');
+
+    const isAdmin = ['SUPER_ADMIN', 'ADMIN', 'MANAGER'].includes(membership.role);
 
     const where: Record<string, unknown> = {
-      userId: session.user.id,
       task: { workspaceId },
     };
+
+    if (userId && userId !== 'all') {
+      where.userId = userId;
+    } else if (!userId || !isAdmin) {
+      where.userId = session.user.id;
+    }
 
     if (from || to) {
       const dateFilter: Record<string, Date> = {};
@@ -44,16 +52,30 @@ export async function GET(
     const entries = await prisma.timeEntry.findMany({
       where,
       include: {
+        user: { select: { id: true, name: true, email: true, image: true } },
         task: {
-          select: { id: true, title: true, project: { select: { id: true, name: true } } },
+          select: {
+            id: true,
+            title: true,
+            priority: true,
+            project: { select: { id: true, name: true } },
+            taskGroup: { select: { id: true, name: true, color: true } },
+          },
         },
       },
       orderBy: { date: 'desc' },
     });
 
     const totalMinutes = entries.reduce((sum, e) => sum + e.duration, 0);
+    const billableMinutes = entries.filter((e) => e.billable).reduce((s, e) => s + e.duration, 0);
 
-    return NextResponse.json({ entries, totalMinutes });
+    return NextResponse.json({
+      billableMinutes,
+      entries,
+      isAdmin,
+      role: membership.role,
+      totalMinutes,
+    });
   } catch {
     return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });
   }
