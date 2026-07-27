@@ -5,8 +5,7 @@ import {
   Columns3,
   Filter,
   GanttChartSquare,
-  List,
-  Save,
+  Plus,
   Table2,
   X,
 } from 'lucide-react';
@@ -16,7 +15,6 @@ import { CalendarView } from '@/components/tasks/calendar-view';
 import { GanttView } from '@/components/tasks/gantt-view';
 import { KanbanView } from '@/components/tasks/kanban-view';
 import { TaskTableView } from '@/components/tasks/task-table-view';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 type Layout = 'TABLE' | 'KANBAN' | 'CALENDAR' | 'GANTT';
@@ -64,7 +62,7 @@ interface FilterRow {
   value: string;
 }
 
-const layouts: Array<{ value: Layout; icon: typeof Table2; label: string }> = [
+const layoutItems: Array<{ value: Layout; icon: typeof Table2; label: string }> = [
   { icon: Table2, label: 'Table', value: 'TABLE' },
   { icon: Columns3, label: 'Kanban', value: 'KANBAN' },
   { icon: Calendar, label: 'Calendar', value: 'CALENDAR' },
@@ -82,6 +80,20 @@ const FILTER_OPS = [
   { label: 'is not', value: 'isNot' },
 ];
 
+const STATUS_OPTIONS = [
+  { color: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300', label: 'Todo', value: 'Todo' },
+  { color: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300', label: 'In Progress', value: 'In Progress' },
+  { color: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300', label: 'Done', value: 'Done' },
+];
+
+const PRIORITY_OPTIONS = [
+  { color: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400', label: 'None', value: 'NONE' },
+  { color: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300', label: 'Low', value: 'LOW' },
+  { color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300', label: 'Medium', value: 'MEDIUM' },
+  { color: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300', label: 'High', value: 'HIGH' },
+  { color: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300', label: 'Urgent', value: 'URGENT' },
+];
+
 export function ViewSwitcher({
   members,
   projectId,
@@ -92,11 +104,12 @@ export function ViewSwitcher({
 }: ViewSwitcherProps) {
   const [layout, setLayout] = useState<Layout>('TABLE');
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
-  const [showViewMenu, setShowViewMenu] = useState(false);
+  const [activeViewId, setActiveViewId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<FilterRow[]>([]);
-  const [saveName, setSaveName] = useState('');
-  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [showNewView, setShowNewView] = useState(false);
+  const [newViewName, setNewViewName] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const fetchViews = useCallback(async () => {
     try {
@@ -117,6 +130,9 @@ export function ViewSwitcher({
   function applyFilters(data: TaskData[]): TaskData[] {
     let result = data;
     for (const f of filters) {
+      if (!f.value) {
+        continue;
+      }
       result = result.filter((task) => {
         let val = '';
         if (f.field === 'status') {
@@ -143,6 +159,7 @@ export function ViewSwitcher({
 
   function addFilter() {
     setFilters([...filters, { field: 'status', operator: 'is', value: '' }]);
+    setShowFilters(true);
   }
 
   function removeFilter(idx: number) {
@@ -150,11 +167,14 @@ export function ViewSwitcher({
   }
 
   function updateFilter(idx: number, patch: Partial<FilterRow>) {
+    if (patch.field) {
+      patch.value = '';
+    }
     setFilters(filters.map((f, i) => (i === idx ? { ...f, ...patch } : f)));
   }
 
   async function saveView() {
-    if (!saveName.trim()) {
+    if (!newViewName.trim()) {
       return;
     }
     try {
@@ -162,15 +182,17 @@ export function ViewSwitcher({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: saveName.trim(),
+          name: newViewName.trim(),
           layout,
           config: { filters },
           isShared: false,
         }),
       });
       if (res.ok) {
-        setSaveName('');
-        setShowSaveDialog(false);
+        const created = await res.json();
+        setNewViewName('');
+        setShowNewView(false);
+        setActiveViewId(created.id);
         fetchViews();
       }
     } catch {
@@ -183,22 +205,94 @@ export function ViewSwitcher({
     const config = view.config as { filters?: FilterRow[] };
     if (config.filters) {
       setFilters(config.filters);
+      if (config.filters.length > 0) {
+        setShowFilters(true);
+      }
+    } else {
+      setFilters([]);
     }
-    setShowViewMenu(false);
+    setActiveViewId(view.id);
   }
 
   async function deleteView(viewId: string) {
     await fetch(`/api/workspaces/${workspaceId}/views/${viewId}`, { method: 'DELETE' });
+    if (activeViewId === viewId) {
+      setActiveViewId(null);
+    }
+    setDeleteConfirm(null);
     fetchViews();
+  }
+
+  function renderFilterValueInput(f: FilterRow, idx: number) {
+    if (f.field === 'status') {
+      return (
+        <select
+          className="rounded border border-gray-300 bg-white px-2 py-1 text-xs dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+          onChange={(e) => updateFilter(idx, { value: e.target.value })}
+          value={f.value}
+        >
+          <option value="">Select...</option>
+          {STATUS_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      );
+    }
+
+    if (f.field === 'priority') {
+      return (
+        <select
+          className="rounded border border-gray-300 bg-white px-2 py-1 text-xs dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+          onChange={(e) => updateFilter(idx, { value: e.target.value })}
+          value={f.value}
+        >
+          <option value="">Select...</option>
+          {PRIORITY_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      );
+    }
+
+    if (f.field === 'assignee') {
+      return (
+        <select
+          className="rounded border border-gray-300 bg-white px-2 py-1 text-xs dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+          onChange={(e) => updateFilter(idx, { value: e.target.value })}
+          value={f.value}
+        >
+          <option value="">Select...</option>
+          {members.map((m) => (
+            <option key={m.id} value={m.name ?? m.email}>
+              {m.name ?? m.email}
+            </option>
+          ))}
+        </select>
+      );
+    }
+
+    return (
+      <input
+        className="rounded border border-gray-300 bg-white px-2 py-1 text-xs dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+        onChange={(e) => updateFilter(idx, { value: e.target.value })}
+        placeholder="Value..."
+        value={f.value}
+      />
+    );
   }
 
   const filteredTasks = applyFilters(tasks);
 
   return (
     <div className="flex h-full flex-col">
+      {/* Row 1: Layout switcher + Filter button */}
       <div className="flex items-center justify-between border-b border-gray-200 px-4 py-2 dark:border-gray-800">
         <div className="flex items-center gap-1">
-          {layouts.map((l) => (
+          {layoutItems.map((l) => (
             <button
               className={cn(
                 'flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors',
@@ -207,7 +301,10 @@ export function ViewSwitcher({
                   : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800',
               )}
               key={l.value}
-              onClick={() => setLayout(l.value)}
+              onClick={() => {
+                setLayout(l.value);
+                setActiveViewId(null);
+              }}
             >
               <l.icon className="h-3.5 w-3.5" />
               {l.label}
@@ -215,75 +312,118 @@ export function ViewSwitcher({
           ))}
         </div>
 
-        <div className="flex items-center gap-1">
-          <button
-            className={cn(
-              'flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs transition-colors',
-              filters.length > 0
-                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
-                : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800',
-            )}
-            onClick={() => setShowFilters(!showFilters)}
-          >
-            <Filter className="h-3.5 w-3.5" />
-            Filter
-            {filters.length > 0 && (
-              <span className="rounded-full bg-blue-600 px-1 text-[10px] text-white">
-                {filters.length}
-              </span>
-            )}
-          </button>
-
-          <div className="relative">
-            <button
-              className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
-              onClick={() => setShowViewMenu(!showViewMenu)}
-            >
-              <List className="h-3.5 w-3.5" />
-              Views
-            </button>
-            {showViewMenu && (
-              <div className="absolute right-0 z-20 mt-1 w-56 rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800">
-                {savedViews.length === 0 && (
-                  <p className="px-3 py-2 text-xs text-gray-400">No saved views</p>
-                )}
-                {savedViews.map((v) => (
-                  <div
-                    className="flex items-center justify-between px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700"
-                    key={v.id}
-                  >
-                    <button
-                      className="flex-1 text-left text-xs text-gray-700 dark:text-gray-300"
-                      onClick={() => loadView(v)}
-                    >
-                      {v.name}
-                    </button>
-                    <button
-                      className="text-gray-400 hover:text-red-500"
-                      onClick={() => deleteView(v.id)}
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
-                <div className="border-t border-gray-100 px-3 py-1.5 dark:border-gray-700">
-                  <button
-                    className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400"
-                    onClick={() => {
-                      setShowSaveDialog(true);
-                      setShowViewMenu(false);
-                    }}
-                  >
-                    <Save className="h-3 w-3" />
-                    Save current view
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+        <button
+          className={cn(
+            'flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs transition-colors',
+            filters.length > 0
+              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+              : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800',
+          )}
+          onClick={() => setShowFilters(!showFilters)}
+        >
+          <Filter className="h-3.5 w-3.5" />
+          Filter
+          {filters.length > 0 && (
+            <span className="rounded-full bg-blue-600 px-1 text-[10px] text-white">
+              {filters.length}
+            </span>
+          )}
+        </button>
       </div>
 
+      {/* Row 2: Saved views as tabs */}
+      <div className="flex items-center gap-1 border-b border-gray-200 px-4 py-1.5 dark:border-gray-800">
+        {savedViews.map((v) => (
+          <div className="group relative flex items-center" key={v.id}>
+            {deleteConfirm === v.id ? (
+              <div className="flex items-center gap-1 rounded-lg border border-red-300 bg-red-50 px-2 py-1 dark:border-red-800 dark:bg-red-900/30">
+                <span className="text-xs text-red-700 dark:text-red-300">Delete?</span>
+                <button
+                  className="rounded px-1 text-xs font-medium text-red-700 hover:bg-red-100 dark:text-red-300 dark:hover:bg-red-900"
+                  onClick={() => deleteView(v.id)}
+                >
+                  Yes
+                </button>
+                <button
+                  className="rounded px-1 text-xs text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                  onClick={() => setDeleteConfirm(null)}
+                >
+                  No
+                </button>
+              </div>
+            ) : (
+              <button
+                className={cn(
+                  'flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors',
+                  activeViewId === v.id
+                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                    : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800',
+                )}
+                onClick={() => loadView(v)}
+              >
+                {v.name}
+                <span
+                  className="ml-0.5 hidden rounded-full p-0.5 text-gray-400 hover:bg-gray-200 hover:text-red-500 group-hover:inline-flex dark:hover:bg-gray-700"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDeleteConfirm(v.id);
+                  }}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <X className="h-2.5 w-2.5" />
+                </span>
+              </button>
+            )}
+          </div>
+        ))}
+
+        {showNewView ? (
+          <div className="flex items-center gap-1">
+            <input
+              autoFocus
+              className="w-28 rounded border border-gray-300 bg-white px-2 py-0.5 text-xs dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+              onChange={(e) => setNewViewName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  saveView();
+                }
+                if (e.key === 'Escape') {
+                  setShowNewView(false);
+                  setNewViewName('');
+                }
+              }}
+              placeholder="View name..."
+              value={newViewName}
+            />
+            <button
+              className="rounded px-1.5 py-0.5 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30"
+              onClick={saveView}
+            >
+              Save
+            </button>
+            <button
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              onClick={() => {
+                setShowNewView(false);
+                setNewViewName('');
+              }}
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ) : (
+          <button
+            className="flex items-center gap-0.5 rounded-lg px-2 py-1 text-xs text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+            onClick={() => setShowNewView(true)}
+            title="Save current view"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+
+      {/* Filters panel */}
       {showFilters && (
         <div className="border-b border-gray-200 bg-gray-50 px-4 py-2 dark:border-gray-800 dark:bg-gray-900">
           {filters.map((f, idx) => (
@@ -310,12 +450,7 @@ export function ViewSwitcher({
                   </option>
                 ))}
               </select>
-              <input
-                className="rounded border border-gray-300 bg-white px-2 py-1 text-xs dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
-                onChange={(e) => updateFilter(idx, { value: e.target.value })}
-                placeholder="Value..."
-                value={f.value}
-              />
+              {renderFilterValueInput(f, idx)}
               <button className="text-gray-400 hover:text-red-500" onClick={() => removeFilter(idx)}>
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -330,29 +465,7 @@ export function ViewSwitcher({
         </div>
       )}
 
-      {showSaveDialog && (
-        <div className="border-b border-gray-200 bg-blue-50 px-4 py-2 dark:border-gray-800 dark:bg-blue-900/20">
-          <div className="flex items-center gap-2">
-            <input
-              autoFocus
-              className="rounded border border-gray-300 bg-white px-2 py-1 text-xs dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
-              onChange={(e) => setSaveName(e.target.value)}
-              placeholder="View name..."
-              value={saveName}
-            />
-            <Button onClick={saveView} size="sm">
-              Save
-            </Button>
-            <button
-              className="text-gray-400 hover:text-gray-600"
-              onClick={() => setShowSaveDialog(false)}
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      )}
-
+      {/* View content */}
       <div className="flex-1 overflow-hidden">
         {layout === 'TABLE' && (
           <TaskTableView
