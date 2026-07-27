@@ -47,10 +47,7 @@ export function AdminSidebar({ adminEmail, adminRole }: AdminSidebarProps) {
 
   useEffect(() => {
     const stored = localStorage.getItem('admin-theme');
-    const isDark =
-      stored === 'dark' ||
-      (!stored && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    setTheme(isDark ? 'dark' : 'light');
+    setTheme(stored === 'dark' ? 'dark' : 'light');
     setMounted(true);
   }, []);
 

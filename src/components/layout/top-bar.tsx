@@ -20,10 +20,7 @@ export function TopBar({ slug, userName, workspaceId }: TopBarProps) {
 
   useEffect(() => {
     const stored = localStorage.getItem('theme');
-    const isDark =
-      stored === 'dark' ||
-      (!stored && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    setTheme(isDark ? 'dark' : 'light');
+    setTheme(stored === 'dark' ? 'dark' : 'light');
     setMounted(true);
   }, []);
 
