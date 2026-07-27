@@ -203,6 +203,80 @@ export function Sidebar({ projects, slug, taskGroups = [], views = [], workspace
             ))}
           </nav>
 
+          {/* Task Groups (cross-project) — ABOVE projects */}
+          {!collapsed && (
+            <div className="mt-6">
+              <div className="flex items-center justify-between px-3 py-1">
+                <span className="text-xs font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">
+                  Groups
+                </span>
+                <button
+                  className="rounded-md p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                  onClick={() => setShowNewGroup(true)}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              <nav className="mt-1 space-y-0.5">
+                <Link
+                  className={cn(
+                    'flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-colors',
+                    pathname === `${base}/my-tasks`
+                      ? 'bg-blue-50 font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                      : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800',
+                  )}
+                  href={`${base}/my-tasks`}
+                >
+                  <LayoutList className="h-4 w-4 shrink-0" />
+                  <span>All Tasks</span>
+                </Link>
+                {taskGroups.map((group) => (
+                  <Link
+                    className={cn(
+                      'flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-colors',
+                      isActive(`${base}/groups/${group.id}`)
+                        ? 'bg-blue-50 font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                        : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800',
+                    )}
+                    href={`${base}/groups/${group.id}`}
+                    key={group.id}
+                  >
+                    <Layers className="h-4 w-4 shrink-0" style={{ color: group.color }} />
+                    <span className="truncate">{group.name}</span>
+                  </Link>
+                ))}
+                {showNewGroup && (
+                  <form
+                    className="flex items-center gap-1 px-3"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      createGroup();
+                    }}
+                  >
+                    <input
+                      autoFocus
+                      className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                      onBlur={() => {
+                        if (!newGroupName.trim()) {
+                          setShowNewGroup(false);
+                        }
+                      }}
+                      onChange={(e) => setNewGroupName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') {
+                          setShowNewGroup(false);
+                          setNewGroupName('');
+                        }
+                      }}
+                      placeholder="Group name"
+                      value={newGroupName}
+                    />
+                  </form>
+                )}
+              </nav>
+            </div>
+          )}
+
           {/* Projects with Phases */}
           <div className="mt-6">
             <div className="flex items-center justify-between px-3 py-1">
@@ -337,72 +411,6 @@ export function Sidebar({ projects, slug, taskGroups = [], views = [], workspace
             </nav>
           </div>
 
-          {/* Task Groups (cross-project) */}
-          {!collapsed && (
-            <div className="mt-6">
-              <div className="flex items-center justify-between px-3 py-1">
-                <span className="text-xs font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">
-                  Groups
-                </span>
-                <button
-                  className="rounded-md p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-                  onClick={() => setShowNewGroup(true)}
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                </button>
-              </div>
-              <nav className="mt-1 space-y-0.5">
-                {taskGroups.map((group) => (
-                  <Link
-                    className={cn(
-                      'flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-colors',
-                      isActive(`${base}/groups/${group.id}`)
-                        ? 'bg-blue-50 font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                        : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800',
-                    )}
-                    href={`${base}/groups/${group.id}`}
-                    key={group.id}
-                  >
-                    <Layers className="h-4 w-4 shrink-0" style={{ color: group.color }} />
-                    <span className="truncate">{group.name}</span>
-                  </Link>
-                ))}
-                {taskGroups.length === 0 && !showNewGroup && (
-                  <p className="px-3 py-1.5 text-xs text-gray-400 dark:text-gray-500">
-                    No groups yet
-                  </p>
-                )}
-                {showNewGroup && (
-                  <form
-                    className="flex items-center gap-1 px-3"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      createGroup();
-                    }}
-                  >
-                    <input
-                      autoFocus
-                      className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                      onBlur={() => {
-                        if (!newGroupName.trim()) {
-                          setShowNewGroup(false);
-                        }
-                      }}
-                      onChange={(e) => setNewGroupName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Escape') {
-                          setShowNewGroup(false);
-                          setNewGroupName('');
-                        }
-                      }}
-                      placeholder="Group name"
-                      value={newGroupName}
-                    />
-                  </form>
-                )}
-              </nav>
-            </div>
-          )}
 
           {views.length > 0 && (
             <div className="mt-6">

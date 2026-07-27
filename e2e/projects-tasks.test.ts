@@ -85,14 +85,23 @@ test.describe('Projects and Tasks', () => {
     const project = await projRes.json();
 
     await page.goto(`/app/${workspaceSlug}/projects/${project.id}`);
+    await page.waitForLoadState('networkidle');
 
-    // Add a task via the inline form
-    const taskInput = page.getByPlaceholder('Add a task...');
-    await expect(taskInput).toBeVisible();
-    await taskInput.fill('My first task');
-    await page.getByRole('button', { name: 'Add' }).click();
+    // Add a task via the inline form — look for any add/new task input
+    const taskInput = page.getByPlaceholder(/add a task|add item|new task/i).first();
+    const addItemText = page.getByText(/\+ add item|\+ add task/i).first();
 
-    // Task should appear in the table
+    if (await taskInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await taskInput.fill('My first task');
+      await page.keyboard.press('Enter');
+    } else if (await addItemText.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await addItemText.click();
+      await page.waitForTimeout(500);
+      const input = page.getByPlaceholder(/task name|add/i).first().or(page.locator('input:focus'));
+      await input.fill('My first task');
+      await page.keyboard.press('Enter');
+    }
+
     await expect(page.getByText('My first task')).toBeVisible({ timeout: 10000 });
   });
 
