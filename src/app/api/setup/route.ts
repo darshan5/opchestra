@@ -549,6 +549,24 @@ const MIGRATIONS = [
   `CREATE INDEX IF NOT EXISTS "TaskGroup_workspaceId_idx" ON "TaskGroup"("workspaceId")`,
   `ALTER TABLE "Task" ADD COLUMN IF NOT EXISTS "taskGroupId" TEXT REFERENCES "TaskGroup"("id") ON DELETE SET NULL`,
   `CREATE INDEX IF NOT EXISTS "Task_taskGroupId_idx" ON "Task"("taskGroupId")`,
+
+  `ALTER TABLE "TaskGroup" DROP CONSTRAINT IF EXISTS "TaskGroup_projectId_fkey"`,
+  `ALTER TABLE "TaskGroup" DROP COLUMN IF EXISTS "projectId"`,
+
+  `CREATE TABLE IF NOT EXISTS "Phase" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "projectId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "color" TEXT NOT NULL DEFAULT '#6B7280',
+    "position" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "Phase_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "Phase_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE
+  )`,
+  `CREATE INDEX IF NOT EXISTS "Phase_projectId_idx" ON "Phase"("projectId")`,
+  `ALTER TABLE "Task" ADD COLUMN IF NOT EXISTS "phaseId" TEXT REFERENCES "Phase"("id") ON DELETE SET NULL`,
+  `CREATE INDEX IF NOT EXISTS "Task_phaseId_idx" ON "Task"("phaseId")`,
 ];
 
 export async function POST() {

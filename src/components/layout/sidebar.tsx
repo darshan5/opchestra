@@ -11,6 +11,7 @@ import {
   Eye,
   FolderKanban,
   Home,
+  Layers,
   LayoutList,
   Menu,
   Plus,
@@ -25,6 +26,12 @@ import { useState } from 'react';
 
 import { cn } from '@/lib/utils';
 
+interface PhaseData {
+  id: string;
+  name: string;
+  color: string;
+}
+
 interface TaskGroupData {
   id: string;
   name: string;
@@ -34,24 +41,28 @@ interface TaskGroupData {
 interface ProjectData {
   id: string;
   name: string;
-  taskGroups?: TaskGroupData[];
+  phases?: PhaseData[];
 }
 
 interface SidebarProps {
   slug: string;
   workspaceName: string;
+  workspaceId: string;
   projects: ProjectData[];
+  taskGroups?: TaskGroupData[];
   views?: Array<{ id: string; name: string }>;
 }
 
-export function Sidebar({ projects, slug, views = [], workspaceName }: SidebarProps) {
+export function Sidebar({ projects, slug, taskGroups = [], views = [], workspaceId, workspaceName }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
-  const [newGroupProjectId, setNewGroupProjectId] = useState<string | null>(null);
+  const [newPhaseProjectId, setNewPhaseProjectId] = useState<string | null>(null);
+  const [newPhaseName, setNewPhaseName] = useState('');
   const [newGroupName, setNewGroupName] = useState('');
+  const [showNewGroup, setShowNewGroup] = useState(false);
 
   const base = `/app/${slug}`;
 
@@ -88,26 +99,36 @@ export function Sidebar({ projects, slug, views = [], workspaceName }: SidebarPr
     });
   }
 
-  async function createGroup(projectId: string) {
+  async function createPhase(projectId: string) {
+    if (!newPhaseName.trim()) {
+      return;
+    }
+    try {
+      await fetch(`/api/workspaces/${workspaceId}/projects/${projectId}/phases`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newPhaseName.trim() }),
+      });
+      setNewPhaseName('');
+      setNewPhaseProjectId(null);
+      router.refresh();
+    } catch {
+      // ignore
+    }
+  }
+
+  async function createGroup() {
     if (!newGroupName.trim()) {
       return;
     }
     try {
-      const wsRes = await fetch('/api/workspaces');
-      const workspaces = await wsRes.json();
-      const ws = workspaces.find((w: { slug: string }) => w.slug === slug);
-      if (!ws) {
-        return;
-      }
-
-      await fetch(`/api/workspaces/${ws.id}/projects/${projectId}/groups`, {
+      await fetch(`/api/workspaces/${workspaceId}/groups`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newGroupName.trim() }),
       });
-
       setNewGroupName('');
-      setNewGroupProjectId(null);
+      setShowNewGroup(false);
       router.refresh();
     } catch {
       // ignore
@@ -182,6 +203,7 @@ export function Sidebar({ projects, slug, views = [], workspaceName }: SidebarPr
             ))}
           </nav>
 
+          {/* Projects with Phases */}
           <div className="mt-6">
             <div className="flex items-center justify-between px-3 py-1">
               {!collapsed && (
@@ -200,7 +222,7 @@ export function Sidebar({ projects, slug, views = [], workspaceName }: SidebarPr
               {projects.map((project) => {
                 const isExpanded = expandedProjects.has(project.id);
                 const projectActive = isActive(`${base}/projects/${project.id}`);
-                const groups = project.taskGroups ?? [];
+                const phases = project.phases ?? [];
 
                 return (
                   <div key={project.id}>
@@ -246,62 +268,60 @@ export function Sidebar({ projects, slug, views = [], workspaceName }: SidebarPr
                           All Tasks
                         </Link>
 
-                        {groups.map((group) => (
+                        {phases.map((phase) => (
                           <Link
                             className={cn(
                               'flex items-center gap-2 rounded-lg px-2 py-1 text-xs transition-colors',
-                              isActive(
-                                `${base}/projects/${project.id}/groups/${group.id}`,
-                              )
+                              isActive(`${base}/projects/${project.id}/phases/${phase.id}`)
                                 ? 'font-medium text-blue-700 dark:text-blue-300'
                                 : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200',
                             )}
-                            href={`${base}/projects/${project.id}/groups/${group.id}`}
-                            key={group.id}
+                            href={`${base}/projects/${project.id}/phases/${phase.id}`}
+                            key={phase.id}
                           >
                             <Circle
                               className="h-2.5 w-2.5 shrink-0"
-                              fill={group.color}
-                              stroke={group.color}
+                              fill={phase.color}
+                              stroke={phase.color}
                             />
-                            <span className="truncate">{group.name}</span>
+                            <span className="truncate">{phase.name}</span>
                           </Link>
                         ))}
 
-                        {newGroupProjectId === project.id ? (
+                        {newPhaseProjectId === project.id ? (
                           <form
                             className="flex items-center gap-1 px-2"
                             onSubmit={(e) => {
                               e.preventDefault();
-                              createGroup(project.id);
+                              createPhase(project.id);
                             }}
                           >
                             <input
                               autoFocus
                               className="w-full rounded border border-gray-300 bg-white px-1.5 py-0.5 text-xs dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                               onBlur={() => {
-                                if (!newGroupName.trim()) {
-                                  setNewGroupProjectId(null);
+                                if (!newPhaseName.trim()) {
+                                  setNewPhaseProjectId(null);
                                 }
                               }}
-                              onChange={(e) => setNewGroupName(e.target.value)}
+                              onChange={(e) => setNewPhaseName(e.target.value)}
                               onKeyDown={(e) => {
                                 if (e.key === 'Escape') {
-                                  setNewGroupProjectId(null);
-                                  setNewGroupName('');
+                                  setNewPhaseProjectId(null);
+                                  setNewPhaseName('');
                                 }
                               }}
-                              placeholder="Group name"
-                              value={newGroupName}
+                              placeholder="Phase name"
+                              value={newPhaseName}
                             />
                           </form>
                         ) : (
                           <button
                             className="flex items-center gap-2 px-2 py-1 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                            onClick={() => setNewGroupProjectId(project.id)}
+                            onClick={() => setNewPhaseProjectId(project.id)}
                           >
                             <Plus className="h-3 w-3" />
-                            New Group
+                            New Phase
                           </button>
                         )}
                       </div>
@@ -316,6 +336,73 @@ export function Sidebar({ projects, slug, views = [], workspaceName }: SidebarPr
               )}
             </nav>
           </div>
+
+          {/* Task Groups (cross-project) */}
+          {!collapsed && (
+            <div className="mt-6">
+              <div className="flex items-center justify-between px-3 py-1">
+                <span className="text-xs font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">
+                  Groups
+                </span>
+                <button
+                  className="rounded-md p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                  onClick={() => setShowNewGroup(true)}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              <nav className="mt-1 space-y-0.5">
+                {taskGroups.map((group) => (
+                  <Link
+                    className={cn(
+                      'flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-colors',
+                      isActive(`${base}/groups/${group.id}`)
+                        ? 'bg-blue-50 font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                        : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800',
+                    )}
+                    href={`${base}/groups/${group.id}`}
+                    key={group.id}
+                  >
+                    <Layers className="h-4 w-4 shrink-0" style={{ color: group.color }} />
+                    <span className="truncate">{group.name}</span>
+                  </Link>
+                ))}
+                {taskGroups.length === 0 && !showNewGroup && (
+                  <p className="px-3 py-1.5 text-xs text-gray-400 dark:text-gray-500">
+                    No groups yet
+                  </p>
+                )}
+                {showNewGroup && (
+                  <form
+                    className="flex items-center gap-1 px-3"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      createGroup();
+                    }}
+                  >
+                    <input
+                      autoFocus
+                      className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                      onBlur={() => {
+                        if (!newGroupName.trim()) {
+                          setShowNewGroup(false);
+                        }
+                      }}
+                      onChange={(e) => setNewGroupName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') {
+                          setShowNewGroup(false);
+                          setNewGroupName('');
+                        }
+                      }}
+                      placeholder="Group name"
+                      value={newGroupName}
+                    />
+                  </form>
+                )}
+              </nav>
+            </div>
+          )}
 
           {views.length > 0 && (
             <div className="mt-6">

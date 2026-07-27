@@ -4,41 +4,30 @@ import { ViewSwitcher } from '@/components/views/view-switcher';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 
-export default async function ProjectPage({
+export default async function GroupPage({
   params,
 }: {
-  params: Promise<{ slug: string; projectId: string }>;
+  params: Promise<{ slug: string; groupId: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) {
     redirect('/login');
   }
 
-  const { slug, projectId } = await params;
+  const { slug, groupId } = await params;
 
   const workspace = await prisma.workspace.findUnique({ where: { slug } });
   if (!workspace) {
     notFound();
   }
 
-  const membership = await prisma.workspaceMember.findUnique({
-    where: { workspaceId_userId: { workspaceId: workspace.id, userId: session.user.id } },
-  });
-
-  if (!membership) {
-    redirect('/app');
-  }
-
-  const project = await prisma.project.findUnique({
-    where: { id: projectId },
-  });
-
-  if (!project || project.workspaceId !== workspace.id) {
+  const group = await prisma.taskGroup.findUnique({ where: { id: groupId } });
+  if (!group || group.workspaceId !== workspace.id) {
     notFound();
   }
 
   const tasks = await prisma.task.findMany({
-    where: { workspaceId: workspace.id, projectId, parentTaskId: null },
+    where: { workspaceId: workspace.id, taskGroupId: groupId, parentTaskId: null },
     include: {
       assignee: { select: { id: true, name: true, email: true, image: true } },
       project: { select: { id: true, name: true } },
@@ -50,7 +39,7 @@ export default async function ProjectPage({
     orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
   });
 
-  const [members, allProjects, phases, taskGroups] = await Promise.all([
+  const [members, allProjects] = await Promise.all([
     prisma.workspaceMember.findMany({
       where: { workspaceId: workspace.id },
       include: { user: { select: { id: true, name: true, email: true, image: true } } },
@@ -60,33 +49,23 @@ export default async function ProjectPage({
       select: { id: true, name: true },
       orderBy: { name: 'asc' },
     }),
-    prisma.phase.findMany({
-      where: { projectId },
-      select: { id: true, name: true, color: true },
-      orderBy: { position: 'asc' },
-    }),
-    prisma.taskGroup.findMany({
-      where: { workspaceId: workspace.id },
-      select: { id: true, name: true, color: true },
-      orderBy: { position: 'asc' },
-    }),
   ]);
 
   return (
     <div className="flex h-full flex-col">
       <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white">{project.name}</h1>
-        {project.description && (
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{project.description}</p>
-        )}
+        <p className="text-xs text-gray-500 dark:text-gray-400">Group</p>
+        <h1 className="text-xl font-bold dark:text-white" style={{ color: group.color }}>
+          {group.name}
+        </h1>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          Tasks from all projects in this group
+        </p>
       </div>
       <ViewSwitcher
         members={members.map((m) => m.user)}
-        phases={phases}
-        projectId={projectId}
         projects={allProjects}
         slug={slug}
-        taskGroups={taskGroups}
         tasks={tasks}
         workspaceId={workspace.id}
       />

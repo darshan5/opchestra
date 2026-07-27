@@ -28,11 +28,15 @@ export default async function WorkspaceLayout({
         select: {
           id: true,
           name: true,
-          taskGroups: {
+          phases: {
             select: { id: true, name: true, color: true },
             orderBy: { position: 'asc' },
           },
         },
+      },
+      taskGroups: {
+        select: { id: true, name: true, color: true },
+        orderBy: { position: 'asc' },
       },
     },
   });
@@ -68,7 +72,9 @@ export default async function WorkspaceLayout({
       <Sidebar
         projects={workspace.projects}
         slug={slug}
+        taskGroups={workspace.taskGroups}
         views={views}
+        workspaceId={workspace.id}
         workspaceName={workspace.name}
       />
       <div className="flex flex-1 flex-col lg:pl-64">

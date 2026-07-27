@@ -135,6 +135,7 @@ export async function POST(
         timeEstimate: parsed.data.timeEstimate,
         isMilestone: parsed.data.isMilestone ?? false,
         taskGroupId: parsed.data.taskGroupId,
+        phaseId: parsed.data.phaseId,
         depth,
         position: (lastTask?.position ?? 0) + 1,
       },

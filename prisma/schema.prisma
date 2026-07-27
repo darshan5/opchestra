@@ -335,7 +335,7 @@ model Project {
 
   workspace  Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   tasks      Task[]
-  taskGroups TaskGroup[]
+  phases     Phase[]
 
   @@index([workspaceId])
 }
@@ -345,12 +345,11 @@ enum ProjectStatus {
   ARCHIVED
 }
 
-// ─── Task Groups ────────────────────────────────────────────
+// ─── Task Groups (cross-project, workspace-level) ───────
 
 model TaskGroup {
   id          String   @id @default(uuid())
   workspaceId String
-  projectId   String
   name        String
   color       String   @default("#6B7280")
   position    Int      @default(0)
@@ -358,11 +357,26 @@ model TaskGroup {
   updatedAt   DateTime @updatedAt
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   tasks     Task[]
 
-  @@index([projectId])
   @@index([workspaceId])
+}
+
+// ─── Phases (per-project grouping) ──────────────────────
+
+model Phase {
+  id        String   @id @default(uuid())
+  projectId String
+  name      String
+  color     String   @default("#6B7280")
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks   Task[]
+
+  @@index([projectId])
 }
 
 // ─── Tasks ──────────────────────────────────────────────────
@@ -395,9 +409,11 @@ model Task {
   slaResponseDue    DateTime?
   slaResolutionDue  DateTime?
   taskGroupId       String?
+  phaseId           String?
 
   workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   taskGroup      TaskGroup? @relation(fields: [taskGroupId], references: [id], onDelete: SetNull)
+  phase          Phase?     @relation(fields: [phaseId], references: [id], onDelete: SetNull)
   project        Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
   parentTask     Task?     @relation("SubTasks", fields: [parentTaskId], references: [id], onDelete: Cascade)
   subTasks       Task[]    @relation("SubTasks")
@@ -422,6 +438,7 @@ model Task {
   @@index([workspaceId, status])
   @@index([ticketNumber])
   @@index([taskGroupId])
+  @@index([phaseId])
 }
 
 enum TaskPriority {

@@ -53,6 +53,12 @@ interface TaskGroupData {
   color: string;
 }
 
+interface PhaseData {
+  id: string;
+  name: string;
+  color: string;
+}
+
 interface ViewSwitcherProps {
   tasks: TaskData[];
   workspaceId: string;
@@ -62,6 +68,7 @@ interface ViewSwitcherProps {
   members: TaskUser[];
   projects?: Array<{ id: string; name: string }>;
   taskGroups?: TaskGroupData[];
+  phases?: PhaseData[];
 }
 
 interface FilterRow {
@@ -104,6 +111,7 @@ const PRIORITY_OPTIONS = [
 
 export function ViewSwitcher({
   members,
+  phases = [],
   projectId,
   projects = [],
   slug,

@@ -128,6 +128,9 @@ export async function PATCH(
     if (parsed.data.taskGroupId !== undefined) {
       data.taskGroupId = parsed.data.taskGroupId;
     }
+    if (parsed.data.phaseId !== undefined) {
+      data.phaseId = parsed.data.phaseId;
+    }
     if (parsed.data.position !== undefined) {
       data.position = parsed.data.position;
     }
