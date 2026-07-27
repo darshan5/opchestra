@@ -5,6 +5,7 @@ import { ChevronRight, MessageSquare, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+import { TaskDetailPanel } from '@/components/tasks/task-detail-panel';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -34,6 +35,7 @@ interface TaskTableViewProps {
   projectId?: string;
   slug: string;
   members: TaskUser[];
+  projects?: Array<{ id: string; name: string }>;
 }
 
 const priorityColors: Record<string, string> = {
@@ -53,6 +55,7 @@ const statusColors: Record<string, string> = {
 export function TaskTableView({
   members,
   projectId,
+  projects = [],
   tasks: initialTasks,
   workspaceId,
 }: TaskTableViewProps) {
@@ -117,6 +120,10 @@ export function TaskTableView({
     }
   }
 
+  function handleTaskUpdated() {
+    router.refresh();
+  }
+
   return (
     <div className="flex-1 overflow-auto">
       <table className="w-full">
@@ -148,7 +155,7 @@ export function TaskTableView({
                 selectedTaskId === task.id && 'bg-blue-50 dark:bg-blue-900/20',
               )}
               key={task.id}
-              onClick={() => setSelectedTaskId(task.id === selectedTaskId ? null : task.id)}
+              onClick={() => setSelectedTaskId(task.id)}
             >
               <td className="px-4 py-2.5">
                 <div className="flex items-center gap-2">
@@ -273,6 +280,17 @@ export function TaskTableView({
           )}
         </form>
       </div>
+
+      {selectedTaskId && (
+        <TaskDetailPanel
+          members={members}
+          onClose={() => setSelectedTaskId(null)}
+          onTaskUpdated={handleTaskUpdated}
+          projects={projects}
+          taskId={selectedTaskId}
+          workspaceId={workspaceId}
+        />
+      )}
     </div>
   );
 }

@@ -138,6 +138,37 @@ export async function PATCH(
       }
     }
 
+    const activityMessages: string[] = [];
+    if (parsed.data.status !== undefined && parsed.data.status !== existing.status) {
+      activityMessages.push(`changed status from ${existing.status} to ${parsed.data.status}`);
+    }
+    if (parsed.data.priority !== undefined && parsed.data.priority !== existing.priority) {
+      activityMessages.push(
+        `changed priority from ${existing.priority} to ${parsed.data.priority}`,
+      );
+    }
+    if (parsed.data.assigneeId !== undefined && parsed.data.assigneeId !== existing.assigneeId) {
+      if (parsed.data.assigneeId) {
+        const assignee = await prisma.user.findUnique({
+          where: { id: parsed.data.assigneeId },
+          select: { name: true, email: true },
+        });
+        activityMessages.push(`assigned to ${assignee?.name ?? assignee?.email ?? 'someone'}`);
+      } else {
+        activityMessages.push('removed assignee');
+      }
+    }
+
+    if (activityMessages.length > 0) {
+      await prisma.comment.create({
+        data: {
+          taskId,
+          userId: session.user.id,
+          content: { type: 'system', text: activityMessages.join(', ') },
+        },
+      });
+    }
+
     const task = await prisma.task.update({
       where: { id: taskId },
       data,

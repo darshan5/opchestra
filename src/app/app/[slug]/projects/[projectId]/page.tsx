@@ -48,10 +48,17 @@ export default async function ProjectPage({
     orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
   });
 
-  const members = await prisma.workspaceMember.findMany({
-    where: { workspaceId: workspace.id },
-    include: { user: { select: { id: true, name: true, email: true, image: true } } },
-  });
+  const [members, allProjects] = await Promise.all([
+    prisma.workspaceMember.findMany({
+      where: { workspaceId: workspace.id },
+      include: { user: { select: { id: true, name: true, email: true, image: true } } },
+    }),
+    prisma.project.findMany({
+      where: { workspaceId: workspace.id, status: 'ACTIVE' },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    }),
+  ]);
 
   return (
     <div className="flex h-full flex-col">
@@ -64,6 +71,7 @@ export default async function ProjectPage({
       <TaskTableView
         members={members.map((m) => m.user)}
         projectId={projectId}
+        projects={allProjects}
         slug={slug}
         tasks={tasks}
         workspaceId={workspace.id}

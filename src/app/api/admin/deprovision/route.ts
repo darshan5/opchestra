@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 
+import { logAuditEvent } from '@/lib/audit';
 import { hasPermission } from '@/lib/auth/admin-permissions';
 import { getAdminSession } from '@/lib/auth/admin-session';
-import { logAuditEvent } from '@/lib/audit';
 import { prisma } from '@/lib/db';
 
 export async function DELETE(request: Request) {

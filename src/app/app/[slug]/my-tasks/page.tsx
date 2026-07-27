@@ -40,10 +40,17 @@ export default async function MyTasksPage({ params }: { params: Promise<{ slug: 
     orderBy: [{ status: 'asc' }, { position: 'asc' }],
   });
 
-  const members = await prisma.workspaceMember.findMany({
-    where: { workspaceId: workspace.id },
-    include: { user: { select: { id: true, name: true, email: true, image: true } } },
-  });
+  const [members, projects] = await Promise.all([
+    prisma.workspaceMember.findMany({
+      where: { workspaceId: workspace.id },
+      include: { user: { select: { id: true, name: true, email: true, image: true } } },
+    }),
+    prisma.project.findMany({
+      where: { workspaceId: workspace.id, status: 'ACTIVE' },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    }),
+  ]);
 
   return (
     <div className="flex h-full flex-col">
@@ -55,6 +62,7 @@ export default async function MyTasksPage({ params }: { params: Promise<{ slug: 
       </div>
       <TaskTableView
         members={members.map((m) => m.user)}
+        projects={projects}
         slug={slug}
         tasks={tasks}
         workspaceId={workspace.id}
