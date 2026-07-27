@@ -575,6 +575,7 @@ export function ViewSwitcher({
           <TaskTableView
             groupBy={groupBy}
             members={members}
+            phases={phases}
             projectId={projectId}
             projects={projects}
             slug={slug}
