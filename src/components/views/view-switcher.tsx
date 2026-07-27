@@ -345,18 +345,37 @@ export function ViewSwitcher({
 
         <div className="flex items-center gap-2">
           {layout === 'TABLE' && (
-            <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-              <span>Group by:</span>
-              <select
-                className="rounded border border-gray-300 bg-white px-1.5 py-1 text-xs font-medium text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
-                onChange={(e) => setGroupBy(e.target.value as GroupByOption)}
-                value={groupBy}
-              >
-                {GROUP_BY_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-                {phases.length > 0 && <option value="phase">Phase</option>}
-              </select>
+            <div className="flex items-center gap-1 border-l border-gray-300 pl-3 dark:border-gray-600">
+              <span className="text-xs text-gray-500 dark:text-gray-400">Group:</span>
+              {GROUP_BY_OPTIONS.map((opt) => (
+                <button
+                  className={cn(
+                    'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                    groupBy === opt.value
+                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                      : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800',
+                  )}
+                  key={opt.value}
+                  onClick={() => { setGroupBy(opt.value as GroupByOption); setActiveViewId(null); }}
+                  type="button"
+                >
+                  {opt.label}
+                </button>
+              ))}
+              {phases.length > 0 && (
+                <button
+                  className={cn(
+                    'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                    groupBy === 'phase'
+                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                      : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800',
+                  )}
+                  onClick={() => { setGroupBy('phase' as GroupByOption); setActiveViewId(null); }}
+                  type="button"
+                >
+                  Phase
+                </button>
+              )}
             </div>
           )}
           <button
