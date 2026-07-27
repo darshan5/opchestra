@@ -217,7 +217,7 @@ export function ViewSwitcher({
         body: JSON.stringify({
           name: newViewName.trim(),
           layout,
-          config: { filters },
+          config: { filters, groupBy },
           isShared: false,
         }),
       });
@@ -235,7 +235,7 @@ export function ViewSwitcher({
 
   function loadView(view: SavedView) {
     setLayout(view.layout);
-    const config = view.config as { filters?: FilterRow[] };
+    const config = view.config as { filters?: FilterRow[]; groupBy?: GroupByOption };
     if (config.filters) {
       setFilters(config.filters);
       if (config.filters.length > 0) {
@@ -243,6 +243,9 @@ export function ViewSwitcher({
       }
     } else {
       setFilters([]);
+    }
+    if (config.groupBy) {
+      setGroupBy(config.groupBy);
     }
     setActiveViewId(view.id);
   }
@@ -348,7 +351,7 @@ export function ViewSwitcher({
         <div className="flex items-center gap-2">
           {layout === 'TABLE' && (
             <div className="flex items-center gap-1 border-l border-gray-300 pl-3 dark:border-gray-600">
-              <span className="text-xs text-gray-500 dark:text-gray-400">Group:</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">Organize:</span>
               {GROUP_BY_OPTIONS.map((opt) => (
                 <button
                   className={cn(
