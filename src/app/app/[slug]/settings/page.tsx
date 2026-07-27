@@ -224,6 +224,51 @@ export default function WorkspaceSettingsPage() {
         </Button>
       </section>
 
+      {/* Priorities */}
+      <section className="mt-8">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Priorities</h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          Customize display names and colors for priority levels.
+        </p>
+        <Button
+          className="mt-3"
+          onClick={() => router.push(`/app/${params.slug}/settings/priorities`)}
+          variant="secondary"
+        >
+          Manage Priorities
+        </Button>
+      </section>
+
+      {/* Groups */}
+      <section className="mt-8">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Task Groups</h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          Manage cross-project task groups for organizing tasks.
+        </p>
+        <Button
+          className="mt-3"
+          onClick={() => router.push(`/app/${params.slug}/settings/groups`)}
+          variant="secondary"
+        >
+          Manage Groups
+        </Button>
+      </section>
+
+      {/* Projects */}
+      <section className="mt-8">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Projects</h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          Edit project names, descriptions, and archive or delete projects.
+        </p>
+        <Button
+          className="mt-3"
+          onClick={() => router.push(`/app/${params.slug}/settings/projects`)}
+          variant="secondary"
+        >
+          Manage Projects
+        </Button>
+      </section>
+
       {/* Custom Fields */}
       <section className="mt-8">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Custom Fields</h2>
