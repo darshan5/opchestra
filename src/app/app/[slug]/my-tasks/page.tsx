@@ -67,6 +67,7 @@ export default async function MyTasksPage({ params }: { params: Promise<{ slug: 
         </p>
       </div>
       <ViewSwitcher
+        currentUserRole={membership.role}
         defaultGroupBy="group"
         members={members.map((m) => m.user)}
         projects={projects}

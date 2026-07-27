@@ -77,6 +77,7 @@ interface TaskTableViewProps {
   taskGroups?: TaskGroupData[];
   phases?: PhaseData[];
   groupBy?: GroupByOption;
+  currentUserRole?: string;
 }
 
 const STATUS_ORDER = ['Todo', 'In Progress', 'Done'];
@@ -541,6 +542,7 @@ function BulkActionsBar({
 // ── Main Table ───────────────────────────────────────────────
 
 export function TaskTableView({
+  currentUserRole,
   groupBy = 'status',
   members,
   phases = [],
@@ -1034,6 +1036,7 @@ export function TaskTableView({
       {/* Task detail panel */}
       {selectedTaskId && (
         <TaskDetailPanel
+          currentUserRole={currentUserRole}
           members={members}
           onClose={() => setSelectedTaskId(null)}
           onTaskUpdated={() => router.refresh()}

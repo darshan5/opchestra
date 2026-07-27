@@ -92,11 +92,13 @@ interface TaskDetailPanelProps {
   projects: Array<{ id: string; name: string }>;
   onClose: () => void;
   onTaskUpdated?: () => void;
+  currentUserRole?: string;
 }
 
 type Tab = 'details' | 'activity' | 'timelog';
 
 export function TaskDetailPanel({
+  currentUserRole,
   members,
   onClose,
   onTaskUpdated,
@@ -331,7 +333,7 @@ export function TaskDetailPanel({
             />
           )}
           {activeTab === 'timelog' && (
-            <TimeLogTab taskId={taskId} workspaceId={workspaceId} />
+            <TimeLogTab currentUserRole={currentUserRole} members={members} taskId={taskId} workspaceId={workspaceId} />
           )}
         </div>
       </div>
@@ -729,7 +731,9 @@ function ActivityTab({
   );
 }
 
-function TimeLogTab({ taskId, workspaceId }: { taskId: string; workspaceId: string }) {
+function TimeLogTab({ currentUserRole, members, taskId, workspaceId }: { taskId: string; workspaceId: string; currentUserRole?: string; members: TaskUser[] }) {
+  const isAdmin = currentUserRole === 'SUPER_ADMIN' || currentUserRole === 'ADMIN' || currentUserRole === 'MANAGER';
+  const [personFilter, setPersonFilter] = useState<string>('all');
   interface TimeEntryData {
     id: string;
     duration: number;
@@ -1141,9 +1145,26 @@ function TimeLogTab({ taskId, workspaceId }: { taskId: string; workspaceId: stri
         />
       </div>
 
+      {/* Person filter for admins */}
+      {isAdmin && entries.length > 0 && (
+        <div className="mb-2 flex items-center gap-2">
+          <span className="text-xs text-gray-500 dark:text-gray-400">Person:</span>
+          <select
+            className="rounded border border-gray-200 bg-white px-2 py-1 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+            onChange={(e) => setPersonFilter(e.target.value)}
+            value={personFilter}
+          >
+            <option value="all">All Members</option>
+            {members.map((m) => (
+              <option key={m.id} value={m.email}>{m.name ?? m.email}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {/* Entries list */}
       <div className="space-y-1">
-        {entries.map((e) => (
+        {entries.filter((e) => personFilter === 'all' || e.user?.email === personFilter).map((e) => (
           <div
             className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-900"
             key={e.id}
@@ -1151,6 +1172,11 @@ function TimeLogTab({ taskId, workspaceId }: { taskId: string; workspaceId: stri
             <span className="w-12 shrink-0 text-xs text-gray-400 dark:text-gray-500">
               {formatDate(e.date)}
             </span>
+            {isAdmin && e.user && (
+              <span className="w-16 shrink-0 truncate text-xs font-medium text-gray-600 dark:text-gray-300" title={e.user.name ?? e.user.email}>
+                {e.user.name?.split(' ')[0] ?? e.user.email.split('@')[0]}
+              </span>
+            )}
             {e.startTime && (
               <span className="w-14 shrink-0 text-xs text-gray-400 dark:text-gray-500">
                 {formatTime(e.startTime)}

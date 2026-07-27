@@ -75,6 +75,7 @@ interface ViewSwitcherProps {
   phases?: PhaseData[];
   defaultGroupBy?: GroupByOption;
   context?: 'all-tasks' | 'my-tasks' | 'project' | 'group';
+  currentUserRole?: string;
 }
 
 interface FilterRow {
@@ -132,6 +133,7 @@ const GROUP_BY_OPTIONS: Array<{ label: string; value: GroupByOption }> = [
 
 export function ViewSwitcher({
   context = 'all-tasks',
+  currentUserRole,
   defaultGroupBy = 'status',
   members,
   phases = [],
@@ -573,6 +575,7 @@ export function ViewSwitcher({
       <div className="flex-1 overflow-auto">
         {layout === 'TABLE' && (
           <TaskTableView
+            currentUserRole={currentUserRole}
             groupBy={groupBy}
             members={members}
             phases={phases}

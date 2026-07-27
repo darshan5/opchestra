@@ -82,6 +82,7 @@ export default async function ProjectPage({
       </div>
       <ViewSwitcher
         context="project"
+        currentUserRole={membership.role}
         members={members.map((m) => m.user)}
         phases={phases}
         projectId={projectId}
