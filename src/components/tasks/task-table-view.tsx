@@ -5,7 +5,8 @@ import {
   ChevronDown,
   ChevronRight,
   Copy,
-  ExternalLink,
+  GripVertical,
+  Info,
   MessageSquare,
   MoreHorizontal,
   Plus,
@@ -181,7 +182,7 @@ function ContextMenu({
   }, [onClose]);
 
   const items = [
-    { action: onOpen, icon: ExternalLink, label: 'Open task' },
+    { action: onOpen, icon: Info, label: 'Open task' },
     { action: () => {}, disabled: true, icon: Copy, label: 'Copy task link' },
     { action: onCreateBelow, icon: Plus, label: 'Create new task below' },
     { divider: true },
@@ -504,6 +505,21 @@ export function TaskTableView({
     }
   }
 
+  async function updateTaskTitle(taskId: string, title: string) {
+    if (!title.trim()) {
+      return;
+    }
+    const res = await fetch(`/api/workspaces/${workspaceId}/tasks/${taskId}`, {
+      body: JSON.stringify({ title: title.trim() }),
+      headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH',
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setTasks(tasks.map((t) => (t.id === taskId ? updated : t)));
+    }
+  }
+
   return (
     <div className="flex-1 overflow-auto">
       <div className="min-w-[800px]">
@@ -533,6 +549,7 @@ export function TaskTableView({
                 <>
                   {/* ── Column Headers ─────────── */}
                   <div className="flex items-center border-b border-gray-200 bg-white text-[11px] font-medium tracking-wider text-gray-400 uppercase dark:border-gray-800 dark:bg-gray-950">
+                    <div className="w-6 shrink-0" />
                     <div className="w-9 shrink-0" />
                     <div className="w-7 shrink-0 px-1">
                       <input className="h-3 w-3 rounded border-gray-300" disabled type="checkbox" />
@@ -559,6 +576,11 @@ export function TaskTableView({
                             selectedTaskId === task.id && 'bg-blue-50 dark:bg-blue-900/20',
                           )}
                         >
+                          {/* Drag handle */}
+                          <div className="flex w-6 shrink-0 cursor-grab items-center justify-center">
+                            <GripVertical className="h-3.5 w-3.5 text-gray-300 transition-colors hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400" />
+                          </div>
+
                           {/* Three-dot menu */}
                           <div className="flex w-9 shrink-0 items-center justify-center">
                             <button
@@ -583,24 +605,17 @@ export function TaskTableView({
                           <div className="w-7 shrink-0 px-1">
                             <input
                               className="h-3.5 w-3.5 rounded border-gray-300 dark:border-gray-600"
-                              onClick={(e) => e.stopPropagation()}
                               type="checkbox"
                             />
                           </div>
 
-                          {/* Task Name */}
-                          <div
-                            className="min-w-0 flex-1 cursor-pointer px-2 py-2"
-                            onClick={() => setSelectedTaskId(task.id)}
-                          >
+                          {/* Task Name — inline editable, no click to open panel */}
+                          <div className="min-w-0 flex-1 px-2 py-2">
                             <div className="flex items-center gap-1.5">
                               {hasSubs && (
                                 <button
                                   className="shrink-0 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    toggleExpand(task.id);
-                                  }}
+                                  onClick={() => toggleExpand(task.id)}
                                   type="button"
                                 >
                                   {isExpanded ? (
@@ -610,31 +625,49 @@ export function TaskTableView({
                                   )}
                                 </button>
                               )}
-                              <span className="truncate text-sm font-medium text-gray-900 dark:text-white">
+                              <span
+                                className="min-w-0 truncate text-sm font-medium text-gray-900 outline-none focus:ring-1 focus:ring-blue-400 focus:rounded dark:text-white"
+                                contentEditable
+                                onBlur={(e) => {
+                                  const newTitle = e.currentTarget.textContent?.trim();
+                                  if (newTitle && newTitle !== task.title) {
+                                    updateTaskTitle(task.id, newTitle);
+                                  }
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    (e.target as HTMLElement).blur();
+                                  }
+                                  if (e.key === 'Escape') {
+                                    e.currentTarget.textContent = task.title;
+                                    (e.target as HTMLElement).blur();
+                                  }
+                                }}
+                                role="textbox"
+                                suppressContentEditableWarning
+                                tabIndex={0}
+                              >
                                 {task.title}
                               </span>
                               {task.isMilestone && (
                                 <span className="shrink-0 text-xs text-purple-500">◆</span>
                               )}
-                              {/* Open task icon on hover */}
+                              {/* Info icon — opens detail panel */}
                               <button
-                                className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedTaskId(task.id);
-                                }}
+                                className="shrink-0 rounded-full border border-gray-300 opacity-0 transition-opacity hover:border-blue-400 hover:text-blue-500 group-hover:opacity-100 dark:border-gray-600"
+                                onClick={() => setSelectedTaskId(task.id)}
                                 title="Open Task page"
                                 type="button"
                               >
-                                <ExternalLink className="h-3.5 w-3.5 text-gray-400 hover:text-blue-500" />
+                                <Info className="h-3.5 w-3.5 text-gray-400 hover:text-blue-500" />
                               </button>
                               {/* Add subitem icon on hover */}
                               <button
                                 className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setExpandedTasks((p) => new Set(p).add(task.id));
-                                }}
+                                onClick={() =>
+                                  setExpandedTasks((p) => new Set(p).add(task.id))
+                                }
                                 title="Add subitem"
                                 type="button"
                               >
@@ -789,7 +822,7 @@ export function TaskTableView({
                   <div className="border-b border-gray-100 dark:border-gray-800/50">
                     {addingInGroup === status ? (
                       <form
-                        className="flex items-center py-1 pl-[72px] pr-4"
+                        className="flex items-center py-1 pl-[96px] pr-4"
                         onSubmit={(e) => {
                           e.preventDefault();
                           createTask(status);
@@ -831,7 +864,7 @@ export function TaskTableView({
                       </form>
                     ) : (
                       <button
-                        className="flex w-full items-center gap-1.5 py-2 pl-[72px] text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                        className="flex w-full items-center gap-1.5 py-2 pl-[96px] text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                         onClick={() => {
                           setAddingInGroup(status);
                           setNewTaskTitle('');
@@ -847,6 +880,7 @@ export function TaskTableView({
                   {/* Group Summary */}
                   {groupTasks.length > 0 && (
                     <div className="flex items-center border-b border-gray-200/60 bg-gray-50/50 text-[10px] text-gray-400 dark:border-gray-800/40 dark:bg-gray-900/20">
+                      <div className="w-6 shrink-0" />
                       <div className="w-9 shrink-0" />
                       <div className="w-7 shrink-0" />
                       <div className="min-w-0 flex-1" />
