@@ -7,7 +7,6 @@ import {
   Circle,
   Clock,
   Contact,
-  CreditCard,
   Eye,
   FolderKanban,
   Home,
@@ -76,7 +75,6 @@ export function Sidebar({ projects, slug, taskGroups = [], views = [], workspace
   const bottomItems = [
     { href: `${base}/time-tracking`, icon: Clock, label: 'Time Tracking' },
     { href: `${base}/invoicing`, icon: Receipt, label: 'Invoicing' },
-    { href: `${base}/billing`, icon: CreditCard, label: 'Billing' },
     { href: `${base}/settings`, icon: Settings, label: 'Settings' },
   ];
 

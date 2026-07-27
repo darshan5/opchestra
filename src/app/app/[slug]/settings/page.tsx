@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
-type Tab = 'general' | 'task-views' | 'members' | 'sla';
+type Tab = 'general' | 'task-views' | 'members' | 'billing' | 'sla';
 
 interface Member {
   id: string;
@@ -442,6 +442,7 @@ export default function WorkspaceSettingsPage() {
     { key: 'general', label: 'General' },
     { key: 'task-views', label: 'Task Views' },
     { key: 'members', label: 'Members' },
+    { key: 'billing', label: 'Billing' },
     { key: 'sla', label: 'SLA Rules' },
   ];
 
@@ -894,6 +895,35 @@ export default function WorkspaceSettingsPage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── BILLING TAB ── */}
+        {tab === 'billing' && (
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Billing</h2>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Manage your subscription and payment details.
+            </p>
+            <div className="mt-6 rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Current Plan</h3>
+              <p className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">Free</p>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Up to 3 members</p>
+              <div className="mt-4 flex gap-3">
+                <a
+                  className="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                  href={`/app/${params.slug}/settings/billing`}
+                >
+                  Upgrade Plan
+                </a>
+                <a
+                  className="inline-flex items-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+                  href={`/app/${params.slug}/settings/billing`}
+                >
+                  Manage Subscription
+                </a>
               </div>
             </div>
           </div>
