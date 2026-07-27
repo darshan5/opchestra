@@ -910,13 +910,22 @@ export function TaskTableView({
                             <div className="flex w-28 shrink-0 items-center justify-center px-1">
                               <select
                                 className="w-full truncate rounded border-0 bg-transparent py-0.5 text-[11px] text-gray-600 cursor-pointer dark:text-gray-400"
-                                onChange={(e) => {
+                                onChange={async (e) => {
                                   e.stopPropagation();
-                                  fetch(`/api/workspaces/${workspaceId}/tasks/${task.id}`, {
+                                  const newGroupId = e.target.value || null;
+                                  const res = await fetch(`/api/workspaces/${workspaceId}/tasks/${task.id}`, {
                                     method: 'PATCH',
                                     headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ taskGroupId: e.target.value || null }),
-                                  }).then(() => router.refresh());
+                                    body: JSON.stringify({ taskGroupId: newGroupId }),
+                                  });
+                                  if (res.ok) {
+                                    const newGroup = newGroupId ? taskGroups.find((g) => g.id === newGroupId) : null;
+                                    setTasks(tasks.map((t) =>
+                                      t.id === task.id
+                                        ? { ...t, taskGroup: newGroup ? { id: newGroup.id, name: newGroup.name, color: newGroup.color } : null }
+                                        : t
+                                    ));
+                                  }
                                 }}
                                 onClick={(e) => e.stopPropagation()}
                                 value={task.taskGroup?.id ?? ''}
