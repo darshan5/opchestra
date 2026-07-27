@@ -65,6 +65,7 @@ export default async function PhasePage({
         </h1>
       </div>
       <ViewSwitcher
+        context="project"
         members={members.map((m) => m.user)}
         projectId={projectId}
         projects={allProjects}

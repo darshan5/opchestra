@@ -74,6 +74,7 @@ interface ViewSwitcherProps {
   taskGroups?: TaskGroupData[];
   phases?: PhaseData[];
   defaultGroupBy?: GroupByOption;
+  context?: 'all-tasks' | 'my-tasks' | 'project' | 'group';
 }
 
 interface FilterRow {
@@ -89,10 +90,17 @@ const layoutItems: Array<{ value: Layout; icon: typeof Table2; label: string }> 
   { icon: GanttChartSquare, label: 'Gantt', value: 'GANTT' },
 ];
 
-const FILTER_FIELDS = [
+const FILTER_FIELDS_ALL = [
   { label: 'Status', value: 'status' },
   { label: 'Priority', value: 'priority' },
-  { label: 'Assignee', value: 'assignee' },
+  { label: 'Person', value: 'assignee' },
+  { label: 'Project', value: 'project' },
+];
+
+const FILTER_FIELDS_PROJECT = [
+  { label: 'Status', value: 'status' },
+  { label: 'Priority', value: 'priority' },
+  { label: 'Person', value: 'assignee' },
 ];
 
 const FILTER_OPS = [
@@ -123,6 +131,7 @@ const GROUP_BY_OPTIONS: Array<{ label: string; value: GroupByOption }> = [
 ];
 
 export function ViewSwitcher({
+  context = 'all-tasks',
   defaultGroupBy = 'status',
   members,
   phases = [],
@@ -134,8 +143,11 @@ export function ViewSwitcher({
   tasks,
   workspaceId,
 }: ViewSwitcherProps) {
+  const isProjectView = context === 'project';
+  const filterFields = isProjectView ? FILTER_FIELDS_PROJECT : FILTER_FIELDS_ALL;
+
   const [layout, setLayout] = useState<Layout>('TABLE');
-  const [groupBy, setGroupBy] = useState<GroupByOption>(defaultGroupBy);
+  const [groupBy, setGroupBy] = useState<GroupByOption>(isProjectView ? 'phase' : defaultGroupBy);
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
   const [activeViewId, setActiveViewId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
@@ -176,6 +188,9 @@ export function ViewSwitcher({
         }
         if (f.field === 'assignee') {
           val = task.assignee?.name ?? task.assignee?.email ?? '';
+        }
+        if (f.field === 'project') {
+          val = task.project?.name ?? '';
         }
 
         if (f.operator === 'is') {
@@ -311,6 +326,23 @@ export function ViewSwitcher({
       );
     }
 
+    if (f.field === 'project') {
+      return (
+        <select
+          className="rounded border border-gray-300 bg-white px-2 py-1 text-xs dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+          onChange={(e) => updateFilter(idx, { value: e.target.value })}
+          value={f.value}
+        >
+          <option value="">Select...</option>
+          {projects.map((p) => (
+            <option key={p.id} value={p.name}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+      );
+    }
+
     return (
       <input
         className="rounded border border-gray-300 bg-white px-2 py-1 text-xs dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
@@ -349,7 +381,7 @@ export function ViewSwitcher({
         </div>
 
         <div className="flex items-center gap-2">
-          {layout === 'TABLE' && (
+          {layout === 'TABLE' && !isProjectView && (
             <div className="flex items-center gap-1 border-l border-gray-300 pl-3 dark:border-gray-600">
               <span className="text-xs text-gray-500 dark:text-gray-400">Organize:</span>
               {GROUP_BY_OPTIONS.map((opt) => (
@@ -505,7 +537,7 @@ export function ViewSwitcher({
                 onChange={(e) => updateFilter(idx, { field: e.target.value })}
                 value={f.field}
               >
-                {FILTER_FIELDS.map((ff) => (
+                {filterFields.map((ff) => (
                   <option key={ff.value} value={ff.value}>
                     {ff.label}
                   </option>

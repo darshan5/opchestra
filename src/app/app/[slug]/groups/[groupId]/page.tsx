@@ -63,6 +63,7 @@ export default async function GroupPage({
         </p>
       </div>
       <ViewSwitcher
+        context="group"
         members={members.map((m) => m.user)}
         projects={allProjects}
         slug={slug}
