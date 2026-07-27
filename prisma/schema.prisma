@@ -227,6 +227,7 @@ model Company {
   workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   contacts       Contact[]
   ticketsByCompany Task[]  @relation("TicketCompany")
+  invoices       Invoice[]
 
   @@index([workspaceId])
 }
@@ -246,6 +247,7 @@ model Contact {
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   company   Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
   tickets   Task[]    @relation("TicketContact")
+  invoices  Invoice[]
 
   @@index([workspaceId])
   @@index([companyId])
@@ -275,6 +277,7 @@ model Workspace {
   companies            Company[]
   contacts             Contact[]
   slaRules             SlaRule[]
+  invoices             Invoice[]
 
   settings WorkspaceSettings?
 }
@@ -570,6 +573,58 @@ model CustomFieldValue {
 
   @@unique([taskId, customFieldDefinitionId])
   @@index([taskId])
+}
+
+// ─── Invoicing ──────────────────────────────────────────────
+
+model Invoice {
+  id            String        @id @default(uuid())
+  workspaceId   String
+  invoiceNumber String
+  companyId     String?
+  contactId     String?
+  status        InvoiceStatus @default(DRAFT)
+  issueDate     DateTime      @default(now())
+  dueDate       DateTime?
+  notes         String?
+  subtotal      Float         @default(0)
+  tax           Float         @default(0)
+  total         Float         @default(0)
+  paidAt        DateTime?
+  sentAt        DateTime?
+  publicKey     String        @unique @default(uuid())
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  company   Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  contact   Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  items     InvoiceItem[]
+
+  @@index([workspaceId])
+  @@index([publicKey])
+}
+
+model InvoiceItem {
+  id          String   @id @default(uuid())
+  invoiceId   String
+  description String
+  quantity    Float    @default(1)
+  rate        Float    @default(0)
+  amount      Float    @default(0)
+  taskId      String?
+  projectId   String?
+  createdAt   DateTime @default(now())
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
 }
 
 // ─── Views ──────────────────────────────────────────────────

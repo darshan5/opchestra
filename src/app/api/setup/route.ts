@@ -458,6 +458,48 @@ const MIGRATIONS = [
   )`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "SlaRule_workspaceId_priority_key" ON "SlaRule"("workspaceId", "priority")`,
   `CREATE INDEX IF NOT EXISTS "SlaRule_workspaceId_idx" ON "SlaRule"("workspaceId")`,
+
+  `CREATE TYPE "InvoiceStatus" AS ENUM ('DRAFT', 'SENT', 'PAID', 'OVERDUE', 'CANCELLED')`,
+
+  `CREATE TABLE IF NOT EXISTS "Invoice" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "workspaceId" TEXT NOT NULL,
+    "invoiceNumber" TEXT NOT NULL,
+    "companyId" TEXT,
+    "contactId" TEXT,
+    "status" "InvoiceStatus" NOT NULL DEFAULT 'DRAFT',
+    "issueDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "dueDate" TIMESTAMP(3),
+    "notes" TEXT,
+    "subtotal" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "tax" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "total" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "paidAt" TIMESTAMP(3),
+    "sentAt" TIMESTAMP(3),
+    "publicKey" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "Invoice_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "Invoice_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "Invoice_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT "Invoice_contactId_fkey" FOREIGN KEY ("contactId") REFERENCES "Contact"("id") ON DELETE SET NULL ON UPDATE CASCADE
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "Invoice_publicKey_key" ON "Invoice"("publicKey")`,
+  `CREATE INDEX IF NOT EXISTS "Invoice_workspaceId_idx" ON "Invoice"("workspaceId")`,
+
+  `CREATE TABLE IF NOT EXISTS "InvoiceItem" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "invoiceId" TEXT NOT NULL,
+    "description" TEXT NOT NULL,
+    "quantity" DOUBLE PRECISION NOT NULL DEFAULT 1,
+    "rate" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "amount" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "taskId" TEXT,
+    "projectId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "InvoiceItem_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "InvoiceItem_invoiceId_fkey" FOREIGN KEY ("invoiceId") REFERENCES "Invoice"("id") ON DELETE CASCADE ON UPDATE CASCADE
+  )`,
 ];
 
 export async function POST() {
