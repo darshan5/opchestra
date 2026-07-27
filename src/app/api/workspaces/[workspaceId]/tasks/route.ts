@@ -57,6 +57,8 @@ export async function GET(
       include: {
         assignee: { select: { id: true, name: true, email: true, image: true } },
         project: { select: { id: true, name: true } },
+        taskGroup: { select: { id: true, name: true, color: true } },
+        phase: { select: { id: true, name: true, color: true } },
         taskLabels: { include: { label: true } },
         _count: { select: { subTasks: true, comments: true } },
       },
@@ -143,6 +145,8 @@ export async function POST(
       include: {
         assignee: { select: { id: true, name: true, email: true, image: true } },
         project: { select: { id: true, name: true } },
+        taskGroup: { select: { id: true, name: true, color: true } },
+        phase: { select: { id: true, name: true, color: true } },
         taskLabels: { include: { label: true } },
         _count: { select: { subTasks: true, comments: true } },
       },
