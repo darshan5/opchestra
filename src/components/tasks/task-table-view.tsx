@@ -685,6 +685,9 @@ export function TaskTableView({
   async function bulkPatch(data: Record<string, unknown>) {
     const ids = Array.from(selectedIds);
     await Promise.all(ids.map((id) => patchTask(id, data)));
+    if (taskGroupId && data.taskGroupId !== undefined && data.taskGroupId !== taskGroupId) {
+      setTasks((prev) => prev.filter((t) => !selectedIds.has(t.id)));
+    }
     setSelectedIds(new Set());
   }
 
@@ -708,14 +711,18 @@ export function TaskTableView({
       body: JSON.stringify({ taskGroupId: newGroupId }),
     });
     if (res.ok) {
-      const newGroup = newGroupId ? taskGroups.find((g) => g.id === newGroupId) : null;
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === taskId
-            ? { ...t, taskGroup: newGroup ? { id: newGroup.id, name: newGroup.name, color: newGroup.color } : null }
-            : t,
-        ),
-      );
+      if (taskGroupId && newGroupId !== taskGroupId) {
+        setTasks((prev) => prev.filter((t) => t.id !== taskId));
+      } else {
+        const newGroup = newGroupId ? taskGroups.find((g) => g.id === newGroupId) : null;
+        setTasks((prev) =>
+          prev.map((t) =>
+            t.id === taskId
+              ? { ...t, taskGroup: newGroup ? { id: newGroup.id, name: newGroup.name, color: newGroup.color } : null }
+              : t,
+          ),
+        );
+      }
     }
   }
 
