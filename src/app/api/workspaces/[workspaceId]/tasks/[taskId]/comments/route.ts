@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { createNotification } from '@/lib/notifications';
 import { createCommentSchema } from '@/lib/validations/task';
 
 export async function GET(
@@ -89,6 +90,17 @@ export async function POST(
 
       return c;
     });
+
+    const notifyUsers = new Set<string>();
+    if (task.assigneeId && task.assigneeId !== session.user.id) {
+      notifyUsers.add(task.assigneeId);
+    }
+    if (task.createdById !== session.user.id) {
+      notifyUsers.add(task.createdById);
+    }
+    for (const uid of notifyUsers) {
+      createNotification(workspaceId, uid, 'TASK_COMMENTED', `New comment on "${task.title}"`, undefined, { taskId });
+    }
 
     return NextResponse.json(comment, { status: 201 });
   } catch {

@@ -1,41 +1,40 @@
 'use client';
 
-import { Bell, LogOut, Moon, Search, Sun } from 'lucide-react';
+import { LogOut, Moon, Search, Sun } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-import { cn } from '@/lib/utils';
+import { NotificationBell } from '@/components/layout/notification-bell';
 
 interface TopBarProps {
   slug: string;
+  workspaceId: string;
   userName?: string | null;
 }
 
-export function TopBar({ slug, userName }: TopBarProps) {
+export function TopBar({ slug, userName, workspaceId }: TopBarProps) {
   const router = useRouter();
-  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>(() => {
-    if (typeof window === 'undefined') {
-      return 'system';
-    }
-    return (localStorage.getItem('theme') as 'light' | 'dark' | 'system') ?? 'system';
-  });
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('theme');
+    const isDark =
+      stored === 'dark' ||
+      (!stored && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    setTheme(isDark ? 'dark' : 'light');
+    setMounted(true);
+  }, []);
 
   function toggleTheme() {
-    const next = theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light';
+    const next = theme === 'light' ? 'dark' : 'light';
     setTheme(next);
     localStorage.setItem('theme', next);
-
     if (next === 'dark') {
       document.documentElement.classList.add('dark');
-    } else if (next === 'light') {
-      document.documentElement.classList.remove('dark');
     } else {
-      if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
+      document.documentElement.classList.remove('dark');
     }
   }
 
@@ -55,24 +54,17 @@ export function TopBar({ slug, userName }: TopBarProps) {
       </div>
 
       <div className="flex items-center gap-1">
-        <button
-          className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
-          onClick={toggleTheme}
-          title={`Theme: ${theme}`}
-        >
-          {theme === 'dark' ? (
-            <Moon className="h-4 w-4" />
-          ) : (
-            <Sun className={cn('h-4 w-4', theme === 'system' && 'opacity-60')} />
-          )}
-        </button>
+        {mounted && (
+          <button
+            className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+            onClick={toggleTheme}
+            title={`Theme: ${theme}`}
+          >
+            {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
+        )}
 
-        <button
-          className="relative rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
-          title="Notifications"
-        >
-          <Bell className="h-4 w-4" />
-        </button>
+        <NotificationBell workspaceId={workspaceId} />
 
         <div className="ml-2 flex items-center gap-2 border-l border-gray-200 pl-3 dark:border-gray-700">
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-xs font-medium text-blue-700 dark:bg-blue-900 dark:text-blue-300">

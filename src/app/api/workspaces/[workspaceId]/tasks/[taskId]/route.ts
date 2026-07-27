@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { createNotification } from '@/lib/notifications';
 import { updateTaskSchema } from '@/lib/validations/task';
 
 export async function GET(
@@ -167,6 +168,18 @@ export async function PATCH(
           content: { type: 'system', text: activityMessages.join(', ') },
         },
       });
+    }
+
+    if (parsed.data.assigneeId !== undefined && parsed.data.assigneeId !== existing.assigneeId) {
+      if (parsed.data.assigneeId && parsed.data.assigneeId !== session.user.id) {
+        createNotification(workspaceId, parsed.data.assigneeId, 'TASK_ASSIGNED', `You were assigned "${existing.title}"`, undefined, { taskId });
+      }
+      if (existing.assigneeId && existing.assigneeId !== session.user.id) {
+        createNotification(workspaceId, existing.assigneeId, 'TASK_UNASSIGNED', `You were unassigned from "${existing.title}"`, undefined, { taskId });
+      }
+    }
+    if (parsed.data.status !== undefined && parsed.data.status !== existing.status && existing.assigneeId && existing.assigneeId !== session.user.id) {
+      createNotification(workspaceId, existing.assigneeId, 'TASK_STATUS_CHANGED', `"${existing.title}" status changed to ${parsed.data.status}`, undefined, { taskId });
     }
 
     const task = await prisma.task.update({

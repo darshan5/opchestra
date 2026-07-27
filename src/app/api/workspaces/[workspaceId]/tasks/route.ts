@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { createNotification } from '@/lib/notifications';
 import { createTaskSchema } from '@/lib/validations/task';
 
 export async function GET(
@@ -143,6 +144,17 @@ export async function POST(
         _count: { select: { subTasks: true, comments: true } },
       },
     });
+
+    if (task.assigneeId && task.assigneeId !== session.user.id) {
+      createNotification(
+        workspaceId,
+        task.assigneeId,
+        'TASK_ASSIGNED',
+        `You were assigned "${task.title}"`,
+        task.project?.name ?? undefined,
+        { taskId: task.id },
+      );
+    }
 
     return NextResponse.json(task, { status: 201 });
   } catch {

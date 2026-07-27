@@ -65,7 +65,7 @@ export default async function WorkspaceLayout({
         workspaceName={workspace.name}
       />
       <div className="flex flex-1 flex-col lg:pl-64">
-        <TopBar slug={slug} userName={session.user.name} />
+        <TopBar slug={slug} userName={session.user.name} workspaceId={workspace.id} />
         <main className="flex-1 overflow-auto">{children}</main>
       </div>
     </div>
