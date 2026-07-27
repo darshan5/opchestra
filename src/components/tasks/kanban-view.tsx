@@ -1,9 +1,9 @@
 'use client';
 
-import { formatDistanceToNow } from 'date-fns';
-import { MessageSquare, Plus, User } from 'lucide-react';
+import { format } from 'date-fns';
+import { Info, ListChecks, MessageSquare, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { TaskDetailPanel } from '@/components/tasks/task-detail-panel';
 import { cn } from '@/lib/utils';
@@ -28,6 +28,12 @@ interface TaskData {
   _count: { subTasks: number; comments: number };
 }
 
+interface StatusDef {
+  name: string;
+  color: string;
+  category: string;
+}
+
 interface KanbanViewProps {
   tasks: TaskData[];
   workspaceId: string;
@@ -37,21 +43,34 @@ interface KanbanViewProps {
   projects?: Array<{ id: string; name: string }>;
 }
 
-const STATUSES = ['Todo', 'In Progress', 'Done'];
+function getInitials(name: string | null, email: string): string {
+  if (name) {
+    const parts = name.split(' ');
+    return parts
+      .slice(0, 2)
+      .map((p) => p.charAt(0).toUpperCase())
+      .join('');
+  }
+  return email.charAt(0).toUpperCase();
+}
 
-const statusHeaderColors: Record<string, string> = {
-  Done: 'border-green-500',
-  'In Progress': 'border-blue-500',
-  Todo: 'border-gray-400',
-};
-
-const priorityBorder: Record<string, string> = {
-  HIGH: 'border-l-orange-500',
-  LOW: 'border-l-green-500',
-  MEDIUM: 'border-l-yellow-500',
-  NONE: 'border-l-gray-300 dark:border-l-gray-600',
-  URGENT: 'border-l-red-500',
-};
+function hashColor(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const colors = [
+    '#3B82F6',
+    '#10B981',
+    '#F59E0B',
+    '#EF4444',
+    '#8B5CF6',
+    '#EC4899',
+    '#06B6D4',
+    '#F97316',
+  ];
+  return colors[Math.abs(hash) % colors.length];
+}
 
 export function KanbanView({
   members,
@@ -65,10 +84,39 @@ export function KanbanView({
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [addingTo, setAddingTo] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState('');
+  const [statusDefs, setStatusDefs] = useState<StatusDef[]>([
+    { name: 'Todo', color: '#6B7280', category: 'todo' },
+    { name: 'In Progress', color: '#F59E0B', category: 'in_progress' },
+    { name: 'Done', color: '#10B981', category: 'done' },
+  ]);
 
-  const grouped = STATUSES.map((status) => ({
-    status,
-    tasks: tasks.filter((t) => t.status === status),
+  const fetchStatuses = useCallback(async () => {
+    try {
+      const wsRes = await fetch('/api/workspaces');
+      const workspaces = await wsRes.json();
+      const ws = workspaces.find((w: { id: string }) => w.id === workspaceId);
+      if (!ws) {
+        return;
+      }
+      const res = await fetch(`/api/workspaces/${workspaceId}/workflows/default`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.statuses) && data.statuses.length > 0) {
+          setStatusDefs(data.statuses);
+        }
+      }
+    } catch {
+      // use defaults
+    }
+  }, [workspaceId]);
+
+  useEffect(() => {
+    fetchStatuses();
+  }, [fetchStatuses]);
+
+  const columns = statusDefs.map((sd) => ({
+    ...sd,
+    tasks: tasks.filter((t) => t.status === sd.name),
   }));
 
   async function createTask(status: string) {
@@ -98,102 +146,115 @@ export function KanbanView({
   }
 
   return (
-    <div className="flex h-full gap-4 overflow-x-auto p-4">
-      {grouped.map(({ status, tasks: columnTasks }) => (
-        <div
-          className="flex w-72 shrink-0 flex-col rounded-lg bg-gray-100 dark:bg-gray-900"
-          key={status}
-        >
+    <div className="flex h-full gap-3 overflow-x-auto p-4">
+      {columns.map((col) => (
+        <div className="flex w-80 shrink-0 flex-col rounded-lg" key={col.name}>
+          {/* Column header */}
           <div
-            className={cn(
-              'flex items-center justify-between border-t-2 px-3 py-2',
-              statusHeaderColors[status] ?? 'border-gray-400',
-            )}
+            className="flex items-center gap-2 rounded-t-lg px-4 py-2.5"
+            style={{ backgroundColor: col.color }}
           >
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-gray-900 dark:text-white">{status}</span>
-              <span className="rounded-full bg-gray-200 px-1.5 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-                {columnTasks.length}
-              </span>
-            </div>
+            <span className="text-sm font-bold text-white">{col.name}</span>
+            <span className="text-sm font-medium text-white/80">{col.tasks.length}</span>
           </div>
 
-          <div className="flex-1 space-y-2 overflow-y-auto p-2">
-            {columnTasks.map((task) => (
+          {/* Cards */}
+          <div className="flex-1 space-y-2 overflow-y-auto bg-gray-50 p-2 dark:bg-gray-900/50">
+            {col.tasks.map((task) => (
               <div
-                className={cn(
-                  'cursor-pointer rounded-lg border border-l-4 border-gray-200 bg-white p-3 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800',
-                  priorityBorder[task.priority] ?? priorityBorder.NONE,
-                )}
+                className="group cursor-pointer rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800"
                 key={task.id}
                 onClick={() => setSelectedTaskId(task.id)}
               >
-                <p className="text-sm font-medium text-gray-900 dark:text-white">{task.title}</p>
+                {/* Title */}
+                <p className="text-sm font-semibold text-gray-900 leading-snug dark:text-white">
+                  {task.title}
+                </p>
 
-                <div className="mt-2 flex items-center gap-2 flex-wrap">
-                  {task.taskLabels.map((tl) => (
+                {/* Tags: status + project */}
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <span
+                    className="inline-flex items-center rounded text-[11px] font-medium text-gray-700 dark:text-gray-300"
+                  >
                     <span
-                      className="rounded px-1.5 py-0.5 text-[10px]"
-                      key={tl.label.id}
-                      style={{
-                        backgroundColor: `${tl.label.color}20`,
-                        color: tl.label.color,
-                      }}
-                    >
-                      {tl.label.name}
+                      className="mr-1.5 inline-block h-3 w-0.5 rounded-full"
+                      style={{ backgroundColor: col.color }}
+                    />
+                    {task.status}
+                  </span>
+                  {task.project && (
+                    <span className="inline-flex items-center rounded text-[11px] font-medium text-gray-700 dark:text-gray-300">
+                      <span
+                        className="mr-1.5 inline-block h-3 w-0.5 rounded-full"
+                        style={{ backgroundColor: hashColor(task.project.name) }}
+                      />
+                      {task.project.name}
                     </span>
-                  ))}
+                  )}
                 </div>
 
-                <div className="mt-2 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {task.assignee ? (
-                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-[10px] font-medium text-blue-700 dark:bg-blue-900 dark:text-blue-300">
-                        {task.assignee.name?.charAt(0)?.toUpperCase() ?? '?'}
-                      </div>
-                    ) : (
-                      <User className="h-4 w-4 text-gray-300 dark:text-gray-600" />
-                    )}
-                    {task.endDate && (
-                      <span
-                        className={cn(
-                          'text-[10px]',
-                          new Date(task.endDate) < new Date()
-                            ? 'font-medium text-red-600 dark:text-red-400'
-                            : 'text-gray-400 dark:text-gray-500',
-                        )}
+                {/* Assignee */}
+                {task.assignee && (
+                  <div className="mt-2 flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                    <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} />
+                    </svg>
+                    {task.assignee.name ?? task.assignee.email}
+                  </div>
+                )}
+
+                {/* Bottom: avatar + icons */}
+                <div className="mt-3 flex items-center justify-between">
+                  <div className="flex -space-x-1">
+                    {task.assignee && (
+                      <div
+                        className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-white text-[10px] font-bold text-white dark:border-gray-800"
+                        style={{ backgroundColor: hashColor(task.assignee.name ?? task.assignee.email) }}
                       >
-                        {formatDistanceToNow(new Date(task.endDate), { addSuffix: true })}
-                      </span>
+                        {getInitials(task.assignee.name, task.assignee.email)}
+                      </div>
                     )}
                   </div>
                   <div className="flex items-center gap-2 text-gray-400">
-                    {task._count.subTasks > 0 && (
-                      <span className="text-[10px]">{task._count.subTasks} sub</span>
-                    )}
                     {task._count.comments > 0 && (
                       <div className="flex items-center gap-0.5">
-                        <MessageSquare className="h-3 w-3" />
+                        <MessageSquare className="h-3.5 w-3.5" />
                         <span className="text-[10px]">{task._count.comments}</span>
                       </div>
                     )}
+                    {task._count.subTasks > 0 && (
+                      <div className="flex items-center gap-0.5">
+                        <ListChecks className="h-3.5 w-3.5" />
+                        <span className="text-[10px]">{task._count.subTasks}</span>
+                      </div>
+                    )}
+                    <button
+                      className="invisible rounded p-0.5 hover:bg-gray-100 group-hover:visible dark:hover:bg-gray-700"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedTaskId(task.id);
+                      }}
+                    >
+                      <Info className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                 </div>
               </div>
             ))}
           </div>
 
-          <div className="border-t border-gray-200 p-2 dark:border-gray-700">
-            {addingTo === status ? (
+          {/* Add task */}
+          <div className="rounded-b-lg border-t border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-900/50">
+            {addingTo === col.name ? (
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
-                  createTask(status);
+                  createTask(col.name);
                 }}
               >
                 <input
                   autoFocus
-                  className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                  className="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                   onBlur={() => {
                     if (!newTitle.trim()) {
                       setAddingTo(null);
@@ -206,9 +267,9 @@ export function KanbanView({
               </form>
             ) : (
               <button
-                className="flex w-full items-center gap-1 rounded px-2 py-1 text-xs text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700"
+                className="flex w-full items-center gap-1 rounded px-2 py-1.5 text-xs text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700"
                 onClick={() => {
-                  setAddingTo(status);
+                  setAddingTo(col.name);
                   setNewTitle('');
                 }}
               >

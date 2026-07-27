@@ -15,7 +15,6 @@ import {
   Search,
   Settings,
   Ticket,
-  Users,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -49,7 +48,6 @@ export function Sidebar({ projects, slug, views = [], workspaceName }: SidebarPr
     { href: `${base}/invoicing`, icon: Receipt, label: 'Invoicing' },
     { href: `${base}/billing`, icon: CreditCard, label: 'Billing' },
     { href: `${base}/settings`, icon: Settings, label: 'Settings' },
-    { href: `${base}/settings/members`, icon: Users, label: 'Members' },
   ];
 
   function isActive(href: string) {

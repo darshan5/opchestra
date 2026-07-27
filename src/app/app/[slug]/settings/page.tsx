@@ -209,6 +209,21 @@ export default function WorkspaceSettingsPage() {
         </div>
       </section>
 
+      {/* Statuses */}
+      <section className="mt-8">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Statuses</h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          Configure status options, colors, and order for tasks and kanban boards.
+        </p>
+        <Button
+          className="mt-3"
+          onClick={() => router.push(`/app/${params.slug}/settings/statuses`)}
+          variant="secondary"
+        >
+          Manage Statuses
+        </Button>
+      </section>
+
       {/* Custom Fields */}
       <section className="mt-8">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Custom Fields</h2>

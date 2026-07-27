@@ -374,15 +374,10 @@ function DetailsTab({
   return (
     <div className="space-y-5 px-5 py-4">
       {/* Description */}
-      <section>
-        <h3 className="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">
-          Description
-        </h3>
-        <TiptapEditor
-          content={task.description}
-          onChange={(content) => updateField('description', content)}
-        />
-      </section>
+      <DescriptionEditor
+        content={task.description}
+        onSave={(content) => updateField('description', content)}
+      />
 
       {/* Fields */}
       <section>
@@ -596,6 +591,59 @@ function FieldRow({
       </div>
       <div className="flex flex-1 items-center gap-1">{children}</div>
     </div>
+  );
+}
+
+function DescriptionEditor({
+  content,
+  onSave,
+}: {
+  content: unknown;
+  onSave: (content: unknown) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const hasContent =
+    content &&
+    typeof content === 'object' &&
+    'content' in (content as Record<string, unknown>) &&
+    Array.isArray((content as Record<string, unknown>).content) &&
+    ((content as Record<string, unknown>).content as unknown[]).length > 0;
+
+  if (editing) {
+    return (
+      <section>
+        <h3 className="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">
+          Description
+        </h3>
+        <div onBlur={() => setEditing(false)}>
+          <TiptapEditor
+            content={content}
+            onChange={(c) => {
+              onSave(c);
+            }}
+            placeholder="Write a description..."
+          />
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section>
+      <h3 className="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">
+        Description
+      </h3>
+      <div
+        className="cursor-text rounded-lg px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-900"
+        onClick={() => setEditing(true)}
+      >
+        {hasContent ? (
+          <TiptapEditor content={content} readOnly />
+        ) : (
+          <p className="italic text-gray-400 dark:text-gray-500">Click to add description...</p>
+        )}
+      </div>
+    </section>
   );
 }
 
