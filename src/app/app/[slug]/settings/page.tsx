@@ -848,6 +848,54 @@ export default function WorkspaceSettingsPage() {
                 </tbody>
               </table>
             </div>
+
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Role Permissions</h2>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">What each workspace role can do.</p>
+              <div className="mt-3 overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="border-b border-gray-200 dark:border-gray-700">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Permission</th>
+                      <th className="px-3 py-2 text-center font-medium text-gray-500 uppercase tracking-wider">Super Admin</th>
+                      <th className="px-3 py-2 text-center font-medium text-gray-500 uppercase tracking-wider">Admin</th>
+                      <th className="px-3 py-2 text-center font-medium text-gray-500 uppercase tracking-wider">Manager</th>
+                      <th className="px-3 py-2 text-center font-medium text-gray-500 uppercase tracking-wider">Member</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                    {[
+                      { perm: 'Create tasks', sa: '✓', a: '✓', m: '✓', mb: '✓' },
+                      { perm: 'Edit any task', sa: '✓', a: '✓', m: '✓', mb: 'Own only' },
+                      { perm: 'Delete tasks', sa: '✓', a: '✓', m: '✓', mb: 'Own only' },
+                      { perm: 'Create projects', sa: '✓', a: '✓', m: '✓', mb: '✗' },
+                      { perm: 'Manage phases', sa: '✓', a: '✓', m: '✓', mb: '✗' },
+                      { perm: 'Create shared views', sa: '✓', a: '✓', m: '✓', mb: '✗' },
+                      { perm: 'Manage members', sa: '✓', a: '✓', m: '✗', mb: '✗' },
+                      { perm: 'Workspace settings', sa: '✓', a: '✓', m: '✗', mb: '✗' },
+                      { perm: 'View all time logs', sa: '✓', a: '✓', m: '✓', mb: '✗' },
+                      { perm: 'Billing', sa: '✓', a: '✗', m: '✗', mb: '✗' },
+                      { perm: 'Delete workspace', sa: '✓', a: '✗', m: '✗', mb: '✗' },
+                    ].map((row) => (
+                      <tr key={row.perm}>
+                        <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">{row.perm}</td>
+                        {[row.sa, row.a, row.m, row.mb].map((val, i) => (
+                          <td className="px-3 py-2 text-center" key={i}>
+                            {val === '✓' ? (
+                              <span className="text-green-600 dark:text-green-400">✓</span>
+                            ) : val === '✗' ? (
+                              <span className="text-gray-300 dark:text-gray-600">✗</span>
+                            ) : (
+                              <span className="text-xs text-amber-600 dark:text-amber-400">{val}</span>
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         )}
 
