@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
 import { CompanyDetailPanel } from '@/components/contacts/company-detail-panel';
+import { ContactDetailPanel } from '@/components/contacts/contact-detail-panel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -37,6 +38,7 @@ export default function ContactsPage() {
   const [workspaceId, setWorkspaceId] = useState('');
   const [showAdd, setShowAdd] = useState(false);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
+  const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
 
   // Add contact fields
   const [newName, setNewName] = useState('');
@@ -268,11 +270,12 @@ export default function ContactsPage() {
                 <th className="px-4 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Company</th>
                 <th className="px-4 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Title</th>
                 <th className="px-4 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Added</th>
+                <th className="w-10 px-4 py-2" />
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {contacts.map((c) => (
-                <tr className="hover:bg-gray-50 dark:hover:bg-gray-900" key={c.id}>
+                <tr className="group hover:bg-gray-50 dark:hover:bg-gray-900" key={c.id}>
                   <td className="px-4 py-2.5 text-sm font-medium text-gray-900 dark:text-white">{c.name}</td>
                   <td className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400">{c.email ?? '—'}</td>
                   <td className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400">{c.phone ?? '—'}</td>
@@ -290,11 +293,20 @@ export default function ContactsPage() {
                   <td className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400">
                     {formatDistanceToNow(new Date(c.createdAt), { addSuffix: true })}
                   </td>
+                  <td className="px-4 py-2.5">
+                    <button
+                      className="rounded p-1 text-gray-400 opacity-0 transition-opacity hover:bg-gray-100 hover:text-gray-600 group-hover:opacity-100 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                      onClick={() => setSelectedContactId(c.id)}
+                      title="View details"
+                    >
+                      <Info className="h-4 w-4" />
+                    </button>
+                  </td>
                 </tr>
               ))}
               {contacts.length === 0 && (
                 <tr>
-                  <td className="px-4 py-8 text-center text-sm text-gray-500" colSpan={6}>No contacts yet</td>
+                  <td className="px-4 py-8 text-center text-sm text-gray-500" colSpan={7}>No contacts yet</td>
                 </tr>
               )}
             </tbody>
@@ -307,6 +319,21 @@ export default function ContactsPage() {
         <CompanyDetailPanel
           companyId={selectedCompanyId}
           onClose={() => setSelectedCompanyId(null)}
+          onUpdated={loadData}
+          workspaceId={workspaceId}
+        />
+      )}
+
+      {/* Contact detail panel */}
+      {selectedContactId && workspaceId && (
+        <ContactDetailPanel
+          companies={companies.map((c) => ({ id: c.id, name: c.name }))}
+          contactId={selectedContactId}
+          onClose={() => setSelectedContactId(null)}
+          onOpenCompany={(cid) => {
+            setSelectedContactId(null);
+            setSelectedCompanyId(cid);
+          }}
           onUpdated={loadData}
           workspaceId={workspaceId}
         />
