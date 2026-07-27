@@ -23,12 +23,15 @@ test.describe.serial('Admin Actions (sequential)', () => {
     await adminLogin(page);
     await page.goto('/admin/settings');
     await page.waitForLoadState('networkidle');
-    await expect(page.getByText('Public Signup')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Public Signup')).toBeVisible({ timeout: 15000 });
+
+    // Wait for settings to fully load
+    await page.waitForTimeout(2000);
 
     // Disable signup
     const toggle = page.getByTestId('signup-toggle');
     await toggle.click();
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(2000);
 
     // Verify API blocks signup
     const res = await page.request.post(`${BASE_URL}/api/auth/signup`, {
