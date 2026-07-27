@@ -15,37 +15,44 @@ export async function POST(
 
     const { workspaceId, taskId } = await params;
 
-    // Auto-stop any existing timer for this user
-    const existing = await prisma.activeTimer.findFirst({
-      where: { userId: session.user.id },
+    // Check if there's already a timer for this task
+    const existingForTask = await prisma.activeTimer.findUnique({
+      where: { userId_taskId: { userId: session.user.id, taskId } },
     });
 
-    if (existing) {
-      const elapsed = Date.now() - existing.startedAt.getTime();
-      let pausedMs = existing.totalPaused * 1000;
-      if (existing.pausedAt) {
-        pausedMs += Date.now() - existing.pausedAt.getTime();
-      }
-      const durationSec = Math.max(0, Math.floor((elapsed - pausedMs) / 1000));
-      const durationMin = Math.max(1, Math.round(durationSec / 60));
-
-      await prisma.$transaction([
-        prisma.timeEntry.create({
+    if (existingForTask) {
+      // Resume it if paused
+      if (existingForTask.pausedAt) {
+        const pausedDuration = Math.floor(
+          (Date.now() - existingForTask.pausedAt.getTime()) / 1000,
+        );
+        const timer = await prisma.activeTimer.update({
+          where: { id: existingForTask.id },
           data: {
-            taskId: existing.taskId,
-            userId: existing.userId,
-            startTime: existing.startedAt,
-            endTime: new Date(),
-            duration: durationMin,
-            date: existing.startedAt,
-            notes: existing.notes || undefined,
-            billable: existing.billable,
+            pausedAt: null,
+            totalPaused: existingForTask.totalPaused + pausedDuration,
           },
-        }),
-        prisma.activeTimer.delete({ where: { id: existing.id } }),
-      ]);
+          include: { task: { select: { id: true, title: true, projectId: true } } },
+        });
+        return NextResponse.json(timer);
+      }
+      // Already running on this task
+      return NextResponse.json(existingForTask);
     }
 
+    // Pause any currently RUNNING timer (not paused ones)
+    const runningTimer = await prisma.activeTimer.findFirst({
+      where: { userId: session.user.id, pausedAt: null },
+    });
+
+    if (runningTimer) {
+      await prisma.activeTimer.update({
+        where: { id: runningTimer.id },
+        data: { pausedAt: new Date() },
+      });
+    }
+
+    // Create new timer
     const timer = await prisma.activeTimer.create({
       data: {
         taskId,

@@ -17,8 +17,9 @@ export async function GET(
 
     const { workspaceId } = await params;
 
+    // Find the RUNNING timer (not paused) for the top bar indicator
     const timer = await prisma.activeTimer.findFirst({
-      where: { userId: session.user.id, workspaceId },
+      where: { userId: session.user.id, workspaceId, pausedAt: null },
       include: { task: { select: { id: true, title: true, projectId: true } } },
     });
 

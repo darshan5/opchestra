@@ -35,7 +35,7 @@ export async function GET(
           },
         },
       },
-      orderBy: { startedAt: 'desc' },
+      orderBy: [{ pausedAt: 'asc' }, { startedAt: 'desc' }],
     });
 
     return NextResponse.json(timers);

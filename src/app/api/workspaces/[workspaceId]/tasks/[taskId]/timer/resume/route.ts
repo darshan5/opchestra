@@ -27,6 +27,18 @@ export async function POST(
       return NextResponse.json({ error: 'Not paused' }, { status: 400 });
     }
 
+    // Pause any currently running timer first
+    const runningTimer = await prisma.activeTimer.findFirst({
+      where: { userId: session.user.id, pausedAt: null },
+    });
+
+    if (runningTimer && runningTimer.id !== timer.id) {
+      await prisma.activeTimer.update({
+        where: { id: runningTimer.id },
+        data: { pausedAt: new Date() },
+      });
+    }
+
     const pausedSeconds = Math.floor((Date.now() - timer.pausedAt.getTime()) / 1000);
 
     const updated = await prisma.activeTimer.update({

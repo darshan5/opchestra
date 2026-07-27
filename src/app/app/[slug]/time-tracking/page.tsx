@@ -356,11 +356,13 @@ export default function TimeTrackingPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                   {activeTimers.map((timer) => {
-                    const canStop = currentUserId === timer.user.id || isAdmin;
+                    const canManage = currentUserId === timer.user.id || isAdmin;
+                    const isPaused = !!timer.pausedAt;
                     return (
-                    <tr key={timer.id}>
+                    <tr key={timer.id} className={isPaused ? 'opacity-75' : ''}>
                       <td className="px-4 py-2.5">
                         <div className="flex items-center gap-2">
+                          <div className={`flex h-2 w-2 rounded-full ${isPaused ? 'bg-amber-400' : 'bg-green-500 animate-pulse'}`} />
                           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-xs font-medium text-blue-700 dark:bg-blue-900 dark:text-blue-300">
                             {(timer.user.name ?? timer.user.email).substring(0, 2).toUpperCase()}
                           </div>
@@ -370,42 +372,66 @@ export default function TimeTrackingPage() {
                         </div>
                       </td>
                       <td className="px-4 py-2.5 text-sm font-medium">
-                        {timer.task.project ? (
-                          <a className="text-blue-600 hover:underline dark:text-blue-400" href={`/app/${params.slug}/projects/${timer.task.project.id}`}>{timer.task.title}</a>
-                        ) : (
-                          <span className="text-gray-900 dark:text-white">{timer.task.title}</span>
-                        )}
+                        <a className="text-blue-600 hover:underline dark:text-blue-400" href={timer.task.project ? `/app/${params.slug}/projects/${timer.task.project.id}` : `/app/${params.slug}/all-tasks`}>{timer.task.title}</a>
                       </td>
                       <td className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400">{timer.task.project?.name ?? '—'}</td>
                       <td className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400">{format(new Date(timer.startedAt), 'h:mm a')}</td>
                       <td className="px-4 py-2.5">
-                        <span className="rounded bg-green-100 px-2 py-1 font-mono text-sm font-medium text-green-700 dark:bg-green-900 dark:text-green-300">
+                        <span className={`rounded px-2 py-1 font-mono text-sm font-medium ${isPaused ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' : 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'}`}>
                           {fmtElapsed(elapsed(timer))}
                         </span>
-                        {timer.pausedAt && <span className="ml-2 text-[10px] text-amber-500">PAUSED</span>}
+                        {isPaused && <span className="ml-2 text-[10px] font-semibold text-amber-500">PAUSED</span>}
                       </td>
                       <td className="px-4 py-2.5">
                         <span className={timer.billable ? 'text-green-600 dark:text-green-400' : 'text-gray-300 dark:text-gray-600'}>$</span>
                       </td>
                       <td className="px-4 py-2.5">
-                        {canStop && stoppingTimer !== timer.id && (
-                          <button
-                            className="rounded bg-red-100 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-200 dark:bg-red-900/40 dark:text-red-300 dark:hover:bg-red-900/60"
-                            onClick={async () => {
-                              setStoppingTimer(timer.id);
-                              await fetch(`/api/workspaces/${workspaceId}/tasks/${timer.task.id}/timer/stop`, { method: 'POST' });
-                              setActiveTimers((prev) => prev.filter((t) => t.id !== timer.id));
-                              setStoppingTimer(null);
-                              window.dispatchEvent(new Event('timer-stopped'));
-                            }}
-                            type="button"
-                          >
-                            Stop
-                          </button>
-                        )}
-                        {stoppingTimer === timer.id && (
-                          <span className="text-xs text-gray-400">Stopping...</span>
-                        )}
+                        <div className="flex items-center gap-1">
+                          {canManage && stoppingTimer !== timer.id && (
+                            <>
+                              {isPaused ? (
+                                <button
+                                  className="rounded bg-green-100 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-200 dark:bg-green-900/40 dark:text-green-300"
+                                  onClick={async () => {
+                                    await fetch(`/api/workspaces/${workspaceId}/tasks/${timer.task.id}/timer/resume`, { method: 'POST' });
+                                    setActiveTimers((prev) => prev.map((t) => t.id === timer.id ? { ...t, pausedAt: null } : (t.pausedAt === null && t.user.id === timer.user.id ? { ...t, pausedAt: new Date().toISOString() } : t)));
+                                    window.dispatchEvent(new Event('timer-started'));
+                                  }}
+                                  type="button"
+                                >
+                                  Resume
+                                </button>
+                              ) : (
+                                <button
+                                  className="rounded bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-200 dark:bg-amber-900/40 dark:text-amber-300"
+                                  onClick={async () => {
+                                    await fetch(`/api/workspaces/${workspaceId}/tasks/${timer.task.id}/timer/pause`, { method: 'POST' });
+                                    setActiveTimers((prev) => prev.map((t) => t.id === timer.id ? { ...t, pausedAt: new Date().toISOString() } : t));
+                                  }}
+                                  type="button"
+                                >
+                                  Pause
+                                </button>
+                              )}
+                              <button
+                                className="rounded bg-red-100 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-200 dark:bg-red-900/40 dark:text-red-300"
+                                onClick={async () => {
+                                  setStoppingTimer(timer.id);
+                                  await fetch(`/api/workspaces/${workspaceId}/tasks/${timer.task.id}/timer/stop`, { method: 'POST' });
+                                  setActiveTimers((prev) => prev.filter((t) => t.id !== timer.id));
+                                  setStoppingTimer(null);
+                                  window.dispatchEvent(new Event('timer-stopped'));
+                                }}
+                                type="button"
+                              >
+                                Stop
+                              </button>
+                            </>
+                          )}
+                          {stoppingTimer === timer.id && (
+                            <span className="text-xs text-gray-400">Stopping...</span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                     );
