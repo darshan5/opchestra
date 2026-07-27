@@ -184,6 +184,7 @@ export function TaskDetailPanel({
     if (res.ok) {
       setNewComment('');
       fetchComments();
+      onTaskUpdated?.();
     }
     setSendingComment(false);
   }
@@ -345,7 +346,7 @@ export function TaskDetailPanel({
             />
           )}
           {activeTab === 'timelog' && (
-            <TimeLogTab currentUserRole={currentUserRole} members={members} taskId={taskId} workspaceId={workspaceId} />
+            <TimeLogTab currentUserRole={currentUserRole} members={members} onActivityChange={() => { fetchComments(); onTaskUpdated?.(); }} taskId={taskId} workspaceId={workspaceId} />
           )}
         </div>
       </div>
@@ -758,7 +759,7 @@ function ActivityTab({
   );
 }
 
-function TimeLogTab({ currentUserRole, members, taskId, workspaceId }: { taskId: string; workspaceId: string; currentUserRole?: string; members: TaskUser[] }) {
+function TimeLogTab({ currentUserRole, members, onActivityChange, taskId, workspaceId }: { taskId: string; workspaceId: string; currentUserRole?: string; members: TaskUser[]; onActivityChange?: () => void }) {
   const isAdmin = currentUserRole === 'SUPER_ADMIN' || currentUserRole === 'ADMIN' || currentUserRole === 'MANAGER';
   const [personFilter, setPersonFilter] = useState<string>('all');
   interface TimeEntryData {
@@ -820,6 +821,8 @@ function TimeLogTab({ currentUserRole, members, taskId, workspaceId }: { taskId:
       setTotalMinutes((prev: number) => prev + diff);
     }
     setEditingDuration(null);
+    onActivityChange?.();
+
   }
 
   const fetchEntries = useCallback(async () => {
@@ -968,6 +971,8 @@ function TimeLogTab({ currentUserRole, members, taskId, workspaceId }: { taskId:
       setTimerNotes('');
       setTimerBillable(true);
       fetchEntries();
+      onActivityChange?.();
+  
       window.dispatchEvent(new Event('timer-stopped'));
     }
   }
@@ -1008,6 +1013,8 @@ function TimeLogTab({ currentUserRole, members, taskId, workspaceId }: { taskId:
     setManualBillable(true);
     setAdding(false);
     fetchEntries();
+    onActivityChange?.();
+
   }
 
   async function toggleBillable(entryId: string, current: boolean) {
@@ -1041,6 +1048,8 @@ function TimeLogTab({ currentUserRole, members, taskId, workspaceId }: { taskId:
       method: 'DELETE',
     });
     fetchEntries();
+    onActivityChange?.();
+
   }
 
   return (
