@@ -1,4 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- White background for dark mode compatibility -->
+  <rect width="32" height="32" rx="6" fill="white"/>
+
   <!-- Left column: checkboxes -->
   <rect x="3" y="4" width="6" height="6" rx="1.5" stroke="#334155" stroke-width="2" fill="none"/>
   <rect x="3" y="13" width="6" height="6" rx="1.5" stroke="#334155" stroke-width="2" fill="#334155"/>
