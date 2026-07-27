@@ -3,6 +3,7 @@
 import {
   ChevronLeft,
   Clock,
+  Contact,
   Eye,
   FolderKanban,
   Home,
@@ -12,6 +13,7 @@ import {
   Receipt,
   Search,
   Settings,
+  Ticket,
   Users,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -37,6 +39,8 @@ export function Sidebar({ projects, slug, views = [], workspaceName }: SidebarPr
   const navItems = [
     { href: base, icon: Home, label: 'Home' },
     { href: `${base}/my-tasks`, icon: LayoutList, label: 'My Tasks' },
+    { href: `${base}/tickets`, icon: Ticket, label: 'Tickets' },
+    { href: `${base}/contacts`, icon: Contact, label: 'Contacts' },
   ];
 
   const bottomItems = [

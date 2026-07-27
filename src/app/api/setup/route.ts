@@ -405,6 +405,44 @@ const MIGRATIONS = [
   )`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "CustomFieldValue_taskId_customFieldDefinitionId_key" ON "CustomFieldValue"("taskId", "customFieldDefinitionId")`,
   `CREATE INDEX IF NOT EXISTS "CustomFieldValue_taskId_idx" ON "CustomFieldValue"("taskId")`,
+
+  `CREATE TABLE IF NOT EXISTS "Company" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "workspaceId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "domain" TEXT,
+    "industry" TEXT,
+    "notes" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "Company_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "Company_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE
+  )`,
+  `CREATE INDEX IF NOT EXISTS "Company_workspaceId_idx" ON "Company"("workspaceId")`,
+
+  `CREATE TABLE IF NOT EXISTS "Contact" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "workspaceId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "email" TEXT,
+    "phone" TEXT,
+    "title" TEXT,
+    "companyId" TEXT,
+    "notes" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "Contact_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "Contact_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "Contact_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE SET NULL ON UPDATE CASCADE
+  )`,
+  `CREATE INDEX IF NOT EXISTS "Contact_workspaceId_idx" ON "Contact"("workspaceId")`,
+  `CREATE INDEX IF NOT EXISTS "Contact_companyId_idx" ON "Contact"("companyId")`,
+
+  `ALTER TABLE "Task" ADD COLUMN IF NOT EXISTS "ticketNumber" TEXT`,
+  `ALTER TABLE "Task" ADD COLUMN IF NOT EXISTS "source" TEXT`,
+  `ALTER TABLE "Task" ADD COLUMN IF NOT EXISTS "contactId" TEXT`,
+  `ALTER TABLE "Task" ADD COLUMN IF NOT EXISTS "companyId" TEXT`,
+  `CREATE INDEX IF NOT EXISTS "Task_ticketNumber_idx" ON "Task"("ticketNumber")`,
 ];
 
 export async function POST() {
