@@ -50,10 +50,7 @@ test.describe('Views (Phase 2)', () => {
   test('table view loads by default', async ({ page }) => {
     await page.goto(`/app/${WORKSPACE_SLUG}/projects/${projectId}`);
     await page.waitForLoadState('networkidle');
-    // Table view should show task content or add item link
-    await expect(
-      page.getByText(/add item|add task|view task/i).first().or(page.locator('table, [class*="table"], [class*="group"]').first()),
-    ).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('Add item').first()).toBeVisible({ timeout: 15000 });
   });
 
   test('kanban view shows status columns', async ({ page }) => {
