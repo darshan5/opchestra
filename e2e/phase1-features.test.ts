@@ -1,45 +1,35 @@
 import { expect, test } from '@playwright/test';
 
-import { TEST_USER } from './helpers';
-
 const BASE_URL = process.env.E2E_BASE_URL || 'https://opchestra.com';
+const USER_EMAIL = 'darshanpatel@gmail.com';
+const USER_PASSWORD = 'Admin1234';
+const WORKSPACE_SLUG = 'opchestra-hq';
 
-let workspaceSlug: string;
 let workspaceId: string;
 let projectId: string;
 
 test.describe('Phase 1 Features', () => {
-  test.beforeAll(async ({ request }) => {
-    await request.post(`${BASE_URL}/api/auth/signup`, {
-      data: { email: TEST_USER.email, name: TEST_USER.name, password: TEST_USER.password },
-    });
-    await request.post(`${BASE_URL}/api/setup/verify-test-user`, {
-      data: { email: TEST_USER.email },
-    });
-  });
-
   test.beforeEach(async ({ page }) => {
     await page.goto('/login');
-    await page.getByLabel('Email').fill(TEST_USER.email);
-    await page.getByLabel('Password').fill(TEST_USER.password);
+    await page.getByLabel('Email').fill(USER_EMAIL);
+    await page.getByLabel('Password').fill(USER_PASSWORD);
     await page.getByRole('button', { name: 'Sign in' }).click();
     await page.waitForURL(/\/app/, { timeout: 15000 });
 
-    if (!workspaceSlug) {
-      const slug = `phase1-${Date.now()}`;
-      const res = await page.request.post(`${BASE_URL}/api/workspaces`, {
-        data: { name: 'Phase 1 Test', slug },
-      });
-      const ws = await res.json();
-      workspaceSlug = ws.slug || slug;
-      workspaceId = ws.id;
+    if (!workspaceId) {
+      const wsRes = await page.request.get(`${BASE_URL}/api/workspaces`);
+      const workspaces = await wsRes.json();
+      const ws = workspaces.find((w: { slug: string }) => w.slug === WORKSPACE_SLUG);
+      workspaceId = ws?.id;
 
-      const projRes = await page.request.post(
-        `${BASE_URL}/api/workspaces/${workspaceId}/projects`,
-        { data: { name: 'P1 Test Project' } },
-      );
-      const proj = await projRes.json();
-      projectId = proj.id;
+      if (workspaceId) {
+        const projRes = await page.request.post(
+          `${BASE_URL}/api/workspaces/${workspaceId}/projects`,
+          { data: { name: 'P1 Test Project' } },
+        );
+        const proj = await projRes.json();
+        projectId = proj.id;
+      }
     }
   });
 
@@ -54,7 +44,7 @@ test.describe('Phase 1 Features', () => {
       data: { title: taskTitle, projectId, priority: 'HIGH' },
     });
 
-    await page.goto(`/app/${workspaceSlug}/projects/${projectId}`);
+    await page.goto(`/app/${WORKSPACE_SLUG}/projects/${projectId}`);
     await page.waitForLoadState('networkidle');
     await expect(page.getByText(taskTitle).first()).toBeVisible({ timeout: 15000 });
 
@@ -75,7 +65,7 @@ test.describe('Phase 1 Features', () => {
   });
 
   test('workspace settings page loads', async ({ page }) => {
-    await page.goto(`/app/${workspaceSlug}/settings`);
+    await page.goto(`/app/${WORKSPACE_SLUG}/settings`);
     await page.waitForLoadState('networkidle');
     await expect(page.locator('body')).toBeVisible({ timeout: 10000 });
   });
@@ -109,7 +99,7 @@ test.describe('Phase 1 Features', () => {
   });
 
   test('my-tasks page loads', async ({ page }) => {
-    await page.goto(`/app/${workspaceSlug}/my-tasks`);
+    await page.goto(`/app/${WORKSPACE_SLUG}/my-tasks`);
     await page.waitForLoadState('networkidle');
     await expect(page.getByRole('heading', { name: 'My Tasks' })).toBeVisible({ timeout: 15000 });
   });
@@ -120,7 +110,7 @@ test.describe('Phase 1 Features', () => {
       return;
     }
 
-    await page.goto(`/app/${workspaceSlug}/projects/${projectId}`);
+    await page.goto(`/app/${WORKSPACE_SLUG}/projects/${projectId}`);
     await page.waitForLoadState('networkidle');
     await expect(page.getByRole('heading', { name: 'P1 Test Project' })).toBeVisible({
       timeout: 15000,
