@@ -378,6 +378,33 @@ const MIGRATIONS = [
     CONSTRAINT "DiscountCode_pkey" PRIMARY KEY ("id")
   )`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "DiscountCode_code_key" ON "DiscountCode"("code")`,
+
+  `CREATE TABLE IF NOT EXISTS "CustomFieldDefinition" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "workspaceId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "config" JSONB NOT NULL DEFAULT '{}',
+    "position" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "CustomFieldDefinition_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "CustomFieldDefinition_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "CustomFieldDefinition_workspaceId_name_key" ON "CustomFieldDefinition"("workspaceId", "name")`,
+  `CREATE INDEX IF NOT EXISTS "CustomFieldDefinition_workspaceId_idx" ON "CustomFieldDefinition"("workspaceId")`,
+
+  `CREATE TABLE IF NOT EXISTS "CustomFieldValue" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "taskId" TEXT NOT NULL,
+    "customFieldDefinitionId" TEXT NOT NULL,
+    "value" JSONB,
+    CONSTRAINT "CustomFieldValue_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "CustomFieldValue_taskId_fkey" FOREIGN KEY ("taskId") REFERENCES "Task"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "CustomFieldValue_customFieldDefinitionId_fkey" FOREIGN KEY ("customFieldDefinitionId") REFERENCES "CustomFieldDefinition"("id") ON DELETE CASCADE ON UPDATE CASCADE
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "CustomFieldValue_taskId_customFieldDefinitionId_key" ON "CustomFieldValue"("taskId", "customFieldDefinitionId")`,
+  `CREATE INDEX IF NOT EXISTS "CustomFieldValue_taskId_idx" ON "CustomFieldValue"("taskId")`,
 ];
 
 export async function POST() {

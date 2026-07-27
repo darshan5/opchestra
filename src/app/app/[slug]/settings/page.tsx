@@ -209,6 +209,21 @@ export default function WorkspaceSettingsPage() {
         </div>
       </section>
 
+      {/* Custom Fields */}
+      <section className="mt-8">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Custom Fields</h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          Define custom fields to track additional data on tasks.
+        </p>
+        <Button
+          className="mt-3"
+          onClick={() => router.push(`/app/${params.slug}/settings/custom-fields`)}
+          variant="secondary"
+        >
+          Manage Custom Fields
+        </Button>
+      </section>
+
       <div className="mt-6">
         <Button onClick={() => router.back()} variant="ghost">
           Back

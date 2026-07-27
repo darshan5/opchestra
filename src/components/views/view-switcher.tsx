@@ -4,6 +4,7 @@ import {
   Calendar,
   Columns3,
   Filter,
+  GanttChartSquare,
   List,
   Save,
   Table2,
@@ -12,12 +13,13 @@ import {
 import { useCallback, useEffect, useState } from 'react';
 
 import { CalendarView } from '@/components/tasks/calendar-view';
+import { GanttView } from '@/components/tasks/gantt-view';
 import { KanbanView } from '@/components/tasks/kanban-view';
 import { TaskTableView } from '@/components/tasks/task-table-view';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-type Layout = 'TABLE' | 'KANBAN' | 'CALENDAR';
+type Layout = 'TABLE' | 'KANBAN' | 'CALENDAR' | 'GANTT';
 
 interface TaskUser {
   id: string;
@@ -66,6 +68,7 @@ const layouts: Array<{ value: Layout; icon: typeof Table2; label: string }> = [
   { icon: Table2, label: 'Table', value: 'TABLE' },
   { icon: Columns3, label: 'Kanban', value: 'KANBAN' },
   { icon: Calendar, label: 'Calendar', value: 'CALENDAR' },
+  { icon: GanttChartSquare, label: 'Gantt', value: 'GANTT' },
 ];
 
 const FILTER_FIELDS = [
@@ -373,6 +376,16 @@ export function ViewSwitcher({
         )}
         {layout === 'CALENDAR' && (
           <CalendarView
+            members={members}
+            projectId={projectId}
+            projects={projects}
+            slug={slug}
+            tasks={filteredTasks}
+            workspaceId={workspaceId}
+          />
+        )}
+        {layout === 'GANTT' && (
+          <GanttView
             members={members}
             projectId={projectId}
             projects={projects}

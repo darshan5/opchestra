@@ -223,15 +223,16 @@ model Workspace {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  members         WorkspaceMember[]
-  projects        Project[]
-  tasks           Task[]
-  labels          Label[]
-  statusWorkflows StatusWorkflow[]
-  views           View[]
-  notifications   Notification[]
-  inviteTokens    InviteToken[]
-  files           File[]
+  members              WorkspaceMember[]
+  projects             Project[]
+  tasks                Task[]
+  labels               Label[]
+  statusWorkflows      StatusWorkflow[]
+  views                View[]
+  notifications        Notification[]
+  inviteTokens         InviteToken[]
+  files                File[]
+  customFieldDefinitions CustomFieldDefinition[]
 
   settings WorkspaceSettings?
 }
@@ -327,8 +328,9 @@ model Task {
   files        File[]
   taskLabels   TaskLabel[]
 
-  dependsOn    TaskDependency[] @relation("DependentTask")
-  dependedOnBy TaskDependency[] @relation("BlockingTask")
+  dependsOn         TaskDependency[] @relation("DependentTask")
+  dependedOnBy      TaskDependency[] @relation("BlockingTask")
+  customFieldValues CustomFieldValue[]
 
   @@index([workspaceId])
   @@index([projectId])
@@ -469,6 +471,38 @@ model StatusWorkflow {
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
+}
+
+// ─── Custom Fields ──────────────────────────────────────────
+
+model CustomFieldDefinition {
+  id          String @id @default(uuid())
+  workspaceId String
+  name        String
+  type        String
+  config      Json   @default("{}")
+  position    Int    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  values    CustomFieldValue[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId])
+}
+
+model CustomFieldValue {
+  id                    String @id @default(uuid())
+  taskId                String
+  customFieldDefinitionId String
+  value                 Json
+
+  task       Task                @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  definition CustomFieldDefinition @relation(fields: [customFieldDefinitionId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, customFieldDefinitionId])
+  @@index([taskId])
 }
 
 // ─── Views ──────────────────────────────────────────────────

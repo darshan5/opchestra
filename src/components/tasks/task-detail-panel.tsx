@@ -16,6 +16,7 @@ import {
 import { useCallback, useEffect, useState } from 'react';
 
 import { TiptapEditor } from '@/components/editor/tiptap-editor';
+import { CustomFieldRenderer } from '@/components/tasks/custom-field-renderer';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -310,11 +311,14 @@ export function TaskDetailPanel({
           {activeTab === 'details' && (
             <DetailsTab
               addSubTask={addSubTask}
+              members={members}
               newSubTaskTitle={newSubTaskTitle}
               projects={projects}
               setNewSubTaskTitle={setNewSubTaskTitle}
               task={task}
+              taskId={taskId}
               updateField={updateField}
+              workspaceId={workspaceId}
             />
           )}
           {activeTab === 'activity' && (
@@ -348,15 +352,21 @@ function Panel({ children, onClose }: { children: React.ReactNode; onClose: () =
 
 function DetailsTab({
   addSubTask,
+  members,
   newSubTaskTitle,
   projects,
   setNewSubTaskTitle,
   task,
+  taskId,
   updateField,
+  workspaceId,
 }: {
   task: FullTask;
   updateField: (field: string, value: unknown) => void;
   projects: Array<{ id: string; name: string }>;
+  members: TaskUser[];
+  workspaceId: string;
+  taskId: string;
   newSubTaskTitle: string;
   setNewSubTaskTitle: (v: string) => void;
   addSubTask: () => void;
@@ -532,6 +542,9 @@ function DetailsTab({
           </div>
         </section>
       )}
+
+      {/* Custom Fields */}
+      <CustomFieldsSection members={members} taskId={taskId} workspaceId={workspaceId} />
 
       {/* Files */}
       <section>
@@ -874,5 +887,87 @@ function TimeLogTab({ taskId, workspaceId }: { taskId: string; workspaceId: stri
         )}
       </div>
     </div>
+  );
+}
+
+function CustomFieldsSection({
+  members,
+  taskId,
+  workspaceId,
+}: {
+  workspaceId: string;
+  taskId: string;
+  members: TaskUser[];
+}) {
+  const [definitions, setDefinitions] = useState<
+    Array<{ id: string; name: string; type: string; config: Record<string, unknown> }>
+  >([]);
+  const [values, setValues] = useState<Record<string, unknown>>({});
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      const [defsRes, valsRes] = await Promise.all([
+        fetch(`/api/workspaces/${workspaceId}/custom-fields`),
+        fetch(`/api/workspaces/${workspaceId}/tasks/${taskId}/field-values`),
+      ]);
+      if (defsRes.ok) {
+        setDefinitions(await defsRes.json());
+      }
+      if (valsRes.ok) {
+        const data = await valsRes.json();
+        const map: Record<string, unknown> = {};
+        for (const v of data) {
+          map[v.customFieldDefinitionId] = v.value;
+        }
+        setValues(map);
+      }
+      setLoaded(true);
+    };
+    load();
+  }, [workspaceId, taskId]);
+
+  async function saveFieldValue(fieldId: string, value: unknown) {
+    setValues((prev) => ({ ...prev, [fieldId]: value }));
+    await fetch(`/api/workspaces/${workspaceId}/tasks/${taskId}/field-values`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fieldId, value }),
+    });
+  }
+
+  if (!loaded || definitions.length === 0) {
+    return null;
+  }
+
+  const allNamedValues: Record<string, unknown> = {};
+  for (const def of definitions) {
+    allNamedValues[def.name] = values[def.id] ?? null;
+  }
+
+  return (
+    <section>
+      <h3 className="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">
+        Custom Fields
+      </h3>
+      <div className="space-y-2">
+        {definitions.map((def) => (
+          <div className="flex items-start gap-3 rounded-lg px-2 py-1" key={def.id}>
+            <span className="w-28 shrink-0 pt-1 text-xs text-gray-500 dark:text-gray-400">
+              {def.name}
+            </span>
+            <div className="flex-1">
+              <CustomFieldRenderer
+                allValues={allNamedValues}
+                definition={def}
+                members={members}
+                onChange={(v) => saveFieldValue(def.id, v)}
+                value={values[def.id] ?? null}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
