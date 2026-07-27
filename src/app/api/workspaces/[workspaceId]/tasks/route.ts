@@ -134,6 +134,7 @@ export async function POST(
         endDate: parsed.data.endDate ? new Date(parsed.data.endDate) : null,
         timeEstimate: parsed.data.timeEstimate,
         isMilestone: parsed.data.isMilestone ?? false,
+        taskGroupId: parsed.data.taskGroupId,
         depth,
         position: (lastTask?.position ?? 0) + 1,
       },

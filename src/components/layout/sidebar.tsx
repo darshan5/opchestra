@@ -1,7 +1,10 @@
 'use client';
 
 import {
+  ChevronDown,
   ChevronLeft,
+  ChevronRight,
+  Circle,
   Clock,
   Contact,
   CreditCard,
@@ -17,22 +20,38 @@ import {
   Ticket,
 } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { cn } from '@/lib/utils';
 
+interface TaskGroupData {
+  id: string;
+  name: string;
+  color: string;
+}
+
+interface ProjectData {
+  id: string;
+  name: string;
+  taskGroups?: TaskGroupData[];
+}
+
 interface SidebarProps {
   slug: string;
   workspaceName: string;
-  projects: Array<{ id: string; name: string }>;
+  projects: ProjectData[];
   views?: Array<{ id: string; name: string }>;
 }
 
 export function Sidebar({ projects, slug, views = [], workspaceName }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  const [newGroupProjectId, setNewGroupProjectId] = useState<string | null>(null);
+  const [newGroupName, setNewGroupName] = useState('');
 
   const base = `/app/${slug}`;
 
@@ -55,6 +74,44 @@ export function Sidebar({ projects, slug, views = [], workspaceName }: SidebarPr
       return pathname === base;
     }
     return pathname.startsWith(href);
+  }
+
+  function toggleProject(projectId: string) {
+    setExpandedProjects((prev) => {
+      const next = new Set(prev);
+      if (next.has(projectId)) {
+        next.delete(projectId);
+      } else {
+        next.add(projectId);
+      }
+      return next;
+    });
+  }
+
+  async function createGroup(projectId: string) {
+    if (!newGroupName.trim()) {
+      return;
+    }
+    try {
+      const wsRes = await fetch('/api/workspaces');
+      const workspaces = await wsRes.json();
+      const ws = workspaces.find((w: { slug: string }) => w.slug === slug);
+      if (!ws) {
+        return;
+      }
+
+      await fetch(`/api/workspaces/${ws.id}/projects/${projectId}/groups`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newGroupName.trim() }),
+      });
+
+      setNewGroupName('');
+      setNewGroupProjectId(null);
+      router.refresh();
+    } catch {
+      // ignore
+    }
   }
 
   return (
@@ -140,21 +197,118 @@ export function Sidebar({ projects, slug, views = [], workspaceName }: SidebarPr
               </Link>
             </div>
             <nav className="mt-1 space-y-0.5">
-              {projects.map((project) => (
-                <Link
-                  className={cn(
-                    'flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-colors',
-                    isActive(`${base}/projects/${project.id}`)
-                      ? 'bg-blue-50 font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                      : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800',
-                  )}
-                  href={`${base}/projects/${project.id}`}
-                  key={project.id}
-                >
-                  <FolderKanban className="h-4 w-4 shrink-0" />
-                  {!collapsed && <span className="truncate">{project.name}</span>}
-                </Link>
-              ))}
+              {projects.map((project) => {
+                const isExpanded = expandedProjects.has(project.id);
+                const projectActive = isActive(`${base}/projects/${project.id}`);
+                const groups = project.taskGroups ?? [];
+
+                return (
+                  <div key={project.id}>
+                    <div className="flex items-center">
+                      {!collapsed && (
+                        <button
+                          className="shrink-0 rounded p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                          onClick={() => toggleProject(project.id)}
+                        >
+                          {isExpanded ? (
+                            <ChevronDown className="h-3 w-3" />
+                          ) : (
+                            <ChevronRight className="h-3 w-3" />
+                          )}
+                        </button>
+                      )}
+                      <Link
+                        className={cn(
+                          'flex flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors',
+                          projectActive
+                            ? 'bg-blue-50 font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                            : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800',
+                        )}
+                        href={`${base}/projects/${project.id}`}
+                      >
+                        <FolderKanban className="h-4 w-4 shrink-0" />
+                        {!collapsed && <span className="truncate">{project.name}</span>}
+                      </Link>
+                    </div>
+
+                    {isExpanded && !collapsed && (
+                      <div className="ml-5 mt-0.5 space-y-0.5 border-l border-gray-200 pl-2 dark:border-gray-800">
+                        <Link
+                          className={cn(
+                            'flex items-center gap-2 rounded-lg px-2 py-1 text-xs transition-colors',
+                            pathname === `${base}/projects/${project.id}`
+                              ? 'font-medium text-blue-700 dark:text-blue-300'
+                              : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200',
+                          )}
+                          href={`${base}/projects/${project.id}`}
+                        >
+                          <LayoutList className="h-3 w-3 shrink-0" />
+                          All Tasks
+                        </Link>
+
+                        {groups.map((group) => (
+                          <Link
+                            className={cn(
+                              'flex items-center gap-2 rounded-lg px-2 py-1 text-xs transition-colors',
+                              isActive(
+                                `${base}/projects/${project.id}/groups/${group.id}`,
+                              )
+                                ? 'font-medium text-blue-700 dark:text-blue-300'
+                                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200',
+                            )}
+                            href={`${base}/projects/${project.id}/groups/${group.id}`}
+                            key={group.id}
+                          >
+                            <Circle
+                              className="h-2.5 w-2.5 shrink-0"
+                              fill={group.color}
+                              stroke={group.color}
+                            />
+                            <span className="truncate">{group.name}</span>
+                          </Link>
+                        ))}
+
+                        {newGroupProjectId === project.id ? (
+                          <form
+                            className="flex items-center gap-1 px-2"
+                            onSubmit={(e) => {
+                              e.preventDefault();
+                              createGroup(project.id);
+                            }}
+                          >
+                            <input
+                              autoFocus
+                              className="w-full rounded border border-gray-300 bg-white px-1.5 py-0.5 text-xs dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                              onBlur={() => {
+                                if (!newGroupName.trim()) {
+                                  setNewGroupProjectId(null);
+                                }
+                              }}
+                              onChange={(e) => setNewGroupName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Escape') {
+                                  setNewGroupProjectId(null);
+                                  setNewGroupName('');
+                                }
+                              }}
+                              placeholder="Group name"
+                              value={newGroupName}
+                            />
+                          </form>
+                        ) : (
+                          <button
+                            className="flex items-center gap-2 px-2 py-1 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                            onClick={() => setNewGroupProjectId(project.id)}
+                          >
+                            <Plus className="h-3 w-3" />
+                            New Group
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
               {projects.length === 0 && !collapsed && (
                 <p className="px-3 py-1.5 text-xs text-gray-400 dark:text-gray-500">
                   No projects yet

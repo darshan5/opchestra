@@ -24,8 +24,15 @@ export default async function WorkspaceLayout({
     include: {
       projects: {
         where: { status: 'ACTIVE' },
-        select: { id: true, name: true },
         orderBy: { name: 'asc' },
+        select: {
+          id: true,
+          name: true,
+          taskGroups: {
+            select: { id: true, name: true, color: true },
+            orderBy: { position: 'asc' },
+          },
+        },
       },
     },
   });

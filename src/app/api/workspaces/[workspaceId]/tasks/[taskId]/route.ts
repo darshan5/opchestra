@@ -125,6 +125,9 @@ export async function PATCH(
     if (parsed.data.isMilestone !== undefined) {
       data.isMilestone = parsed.data.isMilestone;
     }
+    if (parsed.data.taskGroupId !== undefined) {
+      data.taskGroupId = parsed.data.taskGroupId;
+    }
     if (parsed.data.position !== undefined) {
       data.position = parsed.data.position;
     }

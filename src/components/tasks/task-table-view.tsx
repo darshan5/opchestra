@@ -26,6 +26,12 @@ interface TaskUser {
   image: string | null;
 }
 
+interface TaskGroupData {
+  id: string;
+  name: string;
+  color: string;
+}
+
 interface TaskData {
   id: string;
   title: string;
@@ -33,6 +39,7 @@ interface TaskData {
   priority: string;
   assignee: TaskUser | null;
   project: { id: string; name: string } | null;
+  taskGroup?: TaskGroupData | null;
   startDate?: string | Date | null;
   endDate: string | Date | null;
   isMilestone: boolean;
@@ -53,9 +60,11 @@ interface TaskTableViewProps {
   tasks: TaskData[];
   workspaceId: string;
   projectId?: string;
+  taskGroupId?: string;
   slug: string;
   members: TaskUser[];
   projects?: Array<{ id: string; name: string }>;
+  taskGroups?: TaskGroupData[];
 }
 
 const STATUS_ORDER = ['Todo', 'In Progress', 'Done'];
@@ -405,6 +414,8 @@ export function TaskTableView({
   members,
   projectId,
   projects = [],
+  taskGroupId,
+  taskGroups = [],
   tasks: initialTasks,
   workspaceId,
 }: TaskTableViewProps) {
@@ -560,6 +571,9 @@ export function TaskTableView({
                     <div className="w-24 shrink-0 px-1 text-center">Priority</div>
                     <div className="w-24 shrink-0 px-1 text-center">Date</div>
                     <div className="w-32 shrink-0 px-1 text-center">Project</div>
+                    {taskGroups.length > 0 && !taskGroupId && (
+                      <div className="w-28 shrink-0 px-1 text-center">Group</div>
+                    )}
                     <div className="w-10 shrink-0" />
                   </div>
 
@@ -794,6 +808,30 @@ export function TaskTableView({
                               </span>
                             )}
                           </div>
+
+                          {/* Group */}
+                          {taskGroups.length > 0 && !taskGroupId && (
+                            <div className="flex w-28 shrink-0 items-center justify-center px-1">
+                              <select
+                                className="w-full truncate rounded border-0 bg-transparent py-0.5 text-[11px] text-gray-600 cursor-pointer dark:text-gray-400"
+                                onChange={(e) => {
+                                  e.stopPropagation();
+                                  fetch(`/api/workspaces/${workspaceId}/tasks/${task.id}`, {
+                                    method: 'PATCH',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ taskGroupId: e.target.value || null }),
+                                  }).then(() => router.refresh());
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                value={task.taskGroup?.id ?? ''}
+                              >
+                                <option value="">—</option>
+                                {taskGroups.map((g) => (
+                                  <option key={g.id} value={g.id}>{g.name}</option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
 
                           {/* Comments */}
                           <div className="flex w-10 shrink-0 items-center justify-center">

@@ -47,13 +47,21 @@ interface SavedView {
   isShared: boolean;
 }
 
+interface TaskGroupData {
+  id: string;
+  name: string;
+  color: string;
+}
+
 interface ViewSwitcherProps {
   tasks: TaskData[];
   workspaceId: string;
   projectId?: string;
+  taskGroupId?: string;
   slug: string;
   members: TaskUser[];
   projects?: Array<{ id: string; name: string }>;
+  taskGroups?: TaskGroupData[];
 }
 
 interface FilterRow {
@@ -99,6 +107,8 @@ export function ViewSwitcher({
   projectId,
   projects = [],
   slug,
+  taskGroupId,
+  taskGroups = [],
   tasks,
   workspaceId,
 }: ViewSwitcherProps) {
@@ -473,6 +483,8 @@ export function ViewSwitcher({
             projectId={projectId}
             projects={projects}
             slug={slug}
+            taskGroupId={taskGroupId}
+            taskGroups={taskGroups}
             tasks={filteredTasks}
             workspaceId={workspaceId}
           />
