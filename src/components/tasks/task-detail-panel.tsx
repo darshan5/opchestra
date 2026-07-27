@@ -106,7 +106,7 @@ export function TaskDetailPanel({
 }: TaskDetailPanelProps) {
   const [task, setTask] = useState<FullTask | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<Tab>('details');
+  const [activeTab, setActiveTab] = useState<Tab>('timelog');
   const [comments, setComments] = useState<CommentData[]>([]);
   const [newComment, setNewComment] = useState('');
   const [sendingComment, setSendingComment] = useState(false);
@@ -289,7 +289,7 @@ export function TaskDetailPanel({
 
         {/* Tabs */}
         <div className="flex border-b border-gray-200 px-5 dark:border-gray-700">
-          {(['details', 'activity', 'timelog'] as Tab[]).map((tab) => (
+          {(['timelog', 'details', 'activity'] as Tab[]).map((tab) => (
             <button
               className={cn(
                 'border-b-2 px-3 py-2 text-sm font-medium transition-colors',
@@ -730,24 +730,42 @@ function ActivityTab({
 }
 
 function TimeLogTab({ taskId, workspaceId }: { taskId: string; workspaceId: string }) {
-  const [entries, setEntries] = useState<
-    Array<{
-      id: string;
-      duration: number;
-      date: string;
-      notes: string | null;
-      billable: boolean;
-      user: { name: string | null; email: string };
-    }>
-  >([]);
+  interface TimeEntryData {
+    id: string;
+    duration: number;
+    date: string;
+    startTime: string | null;
+    notes: string | null;
+    billable: boolean;
+    user: { name: string | null; email: string };
+  }
+
+  const [entries, setEntries] = useState<TimeEntryData[]>([]);
   const [totalMinutes, setTotalMinutes] = useState(0);
-  const [duration, setDuration] = useState('');
-  const [notes, setNotes] = useState('');
-  const [billable, setBillable] = useState(true);
-  const [adding, setAdding] = useState(false);
+  const [billableMinutes, setBillableMinutes] = useState(0);
+
+  // Timer state
   const [timerRunning, setTimerRunning] = useState(false);
+  const [timerPaused, setTimerPaused] = useState(false);
   const [timerStart, setTimerStart] = useState<number | null>(null);
+  const [pausedAt, setPausedAt] = useState<number | null>(null);
+  const [totalPausedMs, setTotalPausedMs] = useState(0);
   const [elapsed, setElapsed] = useState(0);
+  const [timerNotes, setTimerNotes] = useState('');
+  const [timerBillable, setTimerBillable] = useState(true);
+  const [autoStopped, setAutoStopped] = useState(false);
+
+  // Manual entry state
+  const [manualDate, setManualDate] = useState(new Date().toISOString().slice(0, 10));
+  const [manualStart, setManualStart] = useState('');
+  const [manualMinutes, setManualMinutes] = useState('');
+  const [manualNotes, setManualNotes] = useState('');
+  const [manualBillable, setManualBillable] = useState(true);
+  const [adding, setAdding] = useState(false);
+
+  // Editing state
+  const [editingNotes, setEditingNotes] = useState<string | null>(null);
+  const [editNotesValue, setEditNotesValue] = useState('');
 
   const fetchEntries = useCallback(async () => {
     const res = await fetch(`/api/workspaces/${workspaceId}/tasks/${taskId}/time-entries`);
@@ -755,6 +773,11 @@ function TimeLogTab({ taskId, workspaceId }: { taskId: string; workspaceId: stri
       const data = await res.json();
       setEntries(data.entries);
       setTotalMinutes(data.totalMinutes);
+      setBillableMinutes(
+        data.entries
+          .filter((e: TimeEntryData) => e.billable)
+          .reduce((sum: number, e: TimeEntryData) => sum + e.duration, 0),
+      );
     }
   }, [workspaceId, taskId]);
 
@@ -762,15 +785,43 @@ function TimeLogTab({ taskId, workspaceId }: { taskId: string; workspaceId: stri
     fetchEntries();
   }, [fetchEntries]);
 
+  const autoStopRef = useCallback(
+    async (secs: number) => {
+      const mins = Math.max(1, Math.round(secs / 60));
+      setTimerRunning(false);
+      setTimerPaused(false);
+      setTimerStart(null);
+      setPausedAt(null);
+      setTotalPausedMs(0);
+      setElapsed(0);
+      await fetch(`/api/workspaces/${workspaceId}/tasks/${taskId}/time-entries`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ duration: mins, notes: timerNotes || null, billable: timerBillable }),
+      });
+      fetchEntries();
+    },
+    [workspaceId, taskId, timerNotes, timerBillable, fetchEntries],
+  );
+
+  // Timer tick
   useEffect(() => {
-    if (!timerRunning || !timerStart) {
+    if (!timerRunning || timerPaused || !timerStart) {
       return;
     }
     const interval = setInterval(() => {
-      setElapsed(Math.floor((Date.now() - timerStart) / 1000));
+      const now = Date.now();
+      const raw = Math.floor((now - timerStart - totalPausedMs) / 1000);
+      setElapsed(raw);
+      if (raw >= 43200) {
+        clearInterval(interval);
+        autoStopRef(raw);
+        setAutoStopped(true);
+        setTimeout(() => setAutoStopped(false), 5000);
+      }
     }, 1000);
     return () => clearInterval(interval);
-  }, [timerRunning, timerStart]);
+  }, [timerRunning, timerPaused, timerStart, totalPausedMs, autoStopRef]);
 
   function formatElapsed(secs: number) {
     const h = Math.floor(secs / 3600);
@@ -788,45 +839,120 @@ function TimeLogTab({ taskId, workspaceId }: { taskId: string; workspaceId: stri
     return m > 0 ? `${h}h ${m}m` : `${h}h`;
   }
 
-  async function startTimer() {
-    setTimerRunning(true);
-    setTimerStart(Date.now());
-    setElapsed(0);
+  function formatTime(dateStr: string | null) {
+    if (!dateStr) {
+      return '';
+    }
+    const d = new Date(dateStr);
+    return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   }
 
-  async function stopTimer() {
-    if (!timerStart) {
-      return;
+  function formatDate(dateStr: string) {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString([], { day: 'numeric', month: 'short' });
+  }
+
+  function startTimer() {
+    setTimerRunning(true);
+    setTimerPaused(false);
+    setTimerStart(Date.now());
+    setTotalPausedMs(0);
+    setPausedAt(null);
+    setElapsed(0);
+    setTimerNotes('');
+    setTimerBillable(true);
+    setAutoStopped(false);
+  }
+
+  function pauseTimer() {
+    setTimerPaused(true);
+    setPausedAt(Date.now());
+  }
+
+  function resumeTimer() {
+    if (pausedAt) {
+      setTotalPausedMs((prev) => prev + (Date.now() - pausedAt));
     }
-    const mins = Math.max(1, Math.round((Date.now() - timerStart) / 60000));
+    setPausedAt(null);
+    setTimerPaused(false);
+  }
+
+  async function saveTimerEntry(elapsedSecs?: number) {
+    const secs = elapsedSecs ?? elapsed;
+    const mins = Math.max(1, Math.round(secs / 60));
     setTimerRunning(false);
+    setTimerPaused(false);
     setTimerStart(null);
+    setPausedAt(null);
+    setTotalPausedMs(0);
     setElapsed(0);
 
     await fetch(`/api/workspaces/${workspaceId}/tasks/${taskId}/time-entries`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ duration: mins, billable: true }),
+      body: JSON.stringify({
+        duration: mins,
+        notes: timerNotes || null,
+        billable: timerBillable,
+        startTime: timerStart ? new Date(timerStart).toISOString() : null,
+      }),
     });
+    setTimerNotes('');
+    setTimerBillable(true);
     fetchEntries();
   }
 
   async function addManual() {
-    const mins = parseInt(duration, 10);
-    if (!mins || mins <= 0) {
+    const mins = parseInt(manualMinutes, 10);
+    if (!mins || mins <= 0 || !manualDate) {
       return;
     }
     setAdding(true);
+    const startTime =
+      manualDate && manualStart ? new Date(`${manualDate}T${manualStart}`).toISOString() : null;
     await fetch(`/api/workspaces/${workspaceId}/tasks/${taskId}/time-entries`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ duration: mins, notes: notes || null, billable }),
+      body: JSON.stringify({
+        duration: mins,
+        date: new Date(manualDate).toISOString(),
+        startTime,
+        notes: manualNotes || null,
+        billable: manualBillable,
+      }),
     });
-    setDuration('');
-    setNotes('');
-    setBillable(true);
+    setManualMinutes('');
+    setManualStart('');
+    setManualNotes('');
+    setManualBillable(true);
     setAdding(false);
     fetchEntries();
+  }
+
+  async function toggleBillable(entryId: string, current: boolean) {
+    await fetch(`/api/workspaces/${workspaceId}/tasks/${taskId}/time-entries/${entryId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ billable: !current }),
+    });
+    setEntries(entries.map((e) => (e.id === entryId ? { ...e, billable: !current } : e)));
+    setBillableMinutes((prev) => {
+      const entry = entries.find((e) => e.id === entryId);
+      if (!entry) {
+        return prev;
+      }
+      return current ? prev - entry.duration : prev + entry.duration;
+    });
+  }
+
+  async function saveEntryNotes(entryId: string, notes: string) {
+    await fetch(`/api/workspaces/${workspaceId}/tasks/${taskId}/time-entries/${entryId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes: notes || null }),
+    });
+    setEntries(entries.map((e) => (e.id === entryId ? { ...e, notes: notes || null } : e)));
+    setEditingNotes(null);
   }
 
   async function deleteEntry(entryId: string) {
@@ -838,59 +964,136 @@ function TimeLogTab({ taskId, workspaceId }: { taskId: string; workspaceId: stri
 
   return (
     <div className="space-y-4 px-5 py-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-xs font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">
+      {/* Summary */}
+      <div className="flex items-center gap-3">
+        <span className="text-xs font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">
           Total: {formatDuration(totalMinutes)}
-        </h3>
+        </span>
+        {billableMinutes > 0 && billableMinutes !== totalMinutes && (
+          <span className="text-xs text-green-600 dark:text-green-400">
+            ({formatDuration(billableMinutes)} billable)
+          </span>
+        )}
       </div>
 
+      {autoStopped && (
+        <div className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+          Timer auto-stopped after 12 hours
+        </div>
+      )}
+
       {/* Timer */}
-      <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-900">
-        {timerRunning ? (
-          <>
-            <span className="font-mono text-lg font-bold text-blue-600 dark:text-blue-400">
-              {formatElapsed(elapsed)}
-            </span>
-            <Button onClick={stopTimer} size="sm" variant="danger">
-              Stop
+      <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-900">
+        <div className="flex items-center gap-2">
+          {timerRunning ? (
+            <>
+              <span
+                className={cn(
+                  'font-mono text-lg font-bold',
+                  timerPaused
+                    ? 'text-amber-500 dark:text-amber-400'
+                    : 'text-blue-600 dark:text-blue-400',
+                )}
+              >
+                {formatElapsed(elapsed)}
+                {timerPaused && (
+                  <span className="ml-1 text-xs font-normal">paused</span>
+                )}
+              </span>
+              <div className="ml-auto flex items-center gap-1.5">
+                {timerPaused ? (
+                  <Button onClick={resumeTimer} size="sm" variant="secondary">
+                    Resume
+                  </Button>
+                ) : (
+                  <Button onClick={pauseTimer} size="sm" variant="secondary">
+                    Pause
+                  </Button>
+                )}
+                <Button onClick={() => saveTimerEntry()} size="sm" variant="danger">
+                  Stop
+                </Button>
+              </div>
+            </>
+          ) : (
+            <Button onClick={startTimer} size="sm">
+              <Clock className="mr-1 h-3.5 w-3.5" />
+              Start Timer
             </Button>
-          </>
-        ) : (
-          <Button onClick={startTimer} size="sm">
-            <Clock className="mr-1 h-3.5 w-3.5" />
-            Start Timer
-          </Button>
+          )}
+        </div>
+        {timerRunning && (
+          <div className="flex items-center gap-2">
+            <button
+              className={cn(
+                'rounded px-1.5 py-0.5 text-xs font-bold transition-colors',
+                timerBillable
+                  ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
+                  : 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500',
+              )}
+              onClick={() => setTimerBillable(!timerBillable)}
+              title={timerBillable ? 'Billable — click to make non-billable' : 'Non-billable — click to make billable'}
+              type="button"
+            >
+              $
+            </button>
+            <input
+              className="flex-1 rounded border border-gray-200 bg-white px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+              onChange={(e) => setTimerNotes(e.target.value)}
+              placeholder="Add notes..."
+              type="text"
+              value={timerNotes}
+            />
+          </div>
         )}
       </div>
 
       {/* Manual entry */}
       <div className="space-y-2 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
         <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Manual Entry</p>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <input
-            className="w-20 rounded border border-gray-200 bg-white px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+            className="w-[120px] rounded border border-gray-200 bg-white px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+            onChange={(e) => setManualDate(e.target.value)}
+            required
+            type="date"
+            value={manualDate}
+          />
+          <input
+            className="w-[90px] rounded border border-gray-200 bg-white px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+            onChange={(e) => setManualStart(e.target.value)}
+            placeholder="Start"
+            type="time"
+            value={manualStart}
+          />
+          <input
+            className="w-[70px] rounded border border-gray-200 bg-white px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-900 dark:text-white"
             min="1"
-            onChange={(e) => setDuration(e.target.value)}
+            onChange={(e) => setManualMinutes(e.target.value)}
             placeholder="mins"
             type="number"
-            value={duration}
+            value={manualMinutes}
           />
           <input
-            className="flex-1 rounded border border-gray-200 bg-white px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-            onChange={(e) => setNotes(e.target.value)}
+            className="min-w-0 flex-1 rounded border border-gray-200 bg-white px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+            onChange={(e) => setManualNotes(e.target.value)}
             placeholder="Notes..."
             type="text"
-            value={notes}
+            value={manualNotes}
           />
-          <label className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-            <input
-              checked={billable}
-              onChange={(e) => setBillable(e.target.checked)}
-              type="checkbox"
-            />
+          <button
+            className={cn(
+              'rounded px-1.5 py-0.5 text-xs font-bold transition-colors',
+              manualBillable
+                ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
+                : 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500',
+            )}
+            onClick={() => setManualBillable(!manualBillable)}
+            type="button"
+          >
             $
-          </label>
-          <Button disabled={!duration} loading={adding} onClick={addManual} size="sm">
+          </button>
+          <Button disabled={!manualMinutes || !manualDate} loading={adding} onClick={addManual} size="sm">
             Add
           </Button>
         </div>
@@ -900,32 +1103,75 @@ function TimeLogTab({ taskId, workspaceId }: { taskId: string; workspaceId: stri
       <div className="space-y-1">
         {entries.map((e) => (
           <div
-            className="flex items-center justify-between rounded-lg px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-900"
+            className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-900"
             key={e.id}
           >
-            <div className="flex-1">
-              <span className="text-sm font-medium text-gray-900 dark:text-white">
-                {formatDuration(e.duration)}
+            <span className="w-12 shrink-0 text-xs text-gray-400 dark:text-gray-500">
+              {formatDate(e.date)}
+            </span>
+            {e.startTime && (
+              <span className="w-14 shrink-0 text-xs text-gray-400 dark:text-gray-500">
+                {formatTime(e.startTime)}
               </span>
-              {e.notes && (
-                <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">{e.notes}</span>
-              )}
-              {e.billable && (
-                <span className="ml-1 text-xs text-green-600 dark:text-green-400">$</span>
+            )}
+            <span className="w-14 shrink-0 text-sm font-medium text-gray-900 dark:text-white">
+              {formatDuration(e.duration)}
+            </span>
+            <div className="min-w-0 flex-1">
+              {editingNotes === e.id ? (
+                <input
+                  autoFocus
+                  className="w-full rounded border border-blue-300 bg-white px-1.5 py-0.5 text-xs dark:border-blue-700 dark:bg-gray-800 dark:text-white"
+                  defaultValue={e.notes ?? ''}
+                  onBlur={(ev) => saveEntryNotes(e.id, ev.target.value)}
+                  onChange={(ev) => setEditNotesValue(ev.target.value)}
+                  onKeyDown={(ev) => {
+                    if (ev.key === 'Enter') {
+                      saveEntryNotes(e.id, (ev.target as HTMLInputElement).value);
+                    }
+                    if (ev.key === 'Escape') {
+                      setEditingNotes(null);
+                    }
+                  }}
+                  type="text"
+                />
+              ) : (
+                <span
+                  className={cn(
+                    'cursor-pointer text-xs',
+                    e.notes
+                      ? 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+                      : 'italic text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400',
+                  )}
+                  onClick={() => {
+                    setEditingNotes(e.id);
+                    setEditNotesValue(e.notes ?? '');
+                  }}
+                >
+                  {e.notes || 'Add note...'}
+                </span>
               )}
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-400">
-                {e.user.name ?? e.user.email} &middot;{' '}
-                {formatDistanceToNow(new Date(e.date), { addSuffix: true })}
-              </span>
-              <button
-                className="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-400"
-                onClick={() => deleteEntry(e.id)}
-              >
-                &times;
-              </button>
-            </div>
+            <button
+              className={cn(
+                'rounded px-1.5 py-0.5 text-xs font-bold transition-colors',
+                e.billable
+                  ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/40 dark:text-green-400'
+                  : 'bg-gray-100 text-gray-400 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-500',
+              )}
+              onClick={() => toggleBillable(e.id, e.billable)}
+              title={e.billable ? 'Billable — click to make non-billable' : 'Non-billable — click to make billable'}
+              type="button"
+            >
+              $
+            </button>
+            <button
+              className="text-xs text-gray-300 hover:text-red-500 dark:text-gray-600 dark:hover:text-red-400"
+              onClick={() => deleteEntry(e.id)}
+              title="Delete entry"
+            >
+              &times;
+            </button>
           </div>
         ))}
         {entries.length === 0 && (
