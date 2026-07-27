@@ -33,6 +33,8 @@ interface TaskData {
   priority: string;
   assignee: TaskUser | null;
   project: { id: string; name: string } | null;
+  taskGroup?: TaskGroupData | null;
+  startDate?: string | Date | null;
   endDate: string | Date | null;
   isMilestone: boolean;
   taskLabels: Array<{ label: { id: string; name: string; color: string } }>;
@@ -533,7 +535,7 @@ export function ViewSwitcher({
       )}
 
       {/* View content */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-auto">
         {layout === 'TABLE' && (
           <TaskTableView
             groupBy={groupBy}
