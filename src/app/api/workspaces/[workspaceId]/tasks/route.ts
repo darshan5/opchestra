@@ -136,6 +136,7 @@ export async function POST(
         isMilestone: parsed.data.isMilestone ?? false,
         taskGroupId: parsed.data.taskGroupId,
         phaseId: parsed.data.phaseId,
+        sourceTicketId: parsed.data.sourceTicketId,
         depth,
         position: (lastTask?.position ?? 0) + 1,
       },

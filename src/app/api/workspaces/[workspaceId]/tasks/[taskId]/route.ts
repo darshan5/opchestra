@@ -50,6 +50,8 @@ export async function GET(
           },
         },
         files: true,
+        linkedTasks: { select: { id: true, title: true, status: true } },
+        sourceTicket: { select: { id: true, title: true, ticketNumber: true } },
         _count: { select: { comments: true, subTasks: true } },
       },
     });
@@ -130,6 +132,9 @@ export async function PATCH(
     }
     if (parsed.data.phaseId !== undefined) {
       data.phaseId = parsed.data.phaseId;
+    }
+    if (parsed.data.sourceTicketId !== undefined) {
+      data.sourceTicketId = parsed.data.sourceTicketId;
     }
     if (parsed.data.position !== undefined) {
       data.position = parsed.data.position;

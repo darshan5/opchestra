@@ -567,6 +567,7 @@ const MIGRATIONS = [
   `CREATE INDEX IF NOT EXISTS "Phase_projectId_idx" ON "Phase"("projectId")`,
   `ALTER TABLE "Task" ADD COLUMN IF NOT EXISTS "phaseId" TEXT REFERENCES "Phase"("id") ON DELETE SET NULL`,
   `CREATE INDEX IF NOT EXISTS "Task_phaseId_idx" ON "Task"("phaseId")`,
+  `ALTER TABLE "Task" ADD COLUMN IF NOT EXISTS "sourceTicketId" TEXT REFERENCES "Task"("id") ON DELETE SET NULL`,
 
   `CREATE TABLE IF NOT EXISTS "ActiveTimer" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
