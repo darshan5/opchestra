@@ -274,6 +274,7 @@ model Workspace {
   customFieldDefinitions CustomFieldDefinition[]
   companies            Company[]
   contacts             Contact[]
+  slaRules             SlaRule[]
 
   settings WorkspaceSettings?
 }
@@ -356,10 +357,12 @@ model Task {
   lastActivityAt DateTime     @default(now())
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
-  ticketNumber   String?
-  source         String?
-  contactId      String?
-  companyId      String?
+  ticketNumber      String?
+  source            String?
+  contactId         String?
+  companyId         String?
+  slaResponseDue    DateTime?
+  slaResolutionDue  DateTime?
 
   workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   project        Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
@@ -518,6 +521,22 @@ model StatusWorkflow {
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
+  @@index([workspaceId])
+}
+
+// ─── SLA Rules ──────────────────────────────────────────────
+
+model SlaRule {
+  id             String   @id @default(uuid())
+  workspaceId    String
+  priority       String
+  responseTime   Int
+  resolutionTime Int
+  createdAt      DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, priority])
   @@index([workspaceId])
 }
 

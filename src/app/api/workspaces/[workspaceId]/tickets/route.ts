@@ -34,7 +34,16 @@ export async function GET(
 
     const tickets = await prisma.task.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        title: true,
+        ticketNumber: true,
+        status: true,
+        priority: true,
+        source: true,
+        slaResponseDue: true,
+        slaResolutionDue: true,
+        createdAt: true,
         assignee: { select: { id: true, name: true, email: true } },
         contact: { select: { id: true, name: true, email: true } },
         ticketCompany: { select: { id: true, name: true } },
@@ -68,6 +77,17 @@ export async function POST(
     const body = await request.json();
     const ticketNumber = await generateTicketNumber(workspaceId);
 
+    const slaRule = await prisma.slaRule.findUnique({
+      where: {
+        workspaceId_priority: {
+          workspaceId,
+          priority: body.priority || 'MEDIUM',
+        },
+      },
+    });
+
+    const now = new Date();
+
     const ticket = await prisma.task.create({
       data: {
         workspaceId,
@@ -81,6 +101,8 @@ export async function POST(
         companyId: body.companyId || null,
         source: body.source || 'Manual',
         ticketNumber,
+        slaResponseDue: slaRule ? new Date(now.getTime() + slaRule.responseTime * 60000) : null,
+        slaResolutionDue: slaRule ? new Date(now.getTime() + slaRule.resolutionTime * 60000) : null,
       },
       include: {
         assignee: { select: { id: true, name: true, email: true } },

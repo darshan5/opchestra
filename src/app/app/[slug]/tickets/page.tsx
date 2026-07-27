@@ -19,8 +19,33 @@ interface TicketData {
   contact: { id: string; name: string; email: string | null } | null;
   ticketCompany: { id: string; name: string } | null;
   assignee: { id: string; name: string | null; email: string } | null;
+  slaResponseDue: string | null;
+  slaResolutionDue: string | null;
   createdAt: string;
 }
+
+function getSlaStatus(due: string | null): 'ok' | 'warning' | 'breached' | null {
+  if (!due) {
+    return null;
+  }
+  const now = Date.now();
+  const dueMs = new Date(due).getTime();
+  if (now > dueMs) {
+    return 'breached';
+  }
+  const remaining = dueMs - now;
+  const total = dueMs - (dueMs - remaining);
+  if (remaining < total * 0.25) {
+    return 'warning';
+  }
+  return 'ok';
+}
+
+const slaColors: Record<string, string> = {
+  breached: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
+  ok: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+  warning: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
+};
 
 const statusTabs = ['All', 'Open', 'In Progress', 'Waiting on Customer', 'Resolved', 'Closed'];
 const priorityColors: Record<string, string> = {
@@ -187,6 +212,17 @@ export default function TicketsPage() {
               <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
                 {ticket.status}
               </span>
+              {(() => {
+                const sla = getSlaStatus(ticket.slaResolutionDue);
+                if (!sla || ticket.status === 'Closed' || ticket.status === 'Resolved') {
+                  return null;
+                }
+                return (
+                  <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium', slaColors[sla])}>
+                    SLA {sla === 'breached' ? 'Breached' : sla === 'warning' ? 'At Risk' : 'OK'}
+                  </span>
+                );
+              })()}
             </div>
           </div>
         ))}

@@ -442,7 +442,22 @@ const MIGRATIONS = [
   `ALTER TABLE "Task" ADD COLUMN IF NOT EXISTS "source" TEXT`,
   `ALTER TABLE "Task" ADD COLUMN IF NOT EXISTS "contactId" TEXT`,
   `ALTER TABLE "Task" ADD COLUMN IF NOT EXISTS "companyId" TEXT`,
+  `ALTER TABLE "Task" ADD COLUMN IF NOT EXISTS "slaResponseDue" TIMESTAMP(3)`,
+  `ALTER TABLE "Task" ADD COLUMN IF NOT EXISTS "slaResolutionDue" TIMESTAMP(3)`,
   `CREATE INDEX IF NOT EXISTS "Task_ticketNumber_idx" ON "Task"("ticketNumber")`,
+
+  `CREATE TABLE IF NOT EXISTS "SlaRule" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "workspaceId" TEXT NOT NULL,
+    "priority" TEXT NOT NULL,
+    "responseTime" INTEGER NOT NULL,
+    "resolutionTime" INTEGER NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "SlaRule_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "SlaRule_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "SlaRule_workspaceId_priority_key" ON "SlaRule"("workspaceId", "priority")`,
+  `CREATE INDEX IF NOT EXISTS "SlaRule_workspaceId_idx" ON "SlaRule"("workspaceId")`,
 ];
 
 export async function POST() {

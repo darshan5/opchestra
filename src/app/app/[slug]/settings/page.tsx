@@ -224,6 +224,34 @@ export default function WorkspaceSettingsPage() {
         </Button>
       </section>
 
+      {/* SLA Rules */}
+      <section className="mt-8">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">SLA Rules</h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          Set response and resolution time targets for tickets by priority.
+        </p>
+        <Button
+          className="mt-3"
+          onClick={() => router.push(`/app/${params.slug}/settings/sla`)}
+          variant="secondary"
+        >
+          Configure SLA Rules
+        </Button>
+      </section>
+
+      {/* Public Submission Form */}
+      <section className="mt-8">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+          Public Submission Form
+        </h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          Share this URL with customers to submit tickets without logging in.
+        </p>
+        <code className="mt-2 block rounded bg-gray-100 px-3 py-2 text-xs text-gray-800 dark:bg-gray-800 dark:text-gray-200">
+          {typeof window !== 'undefined' ? window.location.origin : ''}/submit/{params.slug}
+        </code>
+      </section>
+
       <div className="mt-6">
         <Button onClick={() => router.back()} variant="ghost">
           Back
