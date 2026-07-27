@@ -567,6 +567,25 @@ const MIGRATIONS = [
   `CREATE INDEX IF NOT EXISTS "Phase_projectId_idx" ON "Phase"("projectId")`,
   `ALTER TABLE "Task" ADD COLUMN IF NOT EXISTS "phaseId" TEXT REFERENCES "Phase"("id") ON DELETE SET NULL`,
   `CREATE INDEX IF NOT EXISTS "Task_phaseId_idx" ON "Task"("phaseId")`,
+
+  `CREATE TABLE IF NOT EXISTS "ActiveTimer" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "taskId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "workspaceId" TEXT NOT NULL,
+    "startedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "pausedAt" TIMESTAMP(3),
+    "totalPaused" INTEGER NOT NULL DEFAULT 0,
+    "notes" TEXT,
+    "billable" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "ActiveTimer_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "ActiveTimer_taskId_fkey" FOREIGN KEY ("taskId") REFERENCES "Task"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "ActiveTimer_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "ActiveTimer_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "ActiveTimer_userId_taskId_key" ON "ActiveTimer"("userId", "taskId")`,
+  `CREATE INDEX IF NOT EXISTS "ActiveTimer_userId_idx" ON "ActiveTimer"("userId")`,
 ];
 
 export async function POST() {

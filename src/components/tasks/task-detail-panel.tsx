@@ -744,12 +744,19 @@ function TimeLogTab({ taskId, workspaceId }: { taskId: string; workspaceId: stri
   const [totalMinutes, setTotalMinutes] = useState(0);
   const [billableMinutes, setBillableMinutes] = useState(0);
 
-  // Timer state
+  // Timer state — backed by ActiveTimer in database
+  interface ActiveTimerData {
+    id: string;
+    startedAt: string;
+    pausedAt: string | null;
+    totalPaused: number;
+    notes: string | null;
+    billable: boolean;
+    task: { id: string; title: string };
+  }
+  const [activeTimer, setActiveTimer] = useState<ActiveTimerData | null>(null);
   const [timerRunning, setTimerRunning] = useState(false);
   const [timerPaused, setTimerPaused] = useState(false);
-  const [timerStart, setTimerStart] = useState<number | null>(null);
-  const [pausedAt, setPausedAt] = useState<number | null>(null);
-  const [totalPausedMs, setTotalPausedMs] = useState(0);
   const [elapsed, setElapsed] = useState(0);
   const [timerNotes, setTimerNotes] = useState('');
   const [timerBillable, setTimerBillable] = useState(true);
@@ -781,47 +788,54 @@ function TimeLogTab({ taskId, workspaceId }: { taskId: string; workspaceId: stri
     }
   }, [workspaceId, taskId]);
 
+  // Fetch active timer from DB on mount
+  const fetchActiveTimer = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/workspaces/${workspaceId}/active-timer`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.task?.id === taskId) {
+          setActiveTimer(data);
+          setTimerRunning(true);
+          setTimerPaused(!!data.pausedAt);
+          setTimerNotes(data.notes || '');
+          setTimerBillable(data.billable);
+        } else {
+          setActiveTimer(null);
+          setTimerRunning(false);
+          setTimerPaused(false);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, [workspaceId, taskId]);
+
   useEffect(() => {
     fetchEntries();
-  }, [fetchEntries]);
+    fetchActiveTimer();
+  }, [fetchEntries, fetchActiveTimer]);
 
-  const autoStopRef = useCallback(
-    async (secs: number) => {
-      const mins = Math.max(1, Math.round(secs / 60));
-      setTimerRunning(false);
-      setTimerPaused(false);
-      setTimerStart(null);
-      setPausedAt(null);
-      setTotalPausedMs(0);
-      setElapsed(0);
-      await fetch(`/api/workspaces/${workspaceId}/tasks/${taskId}/time-entries`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ duration: mins, notes: timerNotes || null, billable: timerBillable }),
-      });
-      fetchEntries();
-    },
-    [workspaceId, taskId, timerNotes, timerBillable, fetchEntries],
-  );
-
-  // Timer tick
+  // Timer tick — derives elapsed from server startedAt
   useEffect(() => {
-    if (!timerRunning || timerPaused || !timerStart) {
+    if (!timerRunning || timerPaused || !activeTimer) {
       return;
     }
     const interval = setInterval(() => {
-      const now = Date.now();
-      const raw = Math.floor((now - timerStart - totalPausedMs) / 1000);
+      const startMs = new Date(activeTimer.startedAt).getTime();
+      const pausedMs = activeTimer.totalPaused * 1000;
+      const raw = Math.floor((Date.now() - startMs - pausedMs) / 1000);
       setElapsed(raw);
       if (raw >= 43200) {
         clearInterval(interval);
-        autoStopRef(raw);
+        stopTimer();
         setAutoStopped(true);
         setTimeout(() => setAutoStopped(false), 5000);
       }
     }, 1000);
     return () => clearInterval(interval);
-  }, [timerRunning, timerPaused, timerStart, totalPausedMs, autoStopRef]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timerRunning, timerPaused, activeTimer]);
 
   function formatElapsed(secs: number) {
     const h = Math.floor(secs / 3600);
@@ -852,54 +866,71 @@ function TimeLogTab({ taskId, workspaceId }: { taskId: string; workspaceId: stri
     return d.toLocaleDateString([], { day: 'numeric', month: 'short' });
   }
 
-  function startTimer() {
-    setTimerRunning(true);
-    setTimerPaused(false);
-    setTimerStart(Date.now());
-    setTotalPausedMs(0);
-    setPausedAt(null);
-    setElapsed(0);
-    setTimerNotes('');
-    setTimerBillable(true);
-    setAutoStopped(false);
-  }
-
-  function pauseTimer() {
-    setTimerPaused(true);
-    setPausedAt(Date.now());
-  }
-
-  function resumeTimer() {
-    if (pausedAt) {
-      setTotalPausedMs((prev) => prev + (Date.now() - pausedAt));
+  async function startTimer() {
+    const res = await fetch(`/api/workspaces/${workspaceId}/tasks/${taskId}/timer/start`, {
+      method: 'POST',
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setActiveTimer(data);
+      setTimerRunning(true);
+      setTimerPaused(false);
+      setElapsed(0);
+      setTimerNotes('');
+      setTimerBillable(true);
+      setAutoStopped(false);
+      fetchEntries();
     }
-    setPausedAt(null);
-    setTimerPaused(false);
   }
 
-  async function saveTimerEntry(elapsedSecs?: number) {
-    const secs = elapsedSecs ?? elapsed;
-    const mins = Math.max(1, Math.round(secs / 60));
-    setTimerRunning(false);
-    setTimerPaused(false);
-    setTimerStart(null);
-    setPausedAt(null);
-    setTotalPausedMs(0);
-    setElapsed(0);
+  async function pauseTimer() {
+    const res = await fetch(`/api/workspaces/${workspaceId}/tasks/${taskId}/timer/pause`, {
+      method: 'POST',
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setActiveTimer(data);
+      setTimerPaused(true);
+    }
+  }
 
-    await fetch(`/api/workspaces/${workspaceId}/tasks/${taskId}/time-entries`, {
+  async function resumeTimer() {
+    const res = await fetch(`/api/workspaces/${workspaceId}/tasks/${taskId}/timer/resume`, {
+      method: 'POST',
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setActiveTimer(data);
+      setTimerPaused(false);
+    }
+  }
+
+  async function stopTimer() {
+    const res = await fetch(`/api/workspaces/${workspaceId}/tasks/${taskId}/timer/stop`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        duration: mins,
-        notes: timerNotes || null,
-        billable: timerBillable,
-        startTime: timerStart ? new Date(timerStart).toISOString() : null,
-      }),
+      body: JSON.stringify({ notes: timerNotes || null, billable: timerBillable }),
     });
-    setTimerNotes('');
-    setTimerBillable(true);
-    fetchEntries();
+    if (res.ok) {
+      setActiveTimer(null);
+      setTimerRunning(false);
+      setTimerPaused(false);
+      setElapsed(0);
+      setTimerNotes('');
+      setTimerBillable(true);
+      fetchEntries();
+    }
+  }
+
+  async function updateActiveTimerField(field: 'notes' | 'billable', value: string | boolean) {
+    if (!activeTimer) {
+      return;
+    }
+    await fetch(`/api/workspaces/${workspaceId}/tasks/${taskId}/timer`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [field]: value }),
+    });
   }
 
   async function addManual() {
@@ -1010,7 +1041,7 @@ function TimeLogTab({ taskId, workspaceId }: { taskId: string; workspaceId: stri
                     Pause
                   </Button>
                 )}
-                <Button onClick={() => saveTimerEntry()} size="sm" variant="danger">
+                <Button onClick={() => stopTimer()} size="sm" variant="danger">
                   Stop
                 </Button>
               </div>
@@ -1031,7 +1062,13 @@ function TimeLogTab({ taskId, workspaceId }: { taskId: string; workspaceId: stri
                   ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
                   : 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500',
               )}
-              onClick={() => setTimerBillable(!timerBillable)}
+              onClick={() => {
+                const newVal = !timerBillable;
+                setTimerBillable(newVal);
+                if (activeTimer) {
+                  updateActiveTimerField('billable', newVal);
+                }
+              }}
               title={timerBillable ? 'Billable — click to make non-billable' : 'Non-billable — click to make billable'}
               type="button"
             >
@@ -1039,6 +1076,11 @@ function TimeLogTab({ taskId, workspaceId }: { taskId: string; workspaceId: stri
             </button>
             <input
               className="flex-1 rounded border border-gray-200 bg-white px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+              onBlur={() => {
+                if (activeTimer) {
+                  updateActiveTimerField('notes', timerNotes);
+                }
+              }}
               onChange={(e) => setTimerNotes(e.target.value)}
               placeholder="Add notes..."
               type="text"
@@ -1074,13 +1116,6 @@ function TimeLogTab({ taskId, workspaceId }: { taskId: string; workspaceId: stri
             type="number"
             value={manualMinutes}
           />
-          <input
-            className="min-w-0 flex-1 rounded border border-gray-200 bg-white px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-            onChange={(e) => setManualNotes(e.target.value)}
-            placeholder="Notes..."
-            type="text"
-            value={manualNotes}
-          />
           <button
             className={cn(
               'rounded px-1.5 py-0.5 text-xs font-bold transition-colors',
@@ -1097,6 +1132,13 @@ function TimeLogTab({ taskId, workspaceId }: { taskId: string; workspaceId: stri
             Add
           </Button>
         </div>
+        <input
+          className="mt-1 w-full rounded border border-gray-200 bg-white px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+          onChange={(e) => setManualNotes(e.target.value)}
+          placeholder="Notes (optional)..."
+          type="text"
+          value={manualNotes}
+        />
       </div>
 
       {/* Entries list */}

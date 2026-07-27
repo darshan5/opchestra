@@ -5,6 +5,7 @@ import { signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { ActiveTimerIndicator } from '@/components/layout/active-timer-indicator';
 import { NotificationBell } from '@/components/layout/notification-bell';
 
 interface TopBarProps {
@@ -60,6 +61,8 @@ export function TopBar({ slug, userName, workspaceId }: TopBarProps) {
             {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
         )}
+
+        <ActiveTimerIndicator workspaceId={workspaceId} />
 
         <NotificationBell workspaceId={workspaceId} />
 

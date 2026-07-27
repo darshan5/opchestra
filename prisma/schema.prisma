@@ -31,6 +31,7 @@ model User {
   passwordResetTokens PasswordResetToken[]
   auditLogsAsTarget   AuditLog[]         @relation("AuditTarget")
   supportTickets      SupportTicket[]
+  activeTimers        ActiveTimer[]
 }
 
 model VerificationToken {
@@ -285,6 +286,7 @@ model Workspace {
   contacts             Contact[]
   slaRules             SlaRule[]
   invoices             Invoice[]
+  activeTimers         ActiveTimer[]
 
   settings WorkspaceSettings?
 }
@@ -430,6 +432,7 @@ model Task {
   dependsOn         TaskDependency[] @relation("DependentTask")
   dependedOnBy      TaskDependency[] @relation("BlockingTask")
   customFieldValues CustomFieldValue[]
+  activeTimers      ActiveTimer[]
 
   @@index([workspaceId])
   @@index([projectId])
@@ -747,4 +750,26 @@ enum NotificationType {
   TASK_COMMENTED
   TASK_MENTIONED
   TASK_DUE_SOON
+}
+
+// ─── Active Timers ──────────────────────────────────────────
+
+model ActiveTimer {
+  id          String    @id @default(uuid())
+  taskId      String
+  userId      String
+  workspaceId String
+  startedAt   DateTime  @default(now())
+  pausedAt    DateTime?
+  totalPaused Int       @default(0)
+  notes       String?
+  billable    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+
+  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, taskId])
+  @@index([userId])
 }
