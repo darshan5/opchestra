@@ -332,6 +332,7 @@ model Project {
   description   String?
   status        ProjectStatus @default(ACTIVE)
   defaultViewId String?
+  position      Int           @default(0)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 

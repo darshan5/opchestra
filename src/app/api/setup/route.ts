@@ -586,6 +586,8 @@ const MIGRATIONS = [
   )`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "ActiveTimer_userId_taskId_key" ON "ActiveTimer"("userId", "taskId")`,
   `CREATE INDEX IF NOT EXISTS "ActiveTimer_userId_idx" ON "ActiveTimer"("userId")`,
+
+  `ALTER TABLE "Project" ADD COLUMN IF NOT EXISTS "position" INTEGER NOT NULL DEFAULT 0`,
 ];
 
 export async function POST() {
