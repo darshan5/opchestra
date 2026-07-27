@@ -1,7 +1,7 @@
 'use client';
 
 import { formatDistanceToNow } from 'date-fns';
-import { Building2, Info, Plus, Search, UserRound } from 'lucide-react';
+import { Building2, Plus, Search, UserRound } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -224,12 +224,11 @@ export default function ContactsPage() {
                 <th className="px-4 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Industry</th>
                 <th className="px-4 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Contacts</th>
                 <th className="px-4 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Added</th>
-                <th className="w-10 px-4 py-2" />
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {companies.map((c) => (
-                <tr className="group hover:bg-gray-50 dark:hover:bg-gray-900" key={c.id}>
+                <tr className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900" key={c.id} onClick={() => setSelectedCompanyId(c.id)}>
                   <td className="px-4 py-2.5 text-sm font-medium text-gray-900 dark:text-white">{c.name}</td>
                   <td className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400">{c.domain ?? '—'}</td>
                   <td className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400">{c.industry ?? '—'}</td>
@@ -237,20 +236,11 @@ export default function ContactsPage() {
                   <td className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400">
                     {formatDistanceToNow(new Date(c.createdAt), { addSuffix: true })}
                   </td>
-                  <td className="px-4 py-2.5">
-                    <button
-                      className="rounded p-1 text-gray-400 opacity-0 transition-opacity hover:bg-gray-100 hover:text-gray-600 group-hover:opacity-100 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-                      onClick={() => setSelectedCompanyId(c.id)}
-                      title="View details"
-                    >
-                      <Info className="h-4 w-4" />
-                    </button>
-                  </td>
                 </tr>
               ))}
               {companies.length === 0 && (
                 <tr>
-                  <td className="px-4 py-8 text-center text-sm text-gray-500" colSpan={6}>No companies yet</td>
+                  <td className="px-4 py-8 text-center text-sm text-gray-500" colSpan={5}>No companies yet</td>
                 </tr>
               )}
             </tbody>
@@ -270,12 +260,11 @@ export default function ContactsPage() {
                 <th className="px-4 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Company</th>
                 <th className="px-4 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Title</th>
                 <th className="px-4 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Added</th>
-                <th className="w-10 px-4 py-2" />
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {contacts.map((c) => (
-                <tr className="group hover:bg-gray-50 dark:hover:bg-gray-900" key={c.id}>
+                <tr className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900" key={c.id} onClick={() => setSelectedContactId(c.id)}>
                   <td className="px-4 py-2.5 text-sm font-medium text-gray-900 dark:text-white">{c.name}</td>
                   <td className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400">{c.email ?? '—'}</td>
                   <td className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400">{c.phone ?? '—'}</td>
@@ -283,7 +272,7 @@ export default function ContactsPage() {
                     {c.company ? (
                       <button
                         className="text-blue-600 hover:underline dark:text-blue-400"
-                        onClick={() => setSelectedCompanyId(c.company!.id)}
+                        onClick={(e) => { e.stopPropagation(); setSelectedCompanyId(c.company!.id); }}
                       >
                         {c.company.name}
                       </button>
@@ -293,20 +282,11 @@ export default function ContactsPage() {
                   <td className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400">
                     {formatDistanceToNow(new Date(c.createdAt), { addSuffix: true })}
                   </td>
-                  <td className="px-4 py-2.5">
-                    <button
-                      className="rounded p-1 text-gray-400 opacity-0 transition-opacity hover:bg-gray-100 hover:text-gray-600 group-hover:opacity-100 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-                      onClick={() => setSelectedContactId(c.id)}
-                      title="View details"
-                    >
-                      <Info className="h-4 w-4" />
-                    </button>
-                  </td>
                 </tr>
               ))}
               {contacts.length === 0 && (
                 <tr>
-                  <td className="px-4 py-8 text-center text-sm text-gray-500" colSpan={7}>No contacts yet</td>
+                  <td className="px-4 py-8 text-center text-sm text-gray-500" colSpan={6}>No contacts yet</td>
                 </tr>
               )}
             </tbody>
