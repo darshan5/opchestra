@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, Trash2, X } from 'lucide-react';
+import { Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -110,6 +110,10 @@ export default function WorkspaceSettingsPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [removeMemberConfirm, setRemoveMemberConfirm] = useState<string | null>(null);
   const [deleteFieldConfirm, setDeleteFieldConfirm] = useState<string | null>(null);
+  const [editFieldId, setEditFieldId] = useState<string | null>(null);
+  const [editFieldName, setEditFieldName] = useState('');
+  const [editFieldOptions, setEditFieldOptions] = useState('');
+  const [editFieldConfig, setEditFieldConfig] = useState<Record<string, unknown>>({});
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('MEMBER');
   const [inviting, setInviting] = useState(false);
@@ -332,6 +336,39 @@ export default function WorkspaceSettingsPage() {
     await fetch(`/api/workspaces/${workspaceId}/custom-fields/${fieldId}`, { method: 'DELETE' });
     setFields(fields.filter((f) => f.id !== fieldId));
     showMsg('Field deleted');
+  }
+
+  function startEditField(field: FieldDef) {
+    setEditFieldId(field.id);
+    setEditFieldName(field.name);
+    setEditFieldConfig(field.config || {});
+    const opts = (field.config?.options as string[]) || [];
+    setEditFieldOptions(opts.join(', '));
+  }
+
+  async function updateField() {
+    if (!workspaceId || !editFieldId || !editFieldName.trim()) {
+      return;
+    }
+    const field = fields.find((f) => f.id === editFieldId);
+    if (!field) {
+      return;
+    }
+    const config = { ...editFieldConfig };
+    if (['dropdown', 'multi_select'].includes(field.type) && editFieldOptions.trim()) {
+      config.options = editFieldOptions.split(',').map((o) => o.trim()).filter(Boolean);
+    }
+    const res = await fetch(`/api/workspaces/${workspaceId}/custom-fields/${editFieldId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: editFieldName.trim(), config }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setFields(fields.map((f) => (f.id === editFieldId ? updated : f)));
+      setEditFieldId(null);
+      showMsg('Field updated');
+    }
   }
 
   // ── Member handlers ──
@@ -627,29 +664,102 @@ export default function WorkspaceSettingsPage() {
                 )}
                 {fields.map((field) => (
                   <div
-                    className="flex items-center justify-between border-b border-gray-50 px-4 py-2.5 last:border-b-0 dark:border-gray-800/50"
+                    className="border-b border-gray-50 px-4 py-2.5 last:border-b-0 dark:border-gray-800/50"
                     key={field.id}
                   >
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-900 dark:text-white">{field.name}</span>
-                      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-500 dark:bg-gray-800 dark:text-gray-400">
-                        {FIELD_TYPES.find((ft) => ft.value === field.type)?.label ?? field.type}
-                      </span>
-                    </div>
-                    {deleteFieldConfirm === field.id ? (
-                      <div className="flex items-center gap-1">
-                        <span className="text-xs text-red-600 dark:text-red-400">Delete?</span>
-                        <button className="text-xs font-medium text-red-600" onClick={() => { deleteField(field.id); setDeleteFieldConfirm(null); }} type="button">Yes</button>
-                        <button className="text-xs text-gray-500" onClick={() => setDeleteFieldConfirm(null)} type="button">No</button>
+                    {editFieldId === field.id ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Input
+                            className="flex-1"
+                            onChange={(e) => setEditFieldName(e.target.value)}
+                            placeholder="Field name"
+                            value={editFieldName}
+                          />
+                          <span className="rounded-full bg-gray-100 px-2 py-1 text-[10px] text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                            {FIELD_TYPES.find((ft) => ft.value === field.type)?.label ?? field.type}
+                          </span>
+                        </div>
+                        {['dropdown', 'multi_select'].includes(field.type) && (
+                          <Input
+                            label="Options (comma-separated)"
+                            onChange={(e) => setEditFieldOptions(e.target.value)}
+                            placeholder="Option 1, Option 2"
+                            value={editFieldOptions}
+                          />
+                        )}
+                        {field.type === 'currency' && (
+                          <Input
+                            label="Currency symbol"
+                            onChange={(e) => setEditFieldConfig({ ...editFieldConfig, symbol: e.target.value })}
+                            placeholder="$"
+                            value={(editFieldConfig.symbol as string) || '$'}
+                          />
+                        )}
+                        {field.type === 'formula' && (
+                          <Input
+                            label="Formula expression"
+                            onChange={(e) => setEditFieldConfig({ ...editFieldConfig, formula: e.target.value })}
+                            placeholder="{field1} + {field2}"
+                            value={(editFieldConfig.formula as string) || ''}
+                          />
+                        )}
+                        {field.type === 'rating' && (
+                          <Input
+                            label="Max stars"
+                            onChange={(e) => setEditFieldConfig({ ...editFieldConfig, maxStars: parseInt(e.target.value) || 5 })}
+                            type="number"
+                            value={String((editFieldConfig.maxStars as number) || 5)}
+                          />
+                        )}
+                        <div className="flex gap-2">
+                          <Button onClick={updateField} size="sm">Save</Button>
+                          <button
+                            className="rounded px-2 py-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                            onClick={() => setEditFieldId(null)}
+                            type="button"
+                          >
+                            Cancel
+                          </button>
+                        </div>
                       </div>
                     ) : (
-                      <button
-                        className="rounded p-1 text-gray-300 hover:bg-red-50 hover:text-red-500 dark:text-gray-600 dark:hover:bg-red-900/30"
-                        onClick={() => setDeleteFieldConfirm(field.id)}
-                        type="button"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-900 dark:text-white">{field.name}</span>
+                          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                            {FIELD_TYPES.find((ft) => ft.value === field.type)?.label ?? field.type}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {deleteFieldConfirm === field.id ? (
+                            <>
+                              <span className="text-xs text-red-600 dark:text-red-400">Delete?</span>
+                              <button className="text-xs font-medium text-red-600" onClick={() => { deleteField(field.id); setDeleteFieldConfirm(null); }} type="button">Yes</button>
+                              <button className="text-xs text-gray-500" onClick={() => setDeleteFieldConfirm(null)} type="button">No</button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                className="rounded p-1 text-gray-300 hover:bg-blue-50 hover:text-blue-500 dark:text-gray-600 dark:hover:bg-blue-900/30"
+                                onClick={() => startEditField(field)}
+                                title="Edit field"
+                                type="button"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                className="rounded p-1 text-gray-300 hover:bg-red-50 hover:text-red-500 dark:text-gray-600 dark:hover:bg-red-900/30"
+                                onClick={() => setDeleteFieldConfirm(field.id)}
+                                title="Delete field"
+                                type="button"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
                     )}
                   </div>
                 ))}
