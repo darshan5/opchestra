@@ -20,6 +20,7 @@ export default function AuditLogsPage() {
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [clearing, setClearing] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   function loadLogs() {
     setLoading(true);
@@ -34,15 +35,13 @@ export default function AuditLogsPage() {
   }, []);
 
   async function clearLogs() {
-    if (!confirm('Are you sure you want to clear all audit logs? This cannot be undone.')) {
-      return;
-    }
     setClearing(true);
     const res = await fetch('/api/admin/logs', { method: 'DELETE' });
     if (res.ok) {
       setLogs([]);
     }
     setClearing(false);
+    setShowClearConfirm(false);
   }
 
   if (loading) {
@@ -63,9 +62,17 @@ export default function AuditLogsPage() {
           </p>
         </div>
         {logs.length > 0 && (
-          <Button loading={clearing} onClick={clearLogs} size="sm" variant="danger">
-            Clear Logs
-          </Button>
+          showClearConfirm ? (
+            <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 dark:border-red-800 dark:bg-red-950">
+              <span className="text-sm text-red-700 dark:text-red-300">Clear all logs? This cannot be undone.</span>
+              <Button loading={clearing} onClick={clearLogs} size="sm" variant="danger">Confirm</Button>
+              <Button onClick={() => setShowClearConfirm(false)} size="sm" variant="ghost">Cancel</Button>
+            </div>
+          ) : (
+            <Button onClick={() => setShowClearConfirm(true)} size="sm" variant="danger">
+              Clear Logs
+            </Button>
+          )
         )}
       </div>
 

@@ -26,6 +26,7 @@ export default function AdminUsersPage() {
   const [creating, setCreating] = useState(false);
   const [tempPassword, setTempPassword] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/admin/admin-users')
@@ -75,14 +76,11 @@ export default function AdminUsersPage() {
   }
 
   async function deleteAdmin(id: string) {
-    if (!window.confirm('Remove this admin?')) {
-      return;
-    }
-
     const res = await fetch(`/api/admin/admin-users/${id}`, { method: 'DELETE' });
     if (res.ok) {
       setAdmins((prev) => prev.filter((a) => a.id !== id));
     }
+    setDeleteConfirmId(null);
   }
 
   if (loading) {
@@ -223,13 +221,21 @@ export default function AdminUsersPage() {
                   {formatDistanceToNow(new Date(admin.createdAt), { addSuffix: true })}
                 </td>
                 <td className="px-4 py-2.5">
-                  <button
-                    className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400"
-                    onClick={() => deleteAdmin(admin.id)}
-                    title="Remove admin"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  {deleteConfirmId === admin.id ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-red-600 dark:text-red-400">Remove?</span>
+                      <button className="text-xs font-medium text-red-600 hover:text-red-800 dark:text-red-400" onClick={() => deleteAdmin(admin.id)}>Yes</button>
+                      <button className="text-xs text-gray-500" onClick={() => setDeleteConfirmId(null)}>Cancel</button>
+                    </div>
+                  ) : (
+                    <button
+                      className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400"
+                      onClick={() => setDeleteConfirmId(admin.id)}
+                      title="Remove admin"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}

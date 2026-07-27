@@ -15,7 +15,7 @@ import {
   Quote,
   Strikethrough,
 } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import { cn } from '@/lib/utils';
 
@@ -32,6 +32,9 @@ export function TiptapEditor({
   placeholder = 'Write a description...',
   readOnly = false,
 }: TiptapEditorProps) {
+  const [showLinkInput, setShowLinkInput] = useState(false);
+  const [linkUrl, setLinkUrl] = useState('');
+
   const editor = useEditor({
     content: content as Record<string, unknown> | null,
     editable: !readOnly,
@@ -61,15 +64,28 @@ export function TiptapEditor({
     if (!editor) {
       return;
     }
-    const url = window.prompt('URL', editor.getAttributes('link').href || '');
-    if (url === null) {
+    const existingUrl = editor.getAttributes('link').href || '';
+    setLinkUrl(existingUrl);
+    setShowLinkInput(true);
+  }
+
+  function applyLink() {
+    if (!editor) {
       return;
     }
-    if (url === '') {
+    if (linkUrl === '') {
       editor.chain().focus().extendMarkRange('link').unsetLink().run();
-      return;
+    } else {
+      editor.chain().focus().extendMarkRange('link').setLink({ href: linkUrl }).run();
     }
-    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+    setShowLinkInput(false);
+    setLinkUrl('');
+  }
+
+  function cancelLink() {
+    setShowLinkInput(false);
+    setLinkUrl('');
+    editor?.chain().focus().run();
   }
 
   return (
@@ -80,7 +96,7 @@ export function TiptapEditor({
       )}
     >
       {!readOnly && (
-        <div className="flex flex-wrap gap-0.5 border-b border-gray-200 p-1 dark:border-gray-700">
+        <div className="flex flex-wrap items-center gap-0.5 border-b border-gray-200 p-1 dark:border-gray-700">
           {[
             {
               action: () => editor.chain().focus().toggleBold().run(),
@@ -150,6 +166,21 @@ export function TiptapEditor({
               <btn.icon className="h-4 w-4" />
             </button>
           ))}
+          {showLinkInput && (
+            <div className="ml-2 flex items-center gap-1 rounded border border-gray-300 bg-white px-2 py-0.5 dark:border-gray-600 dark:bg-gray-800">
+              <input
+                autoFocus
+                className="w-40 bg-transparent text-xs text-gray-900 placeholder-gray-400 outline-none dark:text-white"
+                onChange={(e) => setLinkUrl(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { applyLink(); } if (e.key === 'Escape') { cancelLink(); } }}
+                placeholder="https://..."
+                type="url"
+                value={linkUrl}
+              />
+              <button className="text-xs font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400" onClick={applyLink} type="button">Add</button>
+              <button className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400" onClick={cancelLink} type="button">Cancel</button>
+            </div>
+          )}
         </div>
       )}
       <EditorContent

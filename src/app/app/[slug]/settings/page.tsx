@@ -108,6 +108,8 @@ export default function WorkspaceSettingsPage() {
 
   // Members
   const [members, setMembers] = useState<Member[]>([]);
+  const [removeMemberConfirm, setRemoveMemberConfirm] = useState<string | null>(null);
+  const [deleteFieldConfirm, setDeleteFieldConfirm] = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('MEMBER');
   const [inviting, setInviting] = useState(false);
@@ -367,7 +369,7 @@ export default function WorkspaceSettingsPage() {
   }
 
   async function removeMember(memberId: string, email: string) {
-    if (!workspaceId || !confirm(`Remove ${email}?`)) {
+    if (!workspaceId) {
       return;
     }
     await fetch(`/api/workspaces/${workspaceId}/members`, {
@@ -376,6 +378,7 @@ export default function WorkspaceSettingsPage() {
       body: JSON.stringify({ memberId }),
     });
     setMembers(members.filter((m) => m.id !== memberId));
+    setRemoveMemberConfirm(null);
     showMsg(`${email} removed`);
   }
 
@@ -633,17 +636,21 @@ export default function WorkspaceSettingsPage() {
                         {FIELD_TYPES.find((ft) => ft.value === field.type)?.label ?? field.type}
                       </span>
                     </div>
-                    <button
-                      className="rounded p-1 text-gray-300 hover:bg-red-50 hover:text-red-500 dark:text-gray-600 dark:hover:bg-red-900/30"
-                      onClick={() => {
-                        if (confirm(`Delete "${field.name}"?`)) {
-                          deleteField(field.id);
-                        }
-                      }}
-                      type="button"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                    {deleteFieldConfirm === field.id ? (
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-red-600 dark:text-red-400">Delete?</span>
+                        <button className="text-xs font-medium text-red-600" onClick={() => { deleteField(field.id); setDeleteFieldConfirm(null); }} type="button">Yes</button>
+                        <button className="text-xs text-gray-500" onClick={() => setDeleteFieldConfirm(null)} type="button">No</button>
+                      </div>
+                    ) : (
+                      <button
+                        className="rounded p-1 text-gray-300 hover:bg-red-50 hover:text-red-500 dark:text-gray-600 dark:hover:bg-red-900/30"
+                        onClick={() => setDeleteFieldConfirm(field.id)}
+                        type="button"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -709,13 +716,21 @@ export default function WorkspaceSettingsPage() {
                       </td>
                       <td className="px-3 py-2 text-right">
                         {m.role !== 'SUPER_ADMIN' && (
-                          <button
-                            className="text-xs text-red-600 hover:underline dark:text-red-400"
-                            onClick={() => removeMember(m.id, m.user.email)}
-                            type="button"
-                          >
-                            Remove
-                          </button>
+                          removeMemberConfirm === m.id ? (
+                            <div className="flex items-center justify-end gap-2">
+                              <span className="text-xs text-red-600 dark:text-red-400">Remove?</span>
+                              <button className="text-xs font-medium text-red-600" onClick={() => removeMember(m.id, m.user.email)} type="button">Yes</button>
+                              <button className="text-xs text-gray-500" onClick={() => setRemoveMemberConfirm(null)} type="button">Cancel</button>
+                            </div>
+                          ) : (
+                            <button
+                              className="text-xs text-red-600 hover:underline dark:text-red-400"
+                              onClick={() => setRemoveMemberConfirm(m.id)}
+                              type="button"
+                            >
+                              Remove
+                            </button>
+                          )
                         )}
                       </td>
                     </tr>

@@ -47,6 +47,7 @@ export default function CustomFieldsPage() {
   const [newOptions, setNewOptions] = useState('');
   const [newFormula, setNewFormula] = useState('');
   const [newSymbol, setNewSymbol] = useState('$');
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -111,10 +112,11 @@ export default function CustomFieldsPage() {
   }
 
   async function deleteField(fieldId: string, name: string) {
-    if (!workspaceId || !confirm(`Delete custom field "${name}"? All values will be lost.`)) { return; }
+    if (!workspaceId) { return; }
     const res = await fetch(`/api/workspaces/${workspaceId}/custom-fields/${fieldId}`, { method: 'DELETE' });
     if (res.ok) {
       fetchFields();
+      setDeleteConfirmId(null);
       setMessage(`Field "${name}" deleted`);
     }
   }
@@ -214,13 +216,21 @@ export default function CustomFieldsPage() {
                 {FIELD_TYPES.find((ft) => ft.value === field.type)?.label ?? field.type}
               </span>
             </div>
-            <button
-              className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
-              onClick={() => deleteField(field.id, field.name)}
-              type="button"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
+            {deleteConfirmId === field.id ? (
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-red-600 dark:text-red-400">Delete?</span>
+                <button className="text-xs font-medium text-red-600" onClick={() => deleteField(field.id, field.name)} type="button">Yes</button>
+                <button className="text-xs text-gray-500" onClick={() => setDeleteConfirmId(null)} type="button">No</button>
+              </div>
+            ) : (
+              <button
+                className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
+                onClick={() => setDeleteConfirmId(field.id)}
+                type="button"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
           </div>
         ))}
       </div>

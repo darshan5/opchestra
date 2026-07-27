@@ -47,6 +47,7 @@ export default function InvoiceDetailPage() {
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [workspaceId, setWorkspaceId] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     fetch('/api/workspaces')
@@ -88,9 +89,6 @@ export default function InvoiceDetailPage() {
   }
 
   async function deleteInvoice() {
-    if (!confirm('Delete this draft invoice?')) {
-      return;
-    }
     await fetch(`/api/workspaces/${workspaceId}/invoices/${params.invoiceId}`, {
       method: 'DELETE',
     });
@@ -129,9 +127,15 @@ export default function InvoiceDetailPage() {
               <Button loading={loading} onClick={sendInvoice}>
                 Send
               </Button>
-              <Button onClick={deleteInvoice} variant="danger">
-                Delete
-              </Button>
+              {showDeleteConfirm ? (
+                <div className="flex items-center gap-2 rounded border border-red-200 bg-red-50 px-3 py-1.5 dark:border-red-800 dark:bg-red-950">
+                  <span className="text-sm text-red-700 dark:text-red-300">Delete this invoice?</span>
+                  <Button onClick={deleteInvoice} size="sm" variant="danger">Confirm</Button>
+                  <Button onClick={() => setShowDeleteConfirm(false)} size="sm" variant="ghost">Cancel</Button>
+                </div>
+              ) : (
+                <Button onClick={() => setShowDeleteConfirm(true)} variant="danger">Delete</Button>
+              )}
             </>
           )}
           {invoice.status === 'SENT' && (

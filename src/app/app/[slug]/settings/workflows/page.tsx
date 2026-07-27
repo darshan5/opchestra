@@ -30,6 +30,7 @@ export default function WorkflowsPage() {
     { name: '', color: '#6B7280', category: 'todo' },
   ]);
   const [saving, setSaving] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/workspaces')
@@ -76,10 +77,8 @@ export default function WorkflowsPage() {
   }
 
   async function deleteWorkflow(id: string) {
-    if (!confirm('Delete this workflow?')) {
-      return;
-    }
     await fetch(`/api/workspaces/${workspaceId}/workflows/${id}`, { method: 'DELETE' });
+    setDeleteConfirmId(null);
     loadWorkflows();
   }
 
@@ -193,12 +192,20 @@ export default function WorkflowsPage() {
                 </h3>
               </div>
               {!wf.isDefault && (
-                <button
-                  className="text-red-400 hover:text-red-600"
-                  onClick={() => deleteWorkflow(wf.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                deleteConfirmId === wf.id ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-red-600 dark:text-red-400">Delete?</span>
+                    <button className="text-xs font-medium text-red-600" onClick={() => deleteWorkflow(wf.id)}>Yes</button>
+                    <button className="text-xs text-gray-500" onClick={() => setDeleteConfirmId(null)}>Cancel</button>
+                  </div>
+                ) : (
+                  <button
+                    className="text-red-400 hover:text-red-600"
+                    onClick={() => setDeleteConfirmId(wf.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )
               )}
             </div>
             <div className="mt-2 flex flex-wrap gap-1">

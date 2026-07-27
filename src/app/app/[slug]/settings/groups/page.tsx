@@ -18,6 +18,7 @@ export default function GroupSettingsPage() {
   const [groups, setGroups] = useState<GroupItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/workspaces')
@@ -65,7 +66,7 @@ export default function GroupSettingsPage() {
   }
 
   async function deleteGroup(id: string, name: string) {
-    if (!workspaceId || !confirm(`Delete group "${name}"? Tasks will become ungrouped.`)) {
+    if (!workspaceId) {
       return;
     }
     const res = await fetch(`/api/workspaces/${workspaceId}/groups/${id}`, {
@@ -73,6 +74,7 @@ export default function GroupSettingsPage() {
     });
     if (res.ok) {
       setGroups((prev) => prev.filter((g) => g.id !== id));
+      setDeleteConfirmId(null);
       setMessage(`Group "${name}" deleted`);
     }
   }
@@ -119,13 +121,21 @@ export default function GroupSettingsPage() {
               onBlur={(e) => updateGroup(g.id, { name: e.target.value })}
               type="text"
             />
-            <button
-              className="text-gray-400 hover:text-red-500"
-              onClick={() => deleteGroup(g.id, g.name)}
-              type="button"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
+            {deleteConfirmId === g.id ? (
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-red-600 dark:text-red-400">Delete?</span>
+                <button className="text-xs font-medium text-red-600" onClick={() => deleteGroup(g.id, g.name)} type="button">Yes</button>
+                <button className="text-xs text-gray-500" onClick={() => setDeleteConfirmId(null)} type="button">No</button>
+              </div>
+            ) : (
+              <button
+                className="text-gray-400 hover:text-red-500"
+                onClick={() => setDeleteConfirmId(g.id)}
+                type="button"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
           </div>
         ))}
         {groups.length === 0 && (

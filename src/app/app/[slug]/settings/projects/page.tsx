@@ -18,6 +18,7 @@ export default function ProjectSettingsPage() {
   const [projects, setProjects] = useState<ProjectItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/workspaces')
@@ -53,8 +54,8 @@ export default function ProjectSettingsPage() {
     }
   }
 
-  async function deleteProject(id: string, name: string) {
-    if (!workspaceId || !confirm(`Delete project "${name}" and all its tasks? This cannot be undone.`)) {
+  async function deleteProject(id: string) {
+    if (!workspaceId) {
       return;
     }
     const res = await fetch(`/api/workspaces/${workspaceId}/projects/${id}`, {
@@ -62,6 +63,7 @@ export default function ProjectSettingsPage() {
     });
     if (res.ok) {
       setProjects((prev) => prev.filter((p) => p.id !== id));
+      setDeleteConfirmId(null);
       setMessage(`Project "${name}" deleted`);
     }
   }
@@ -134,13 +136,21 @@ export default function ProjectSettingsPage() {
                 <ArchiveRestore className="h-4 w-4" />
               )}
             </button>
-            <button
-              className="text-gray-400 hover:text-red-500"
-              onClick={() => deleteProject(p.id, p.name)}
-              type="button"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
+            {deleteConfirmId === p.id ? (
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-red-600 dark:text-red-400">Delete?</span>
+                <button className="text-xs font-medium text-red-600" onClick={() => deleteProject(p.id)} type="button">Yes</button>
+                <button className="text-xs text-gray-500" onClick={() => setDeleteConfirmId(null)} type="button">No</button>
+              </div>
+            ) : (
+              <button
+                className="text-gray-400 hover:text-red-500"
+                onClick={() => setDeleteConfirmId(p.id)}
+                type="button"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
           </div>
         ))}
         {projects.length === 0 && (
