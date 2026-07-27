@@ -14,6 +14,8 @@ const PERMISSIONS: Record<string, string[]> = {
     'discounts.write',
     'reports.read',
     'provisioning.write',
+    'plans.read',
+    'plans.write',
   ],
   SUPER_ADMIN: ['*'],
   SUPPORT: [

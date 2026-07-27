@@ -2,6 +2,7 @@
 
 import {
   BarChart3,
+  CreditCard,
   FileText,
   LayoutDashboard,
   LogOut,
@@ -29,6 +30,7 @@ const navItems = [
   { href: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/admin/users', icon: Users, label: 'Subscribers' },
   { href: '/admin/admin-users', icon: UserCog, label: 'Admin Users' },
+  { href: '/admin/plans', icon: CreditCard, label: 'Plans' },
   { href: '/admin/discounts', icon: Tag, label: 'Discounts' },
   { href: '/admin/reports', icon: BarChart3, label: 'Reports' },
   { href: '/admin/logs', icon: FileText, label: 'Audit Logs' },

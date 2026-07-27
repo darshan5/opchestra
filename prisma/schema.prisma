@@ -581,6 +581,24 @@ model CustomFieldValue {
   @@index([taskId])
 }
 
+// ─── Plans (SaaS Billing) ───────────────────────────────────
+
+model Plan {
+  id                   String  @id @default(uuid())
+  name                 String
+  description          String?
+  priceMonthly         Float
+  priceAnnual          Float
+  maxUsers             Int
+  stripePriceIdMonthly String?
+  stripePriceIdAnnual  String?
+  features             Json?
+  isActive             Boolean @default(true)
+  sortOrder            Int     @default(0)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
 // ─── Invoicing ──────────────────────────────────────────────
 
 model Invoice {

@@ -507,6 +507,30 @@ const MIGRATIONS = [
     CONSTRAINT "InvoiceItem_pkey" PRIMARY KEY ("id"),
     CONSTRAINT "InvoiceItem_invoiceId_fkey" FOREIGN KEY ("invoiceId") REFERENCES "Invoice"("id") ON DELETE CASCADE ON UPDATE CASCADE
   )`,
+
+  `CREATE TABLE IF NOT EXISTS "Plan" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "priceMonthly" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "priceAnnual" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "maxUsers" INTEGER NOT NULL DEFAULT 3,
+    "stripePriceIdMonthly" TEXT,
+    "stripePriceIdAnnual" TEXT,
+    "features" JSONB,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "sortOrder" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "Plan_pkey" PRIMARY KEY ("id")
+  )`,
+  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "stripeCustomerId" TEXT`,
+  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "subscriptionId" TEXT`,
+  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "subscriptionStatus" TEXT`,
+  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "planId" TEXT`,
+  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "billingInterval" TEXT`,
+  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "currentPeriodEnd" TIMESTAMP(3)`,
+  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "cancelAtPeriodEnd" BOOLEAN DEFAULT false`,
 ];
 
 export async function POST() {
