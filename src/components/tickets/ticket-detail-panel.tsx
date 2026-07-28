@@ -61,6 +61,7 @@ export function TicketDetailPanel({
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [newTaskName, setNewTaskName] = useState('');
   const [tab, setTab] = useState<'details' | 'activity'>('details');
+  const [companies, setCompanies] = useState<Array<{ id: string; name: string }>>([]);
 
   const fetchTicket = useCallback(async () => {
     const res = await fetch(`/api/workspaces/${workspaceId}/tasks/${ticketId}`);
@@ -83,7 +84,11 @@ export function TicketDetailPanel({
   useEffect(() => {
     fetchTicket();
     fetchComments();
-  }, [fetchTicket, fetchComments]);
+    fetch(`/api/workspaces/${workspaceId}/companies`)
+      .then((r) => r.ok ? r.json() : [])
+      .then(setCompanies)
+      .catch(() => {});
+  }, [fetchTicket, fetchComments, workspaceId]);
 
   async function patchTicket(data: Record<string, unknown>) {
     const res = await fetch(`/api/workspaces/${workspaceId}/tasks/${ticketId}`, {
@@ -270,12 +275,19 @@ export function TicketDetailPanel({
                   )}
                 </div>
               )}
-              {ticket.ticketCompany && (
-                <div>
-                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Company</label>
-                  <p className="mt-1 text-sm text-gray-900 dark:text-white">{ticket.ticketCompany.name}</p>
-                </div>
-              )}
+              <div>
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Company</label>
+                <select
+                  className="mt-1 block w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                  onChange={(e) => patchTicket({ companyId: e.target.value || null })}
+                  value={ticket.ticketCompany?.id ?? ''}
+                >
+                  <option value="">No company</option>
+                  {companies.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
 
               {/* Source & Date */}
               <div className="grid grid-cols-2 gap-4">
