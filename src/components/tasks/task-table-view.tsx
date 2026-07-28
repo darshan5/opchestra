@@ -82,6 +82,64 @@ interface TaskTableViewProps {
   initialOpenTaskId?: string;
 }
 
+// ── Column Definitions ──────────────────────────────────────
+
+interface ColumnDef {
+  key: string;
+  label: string;
+  defaultWidth: number;
+  minWidth: number;
+  resizable: boolean;
+  hideable: boolean;
+}
+
+const COLUMN_DEFS: ColumnDef[] = [
+  { key: 'task', label: 'Task', defaultWidth: 0, minWidth: 200, resizable: false, hideable: false },
+  { key: 'person', label: 'Person', defaultWidth: 96, minWidth: 60, resizable: true, hideable: true },
+  { key: 'status', label: 'Status', defaultWidth: 112, minWidth: 80, resizable: true, hideable: true },
+  { key: 'priority', label: 'Priority', defaultWidth: 96, minWidth: 60, resizable: true, hideable: true },
+  { key: 'date', label: 'Date', defaultWidth: 96, minWidth: 60, resizable: true, hideable: true },
+  { key: 'project', label: 'Project', defaultWidth: 128, minWidth: 80, resizable: true, hideable: true },
+  { key: 'company', label: 'Company', defaultWidth: 128, minWidth: 80, resizable: true, hideable: true },
+  { key: 'group', label: 'Group', defaultWidth: 112, minWidth: 80, resizable: true, hideable: true },
+  { key: 'phase', label: 'Phase', defaultWidth: 112, minWidth: 80, resizable: true, hideable: true },
+  { key: 'comments', label: '', defaultWidth: 40, minWidth: 40, resizable: false, hideable: false },
+];
+
+function getDefaultVisibleColumns(context: { projectId?: string; taskGroupId?: string }): string[] {
+  const cols = ['task', 'person', 'status', 'priority', 'date', 'project', 'company', 'comments'];
+  if (context.projectId) {
+    // In project view: hide Project (redundant), show Phase
+    return cols.filter(c => c !== 'project').concat('phase');
+  }
+  if (context.taskGroupId) {
+    // In group view: hide Group (redundant)
+    return cols.filter(c => c !== 'group');
+  }
+  return cols;
+}
+
+function loadColumnState(storageKey: string, defaults: string[]): { visible: string[]; widths: Record<string, number> } {
+  if (typeof window === 'undefined') {
+    return { visible: defaults, widths: {} };
+  }
+  try {
+    const stored = localStorage.getItem(storageKey);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return { visible: parsed.visible || defaults, widths: parsed.widths || {} };
+    }
+  } catch { /* ignore */ }
+  return { visible: defaults, widths: {} };
+}
+
+function saveColumnState(storageKey: string, visible: string[], widths: Record<string, number>) {
+  if (typeof window === 'undefined') { return; }
+  try {
+    localStorage.setItem(storageKey, JSON.stringify({ visible, widths }));
+  } catch { /* ignore */ }
+}
+
 const STATUS_ORDER = ['Todo', 'In Progress', 'Done'];
 
 const STATUS_CELL: Record<string, string> = {
@@ -587,6 +645,60 @@ export function TaskTableView({
   } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [bulkConfirmDelete, setBulkConfirmDelete] = useState(false);
+  const [showColumnPicker, setShowColumnPicker] = useState(false);
+
+  // Column management
+  const colStorageKey = `opchestra-cols-${projectId || taskGroupId || 'all'}`;
+  const defaultVisibleCols = getDefaultVisibleColumns({ projectId, taskGroupId });
+  const [colState, setColState] = useState(() => loadColumnState(colStorageKey, defaultVisibleCols));
+  const visibleCols = colState.visible;
+  const colWidths = colState.widths;
+
+  function setVisibleCols(cols: string[]) {
+    const next = { ...colState, visible: cols };
+    setColState(next);
+    saveColumnState(colStorageKey, cols, next.widths);
+  }
+
+  function setColWidth(key: string, width: number) {
+    const next = { ...colState, widths: { ...colState.widths, [key]: width } };
+    setColState(next);
+    saveColumnState(colStorageKey, next.visible, next.widths);
+  }
+
+  function toggleColumn(key: string) {
+    const cols = visibleCols.includes(key) ? visibleCols.filter(c => c !== key) : [...visibleCols, key];
+    setVisibleCols(cols);
+  }
+
+  function getColWidth(key: string): number {
+    if (colWidths[key]) { return colWidths[key]; }
+    const def = COLUMN_DEFS.find(c => c.key === key);
+    return def?.defaultWidth || 100;
+  }
+
+  function startResize(colKey: string, startX: number) {
+    const startWidth = getColWidth(colKey);
+    const minW = COLUMN_DEFS.find(c => c.key === colKey)?.minWidth || 60;
+    function onMouseMove(e: MouseEvent) {
+      const newWidth = Math.max(minW, startWidth + (e.clientX - startX));
+      setColWidth(colKey, newWidth);
+    }
+    function onMouseUp() {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    }
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }
+
+  // Close column picker on click outside
+  useEffect(() => {
+    if (!showColumnPicker) { return; }
+    function handler() { setShowColumnPicker(false); }
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
+  }, [showColumnPicker]);
 
   // Auto-scroll to and highlight the initial task
   useEffect(() => {
@@ -809,16 +921,56 @@ export function TaskTableView({
                         type="checkbox"
                       />
                     </div>
-                    <div className="min-w-0 flex-1 px-2 py-2">Task</div>
-                    <div className="w-24 shrink-0 px-1 text-center">Person</div>
-                    <div className="w-28 shrink-0 px-1 text-center">Status</div>
-                    <div className="w-24 shrink-0 px-1 text-center">Priority</div>
-                    <div className="w-24 shrink-0 px-1 text-center">Date</div>
-                    <div className="w-32 shrink-0 px-1 text-center">Project</div>
-                    {taskGroups.length > 0 && !taskGroupId && (
-                      <div className="w-28 shrink-0 px-1 text-center">Group</div>
-                    )}
-                    <div className="w-10 shrink-0" />
+                    {visibleCols.map((colKey) => {
+                      const def = COLUMN_DEFS.find(c => c.key === colKey);
+                      if (!def) { return null; }
+                      const w = colKey === 'task' ? undefined : getColWidth(colKey);
+                      return (
+                        <div
+                          className={cn(
+                            'relative shrink-0 px-1 py-2',
+                            colKey === 'task' ? 'min-w-0 flex-1 px-2' : 'text-center',
+                            colKey === 'comments' && 'w-10',
+                          )}
+                          key={colKey}
+                          style={w ? { width: w } : undefined}
+                        >
+                          {def.label}
+                          {def.resizable && (
+                            <div
+                              className="absolute top-0 right-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400"
+                              onMouseDown={(e) => { e.preventDefault(); startResize(colKey, e.clientX); }}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                    {/* Add column button */}
+                    <div className="relative w-8 shrink-0 flex items-center justify-center">
+                      <button
+                        className="rounded p-0.5 text-gray-300 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 dark:hover:text-gray-400"
+                        onClick={() => setShowColumnPicker(!showColumnPicker)}
+                        title="Add/remove columns"
+                        type="button"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </button>
+                      {showColumnPicker && (
+                        <div className="absolute right-0 top-full z-40 mt-1 w-44 rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-900">
+                          {COLUMN_DEFS.filter(c => c.hideable).map((col) => (
+                            <label className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800" key={col.key}>
+                              <input
+                                checked={visibleCols.includes(col.key)}
+                                className="h-3 w-3 rounded border-gray-300"
+                                onChange={() => toggleColumn(col.key)}
+                                type="checkbox"
+                              />
+                              <span className="normal-case tracking-normal">{col.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Task Rows */}
@@ -894,84 +1046,140 @@ export function TaskTableView({
                               </button>
                             </div>
                           </div>
-                          {/* Person */}
-                          <div className="flex w-24 shrink-0 items-center justify-center px-1" onClick={(e) => e.stopPropagation()}>
-                            <div className="relative">
-                              {task.assignee ? (
-                                <>
-                                  <div className={cn('flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold text-white', getAvatarColor(task.assignee.name || task.assignee.email))} title={task.assignee.name ?? task.assignee.email}>
-                                    {initials(task.assignee.name || task.assignee.email)}
+                          {/* Dynamic columns */}
+                          {visibleCols.map((colKey) => {
+                            const w = colKey === 'task' ? undefined : getColWidth(colKey);
+                            const style = w ? { width: w } : undefined;
+
+                            if (colKey === 'task') { return null; /* rendered above */ }
+
+                            if (colKey === 'person') {
+                              return (
+                                <div className="flex shrink-0 items-center justify-center px-1" key={colKey} onClick={(e) => e.stopPropagation()} style={style}>
+                                  <div className="relative">
+                                    {task.assignee ? (
+                                      <>
+                                        <div className={cn('flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold text-white', getAvatarColor(task.assignee.name || task.assignee.email))} title={task.assignee.name ?? task.assignee.email}>
+                                          {initials(task.assignee.name || task.assignee.email)}
+                                        </div>
+                                        <select className="absolute inset-0 cursor-pointer opacity-0" onChange={(e) => patchTask(task.id, { assigneeId: e.target.value || null })} value={task.assignee.id}>
+                                          <option value="">Unassigned</option>
+                                          {members.map((m) => <option key={m.id} value={m.id}>{m.name ?? m.email}</option>)}
+                                        </select>
+                                      </>
+                                    ) : (
+                                      <div className="relative">
+                                        <div className="flex h-7 w-7 items-center justify-center rounded-full border border-dashed border-gray-300 text-gray-400 dark:border-gray-600"><Plus className="h-3 w-3" /></div>
+                                        <select className="absolute inset-0 cursor-pointer opacity-0" onChange={(e) => patchTask(task.id, { assigneeId: e.target.value || null })} value="">
+                                          <option value="">Assign...</option>
+                                          {members.map((m) => <option key={m.id} value={m.id}>{m.name ?? m.email}</option>)}
+                                        </select>
+                                      </div>
+                                    )}
                                   </div>
-                                  <select className="absolute inset-0 cursor-pointer opacity-0" onChange={(e) => patchTask(task.id, { assigneeId: e.target.value || null })} value={task.assignee.id}>
-                                    <option value="">Unassigned</option>
-                                    {members.map((m) => <option key={m.id} value={m.id}>{m.name ?? m.email}</option>)}
-                                  </select>
-                                </>
-                              ) : (
-                                <div className="relative">
-                                  <div className="flex h-7 w-7 items-center justify-center rounded-full border border-dashed border-gray-300 text-gray-400 dark:border-gray-600"><Plus className="h-3 w-3" /></div>
-                                  <select className="absolute inset-0 cursor-pointer opacity-0" onChange={(e) => patchTask(task.id, { assigneeId: e.target.value || null })} value="">
-                                    <option value="">Assign...</option>
-                                    {members.map((m) => <option key={m.id} value={m.id}>{m.name ?? m.email}</option>)}
+                                </div>
+                              );
+                            }
+
+                            if (colKey === 'status') {
+                              return (
+                                <div className="flex shrink-0 items-center justify-center px-0.5" key={colKey} onClick={(e) => e.stopPropagation()} style={style}>
+                                  <div className="relative w-full">
+                                    <div className={cn('w-full rounded py-1.5 text-center text-xs font-semibold', STATUS_CELL[task.status] ?? STATUS_CELL.Todo)}>{task.status}</div>
+                                    <select className="absolute inset-0 cursor-pointer opacity-0" onChange={(e) => patchTask(task.id, { status: e.target.value })} value={task.status}>
+                                      <option value="Todo">Todo</option>
+                                      <option value="In Progress">In Progress</option>
+                                      <option value="Done">Done</option>
+                                    </select>
+                                  </div>
+                                </div>
+                              );
+                            }
+
+                            if (colKey === 'priority') {
+                              return (
+                                <div className="flex shrink-0 items-center justify-center px-0.5" key={colKey} style={style}>
+                                  {task.priority !== 'NONE' ? (
+                                    <span className={cn('w-full rounded py-1.5 text-center text-xs font-semibold', PRIORITY_CELL[task.priority])}>
+                                      {task.priority.charAt(0) + task.priority.slice(1).toLowerCase()}
+                                    </span>
+                                  ) : (
+                                    <span className="w-full py-1.5 text-center text-xs text-gray-300 dark:text-gray-600">—</span>
+                                  )}
+                                </div>
+                              );
+                            }
+
+                            if (colKey === 'date') {
+                              return (
+                                <div className="shrink-0 px-1 text-center text-xs text-gray-500 dark:text-gray-400" key={colKey} style={style}>
+                                  {task.endDate ? format(new Date(task.endDate), 'MMM d') : ''}
+                                </div>
+                              );
+                            }
+
+                            if (colKey === 'project') {
+                              return (
+                                <div className="flex shrink-0 items-center justify-center px-1" key={colKey} style={style}>
+                                  {task.project && (
+                                    <span className={cn('truncate rounded px-2 py-1 text-[11px] font-semibold', getProjectColor(task.project.name))}>{task.project.name}</span>
+                                  )}
+                                </div>
+                              );
+                            }
+
+                            if (colKey === 'company') {
+                              return (
+                                <div className="flex shrink-0 items-center justify-center px-1" key={colKey} style={style}>
+                                  {task.ticketCompany && (
+                                    <a className="truncate rounded px-2 py-1 text-[11px] font-medium text-purple-600 hover:underline dark:text-purple-400" href={`/app/${slug}/contacts?company=${task.ticketCompany.id}`}>
+                                      {task.ticketCompany.name}
+                                    </a>
+                                  )}
+                                </div>
+                              );
+                            }
+
+                            if (colKey === 'group') {
+                              return (
+                                <div className="flex shrink-0 items-center justify-center px-1" key={colKey} style={style}>
+                                  <select
+                                    className="w-full truncate rounded border-0 bg-transparent py-0.5 text-[11px] text-gray-600 cursor-pointer dark:text-gray-400"
+                                    onChange={(e) => moveTaskToGroup(task.id, e.target.value)}
+                                    onClick={(e) => e.stopPropagation()}
+                                    value={task.taskGroup?.id ?? ''}
+                                  >
+                                    <option value="">—</option>
+                                    {taskGroups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
                                   </select>
                                 </div>
-                              )}
-                            </div>
-                          </div>
-                          {/* Status */}
-                          <div className="flex w-28 shrink-0 items-center justify-center px-0.5" onClick={(e) => e.stopPropagation()}>
-                            <div className="relative w-full">
-                              <div className={cn('w-full rounded py-1.5 text-center text-xs font-semibold', STATUS_CELL[task.status] ?? STATUS_CELL.Todo)}>{task.status}</div>
-                              <select className="absolute inset-0 cursor-pointer opacity-0" onChange={(e) => patchTask(task.id, { status: e.target.value })} value={task.status}>
-                                <option value="Todo">Todo</option>
-                                <option value="In Progress">In Progress</option>
-                                <option value="Done">Done</option>
-                              </select>
-                            </div>
-                          </div>
-                          {/* Priority */}
-                          <div className="flex w-24 shrink-0 items-center justify-center px-0.5">
-                            {task.priority !== 'NONE' ? (
-                              <span className={cn('w-full rounded py-1.5 text-center text-xs font-semibold', PRIORITY_CELL[task.priority])}>
-                                {task.priority.charAt(0) + task.priority.slice(1).toLowerCase()}
-                              </span>
-                            ) : (
-                              <span className="w-full py-1.5 text-center text-xs text-gray-300 dark:text-gray-600">—</span>
-                            )}
-                          </div>
-                          {/* Date */}
-                          <div className="w-24 shrink-0 px-1 text-center text-xs text-gray-500 dark:text-gray-400">
-                            {task.endDate ? format(new Date(task.endDate), 'MMM d') : ''}
-                          </div>
-                          {/* Project */}
-                          <div className="flex w-32 shrink-0 items-center justify-center px-1">
-                            {task.project && (
-                              <span className={cn('truncate rounded px-2 py-1 text-[11px] font-semibold', getProjectColor(task.project.name))}>{task.project.name}</span>
-                            )}
-                          </div>
-                          {/* Group */}
-                          {taskGroups.length > 0 && !taskGroupId && (
-                            <div className="flex w-28 shrink-0 items-center justify-center px-1">
-                              <select
-                                className="w-full truncate rounded border-0 bg-transparent py-0.5 text-[11px] text-gray-600 cursor-pointer dark:text-gray-400"
-                                onChange={(e) => moveTaskToGroup(task.id, e.target.value)}
-                                onClick={(e) => e.stopPropagation()}
-                                value={task.taskGroup?.id ?? ''}
-                              >
-                                <option value="">—</option>
-                                {taskGroups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-                              </select>
-                            </div>
-                          )}
-                          {/* Comments */}
-                          <div className="flex w-10 shrink-0 items-center justify-center">
-                            {task._count.comments > 0 && (
-                              <div className="flex items-center gap-0.5 text-gray-400">
-                                <MessageSquare className="h-3 w-3" />
-                                <span className="text-[10px]">{task._count.comments}</span>
-                              </div>
-                            )}
-                          </div>
+                              );
+                            }
+
+                            if (colKey === 'phase') {
+                              return (
+                                <div className="flex shrink-0 items-center justify-center px-1 text-[11px] text-gray-500 dark:text-gray-400" key={colKey} style={style}>
+                                  {(task as unknown as { phase?: { name: string; color: string } }).phase?.name ?? '—'}
+                                </div>
+                              );
+                            }
+
+                            if (colKey === 'comments') {
+                              return (
+                                <div className="flex w-10 shrink-0 items-center justify-center" key={colKey}>
+                                  {task._count.comments > 0 && (
+                                    <div className="flex items-center gap-0.5 text-gray-400">
+                                      <MessageSquare className="h-3 w-3" />
+                                      <span className="text-[10px]">{task._count.comments}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            }
+
+                            return null;
+                          })}
+                          <div className="w-8 shrink-0" />
                         </div>
                         {isExpanded && <SubItemsSection members={members} parentTaskId={task.id} workspaceId={workspaceId} />}
                       </div>
@@ -996,20 +1204,32 @@ export function TaskTableView({
                   {/* Group Summary */}
                   {groupTasks.length > 0 && (
                     <div className="flex items-center border-b border-gray-200/60 bg-gray-50/50 text-[10px] text-gray-400 dark:border-gray-800/40 dark:bg-gray-900/20">
-                      <div className="w-6 shrink-0" /><div className="w-9 shrink-0" /><div className="w-7 shrink-0" /><div className="min-w-0 flex-1" /><div className="w-24 shrink-0" />
-                      <div className="flex w-28 shrink-0 items-center justify-center px-1">
-                        <div className="flex h-1.5 w-full overflow-hidden rounded-full">
-                          {(() => {
-                            const d = groupTasks.filter((t) => t.status === 'Done').length;
-                            const p = groupTasks.filter((t) => t.status === 'In Progress').length;
-                            const o = groupTasks.length - d - p;
-                            const n = groupTasks.length;
-                            return (<>{d > 0 && <div className="bg-green-500" style={{ width: `${(d / n) * 100}%` }} />}{p > 0 && <div className="bg-amber-400" style={{ width: `${(p / n) * 100}%` }} />}{o > 0 && <div className="bg-gray-300 dark:bg-gray-600" style={{ width: `${(o / n) * 100}%` }} />}</>);
-                          })()}
-                        </div>
-                      </div>
-                      <div className="w-24 shrink-0" /><div className="w-24 shrink-0" /><div className="w-32 shrink-0" />
-                      <div className="w-10 shrink-0 py-1.5 text-center">{groupTasks.length} {groupTasks.length === 1 ? 'item' : 'items'}</div>
+                      <div className="w-6 shrink-0" /><div className="w-9 shrink-0" /><div className="w-7 shrink-0" />
+                      {visibleCols.map((colKey) => {
+                        if (colKey === 'task') { return <div className="min-w-0 flex-1" key={colKey} />; }
+                        if (colKey === 'status') {
+                          const w = getColWidth(colKey);
+                          return (
+                            <div className="flex shrink-0 items-center justify-center px-1" key={colKey} style={{ width: w }}>
+                              <div className="flex h-1.5 w-full overflow-hidden rounded-full">
+                                {(() => {
+                                  const d = groupTasks.filter((t) => t.status === 'Done').length;
+                                  const p = groupTasks.filter((t) => t.status === 'In Progress').length;
+                                  const o = groupTasks.length - d - p;
+                                  const n = groupTasks.length;
+                                  return (<>{d > 0 && <div className="bg-green-500" style={{ width: `${(d / n) * 100}%` }} />}{p > 0 && <div className="bg-amber-400" style={{ width: `${(p / n) * 100}%` }} />}{o > 0 && <div className="bg-gray-300 dark:bg-gray-600" style={{ width: `${(o / n) * 100}%` }} />}</>);
+                                })()}
+                              </div>
+                            </div>
+                          );
+                        }
+                        if (colKey === 'comments') {
+                          return <div className="w-10 shrink-0 py-1.5 text-center" key={colKey}>{groupTasks.length} {groupTasks.length === 1 ? 'item' : 'items'}</div>;
+                        }
+                        const w = getColWidth(colKey);
+                        return <div className="shrink-0" key={colKey} style={{ width: w }} />;
+                      })}
+                      <div className="w-8 shrink-0" />
                     </div>
                   )}
                 </>
