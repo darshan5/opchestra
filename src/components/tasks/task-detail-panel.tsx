@@ -842,6 +842,7 @@ function TimeLogTab({ currentUserRole, members, onActivityChange, taskId, worksp
   // Fetch active timer from DB on mount
   const fetchActiveTimer = useCallback(async () => {
     try {
+      // First check global running timer
       const res = await fetch(`/api/workspaces/${workspaceId}/active-timer`);
       if (res.ok) {
         const data = await res.json();
@@ -851,12 +852,25 @@ function TimeLogTab({ currentUserRole, members, onActivityChange, taskId, worksp
           setTimerPaused(!!data.pausedAt);
           setTimerNotes(data.notes || '');
           setTimerBillable(data.billable);
-        } else {
-          setActiveTimer(null);
-          setTimerRunning(false);
-          setTimerPaused(false);
+          return;
         }
       }
+      // Also check for a paused timer on this specific task
+      const pausedRes = await fetch(`/api/workspaces/${workspaceId}/tasks/${taskId}/timer`);
+      if (pausedRes.ok) {
+        const pausedData = await pausedRes.json();
+        if (pausedData && pausedData.id) {
+          setActiveTimer(pausedData);
+          setTimerRunning(true);
+          setTimerPaused(!!pausedData.pausedAt);
+          setTimerNotes(pausedData.notes || '');
+          setTimerBillable(pausedData.billable);
+          return;
+        }
+      }
+      setActiveTimer(null);
+      setTimerRunning(false);
+      setTimerPaused(false);
     } catch {
       // ignore
     }
