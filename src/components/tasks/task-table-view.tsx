@@ -48,6 +48,7 @@ interface TaskData {
   assignee: TaskUser | null;
   project: { id: string; name: string } | null;
   taskGroup?: TaskGroupData | null;
+  phase?: { id: string; name: string; color: string } | null;
   ticketCompany?: { id: string; name: string } | null;
   startDate?: string | Date | null;
   endDate: string | Date | null;
