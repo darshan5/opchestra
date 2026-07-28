@@ -853,7 +853,7 @@ export function TaskTableView({
       });
       if (res.ok) {
         const task = await res.json();
-        setTasks([...tasks, task]);
+        setTasks([task, ...tasks]);
         setNewTaskTitle('');
         setAddingInGroup(null);
         router.refresh();
@@ -1035,6 +1035,21 @@ export function TaskTableView({
                         </div>
                       )}
                     </div>
+                  </div>
+
+                  {/* Add Item Row */}
+                  <div className="border-b border-gray-100 dark:border-gray-800/50">
+                    {addingInGroup === groupKey ? (
+                      <form className="flex items-center py-1 pl-[96px] pr-4" onSubmit={(e) => { e.preventDefault(); createTask(groupKey); }}>
+                        <input autoFocus className="min-w-0 flex-1 bg-transparent py-1 text-sm text-gray-900 placeholder-gray-400 focus:outline-none dark:text-white" disabled={saving} onChange={(e) => setNewTaskTitle(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') { setAddingInGroup(null); setNewTaskTitle(''); } }} placeholder="Task name..." value={newTaskTitle} />
+                        {newTaskTitle.trim() && <button className="ml-2 rounded bg-blue-500 px-3 py-1 text-xs font-medium text-white hover:bg-blue-600" disabled={saving} type="submit">Add</button>}
+                        <button className="ml-1 rounded px-2 py-1 text-xs text-gray-400 hover:text-gray-600" onClick={() => { setAddingInGroup(null); setNewTaskTitle(''); }} type="button">✕</button>
+                      </form>
+                    ) : (
+                      <button className="flex w-full items-center gap-1.5 py-2 pl-[96px] text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" onClick={() => { setAddingInGroup(groupKey); setNewTaskTitle(''); }} type="button">
+                        <Plus className="h-3.5 w-3.5" /> Add item
+                      </button>
+                    )}
                   </div>
 
                   {/* Task Rows */}
@@ -1260,21 +1275,6 @@ export function TaskTableView({
                       </div>
                     );
                   })}
-
-                  {/* Add Item Row */}
-                  <div className="border-b border-gray-100 dark:border-gray-800/50">
-                    {addingInGroup === groupKey ? (
-                      <form className="flex items-center py-1 pl-[96px] pr-4" onSubmit={(e) => { e.preventDefault(); createTask(groupKey); }}>
-                        <input autoFocus className="min-w-0 flex-1 bg-transparent py-1 text-sm text-gray-900 placeholder-gray-400 focus:outline-none dark:text-white" disabled={saving} onChange={(e) => setNewTaskTitle(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') { setAddingInGroup(null); setNewTaskTitle(''); } }} placeholder="Task name..." value={newTaskTitle} />
-                        {newTaskTitle.trim() && <button className="ml-2 rounded bg-blue-500 px-3 py-1 text-xs font-medium text-white hover:bg-blue-600" disabled={saving} type="submit">Add</button>}
-                        <button className="ml-1 rounded px-2 py-1 text-xs text-gray-400 hover:text-gray-600" onClick={() => { setAddingInGroup(null); setNewTaskTitle(''); }} type="button">✕</button>
-                      </form>
-                    ) : (
-                      <button className="flex w-full items-center gap-1.5 py-2 pl-[96px] text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" onClick={() => { setAddingInGroup(groupKey); setNewTaskTitle(''); }} type="button">
-                        <Plus className="h-3.5 w-3.5" /> Add item
-                      </button>
-                    )}
-                  </div>
 
                   {/* Group Summary */}
                   {groupTasks.length > 0 && (
