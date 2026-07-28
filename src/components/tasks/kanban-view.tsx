@@ -81,6 +81,7 @@ export function KanbanView({
 }: KanbanViewProps) {
   const router = useRouter();
   const [tasks, setTasks] = useState<TaskData[]>(initialTasks);
+  useEffect(() => { setTasks(initialTasks); }, [initialTasks]);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [addingTo, setAddingTo] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState('');
