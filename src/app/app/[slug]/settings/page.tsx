@@ -124,6 +124,7 @@ export default function WorkspaceSettingsPage() {
 
   // Invoicing
   const [invoicePaymentDueDays, setInvoicePaymentDueDays] = useState(30);
+  const [invoiceDefaultTaxRate, setInvoiceDefaultTaxRate] = useState(0);
   const [savingInvoice, setSavingInvoice] = useState(false);
 
   // SLA
@@ -184,6 +185,9 @@ export default function WorkspaceSettingsPage() {
       const data = await settingsRes.json();
       if (data.invoicePaymentDueDays !== undefined) {
         setInvoicePaymentDueDays(data.invoicePaymentDueDays);
+      }
+      if (data.invoiceDefaultTaxRate !== undefined) {
+        setInvoiceDefaultTaxRate(data.invoiceDefaultTaxRate);
       }
     }
   }, [workspaceId]);
@@ -442,7 +446,7 @@ export default function WorkspaceSettingsPage() {
     await fetch(`/api/workspaces/${workspaceId}/settings`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ invoicePaymentDueDays }),
+      body: JSON.stringify({ invoicePaymentDueDays, invoiceDefaultTaxRate }),
     });
     showMsg('Invoice settings saved');
     setSavingInvoice(false);
@@ -997,21 +1001,40 @@ export default function WorkspaceSettingsPage() {
               Configure defaults for new invoices.
             </p>
             <div className="mt-6 space-y-4">
-              <div className="max-w-xs">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Default Payment Due (days)
-                </label>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  New invoices will default to this many days from the issue date.
-                </p>
-                <input
-                  className="mt-2 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                  min="0"
-                  max="365"
-                  onChange={(e) => setInvoicePaymentDueDays(parseInt(e.target.value) || 0)}
-                  type="number"
-                  value={invoicePaymentDueDays}
-                />
+              <div className="grid gap-6 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Default Payment Due (days)
+                  </label>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    New invoices will default to this many days from the issue date.
+                  </p>
+                  <input
+                    className="mt-2 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                    min="0"
+                    max="365"
+                    onChange={(e) => setInvoicePaymentDueDays(parseInt(e.target.value) || 0)}
+                    type="number"
+                    value={invoicePaymentDueDays}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Default Tax Rate (%)
+                  </label>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    New invoices will use this tax rate by default.
+                  </p>
+                  <input
+                    className="mt-2 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    onChange={(e) => setInvoiceDefaultTaxRate(parseFloat(e.target.value) || 0)}
+                    type="number"
+                    value={invoiceDefaultTaxRate}
+                  />
+                </div>
               </div>
               <Button loading={savingInvoice} onClick={saveInvoiceSettings}>Save</Button>
             </div>

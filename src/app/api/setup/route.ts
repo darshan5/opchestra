@@ -633,6 +633,9 @@ const MIGRATIONS = [
   `ALTER TABLE "InvoiceItem" ADD COLUMN IF NOT EXISTS "isSubItem" BOOLEAN NOT NULL DEFAULT false`,
   `ALTER TABLE "InvoiceItem" ADD COLUMN IF NOT EXISTS "isFlat" BOOLEAN NOT NULL DEFAULT false`,
   `ALTER TABLE "InvoiceItem" ADD COLUMN IF NOT EXISTS "position" INTEGER NOT NULL DEFAULT 0`,
+
+  // Default tax rate for invoices
+  `ALTER TABLE "Workspace" ADD COLUMN IF NOT EXISTS "invoiceDefaultTaxRate" DOUBLE PRECISION NOT NULL DEFAULT 0`,
 ];
 
 export async function POST() {

@@ -72,6 +72,11 @@ export default function NewInvoicePage() {
           setWorkspaceId(ws.id);
           fetch(`/api/workspaces/${ws.id}/companies`).then((r) => r.json()).then(setCompanies);
           fetch(`/api/workspaces/${ws.id}/contacts`).then((r) => r.json()).then(setContacts);
+          fetch(`/api/workspaces/${ws.id}/settings`).then((r) => r.json()).then((settings) => {
+            if (settings.invoiceDefaultTaxRate) {
+              setTaxRate(settings.invoiceDefaultTaxRate);
+            }
+          });
 
           const paymentDueDays = ws.invoicePaymentDueDays ?? 30;
           const due = new Date();

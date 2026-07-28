@@ -303,6 +303,7 @@ model Workspace {
   currentPeriodEnd    DateTime?
   seatLimit              Int      @default(3)
   invoicePaymentDueDays  Int      @default(30)
+  invoiceDefaultTaxRate  Float    @default(0)
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 
