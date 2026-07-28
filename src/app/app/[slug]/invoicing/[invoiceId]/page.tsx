@@ -1,7 +1,7 @@
 'use client';
 
 import { format } from 'date-fns';
-import { ExternalLink, Plus, Save, Trash2, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, ExternalLink, Plus, Save, Trash2, X } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -18,6 +18,7 @@ interface LineItem {
   projectId?: string | null;
   isSection?: boolean;
   isSubItem?: boolean;
+  isFlat?: boolean;
 }
 
 interface InvoiceDetail {
@@ -146,10 +147,19 @@ export default function InvoiceDetailPage() {
     setDirty(false);
   }
 
-  function updateItem(index: number, field: keyof LineItem, value: string | number) {
+  function updateItem(index: number, field: keyof LineItem, value: string | number | boolean) {
     const updated = [...items];
     (updated[index] as unknown as Record<string, unknown>)[field] = value;
-    if (field === 'quantity' || field === 'rate') {
+    if (field === 'isFlat') {
+      if (value) {
+        updated[index].quantity = 1;
+        updated[index].rate = updated[index].amount;
+      } else {
+        updated[index].amount = updated[index].quantity * updated[index].rate;
+      }
+    } else if (field === 'amount' && updated[index].isFlat) {
+      updated[index].rate = updated[index].amount;
+    } else if (field === 'quantity' || field === 'rate') {
       updated[index].amount = updated[index].quantity * updated[index].rate;
     }
     setItems(updated);
@@ -173,6 +183,22 @@ export default function InvoiceDetailPage() {
       insertAt++;
     }
     updated.splice(insertAt, 0, { description: '', quantity: 1, rate: 0, amount: 0, isSubItem: true });
+    setItems(updated);
+    setDirty(true);
+  }
+
+  function moveItem(index: number, direction: 'up' | 'down') {
+    const updated = [...items];
+    const item = updated[index];
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= updated.length) return;
+    if (item.isSubItem) {
+      const target = updated[targetIdx];
+      if (!target.isSubItem && direction === 'up') return;
+      if (!target.isSubItem && direction === 'down') return;
+    }
+    updated.splice(index, 1);
+    updated.splice(targetIdx, 0, item);
     setItems(updated);
     setDirty(true);
   }
@@ -220,6 +246,7 @@ export default function InvoiceDetailPage() {
             projectId: i.projectId || null,
             isSection: i.isSection || undefined,
             isSubItem: i.isSubItem || undefined,
+            isFlat: i.isFlat || undefined,
           })),
         }),
         headers: { 'Content-Type': 'application/json' },
@@ -515,9 +542,15 @@ export default function InvoiceDetailPage() {
         <table className="mt-3 w-full">
           <thead className="border-b border-gray-200 dark:border-gray-800">
             <tr>
+              {isEditable && <th className="w-8" />}
               <th className="px-4 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                 Description
               </th>
+              {isEditable && (
+                <th className="w-16 px-2 py-2 text-center text-xs font-medium tracking-wider text-gray-500 uppercase">
+                  Type
+                </th>
+              )}
               <th className="w-24 px-4 py-2 text-right text-xs font-medium tracking-wider text-gray-500 uppercase">
                 Qty
               </th>
@@ -536,6 +569,7 @@ export default function InvoiceDetailPage() {
               const isSubItem = item.isSubItem;
               const isTaskHeader = !isSection && !isSubItem && item.quantity === 0 && item.rate === 0 && item.amount === 0 && item.taskId;
               const isHeaderLike = isSection || isTaskHeader;
+              const isFlat = item.isFlat;
               return (
                 <tr
                   key={i}
@@ -544,10 +578,43 @@ export default function InvoiceDetailPage() {
                     isTaskHeader && 'bg-gray-50 dark:bg-gray-900/50',
                   )}
                 >
+                  {isEditable && (
+                    <td className="px-1 py-2.5">
+                      <div className="flex flex-col items-center">
+                        <button
+                          className="text-gray-300 hover:text-gray-600 disabled:opacity-0 dark:text-gray-600 dark:hover:text-gray-300"
+                          disabled={i === 0}
+                          onClick={() => moveItem(i, 'up')}
+                          type="button"
+                        >
+                          <ChevronUp className="h-3 w-3" />
+                        </button>
+                        <button
+                          className="text-gray-300 hover:text-gray-600 disabled:opacity-0 dark:text-gray-600 dark:hover:text-gray-300"
+                          disabled={i === items.length - 1}
+                          onClick={() => moveItem(i, 'down')}
+                          type="button"
+                        >
+                          <ChevronDown className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </td>
+                  )}
                   <td className="px-4 py-2.5">
                     {isEditable ? (
                       <div className="flex items-center gap-1">
-                        {isSubItem && <span className="ml-4 text-gray-400">·</span>}
+                        {!isSection && !isSubItem && !isTaskHeader && (
+                          <button
+                            className="shrink-0 text-gray-300 hover:text-blue-600 dark:text-gray-600 dark:hover:text-blue-400"
+                            onClick={() => addSubItem(i)}
+                            title="Add sub-item"
+                            type="button"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                        {isSubItem && <span className="ml-6 shrink-0 text-gray-400">·</span>}
+                        {isTaskHeader && <span className="ml-5 shrink-0" />}
                         <input
                           className={cn(
                             'w-full rounded border border-gray-200 bg-white px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white',
@@ -572,8 +639,27 @@ export default function InvoiceDetailPage() {
                       </span>
                     )}
                   </td>
+                  {isEditable && (
+                    <td className="px-1 py-2.5 text-center">
+                      {!isHeaderLike && (
+                        <button
+                          className={cn(
+                            'rounded px-1.5 py-0.5 text-[10px] font-medium',
+                            isFlat
+                              ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400'
+                              : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+                          )}
+                          onClick={() => updateItem(i, 'isFlat', !isFlat)}
+                          title={isFlat ? 'Switch to hourly rate' : 'Switch to flat price'}
+                          type="button"
+                        >
+                          {isFlat ? 'Flat' : 'Hourly'}
+                        </button>
+                      )}
+                    </td>
+                  )}
                   <td className="px-4 py-2.5 text-right">
-                    {isEditable && !isHeaderLike ? (
+                    {isEditable && !isHeaderLike && !isFlat ? (
                       <input
                         className="w-full rounded border border-gray-200 bg-white px-2 py-1 text-right text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                         min="0"
@@ -584,12 +670,12 @@ export default function InvoiceDetailPage() {
                       />
                     ) : (
                       <span className="text-sm text-gray-700 dark:text-gray-300">
-                        {isHeaderLike ? '' : item.quantity}
+                        {isHeaderLike || isFlat ? '' : item.quantity}
                       </span>
                     )}
                   </td>
                   <td className="px-4 py-2.5 text-right">
-                    {isEditable && !isHeaderLike ? (
+                    {isEditable && !isHeaderLike && !isFlat ? (
                       <input
                         className="w-full rounded border border-gray-200 bg-white px-2 py-1 text-right text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                         min="0"
@@ -600,35 +686,32 @@ export default function InvoiceDetailPage() {
                       />
                     ) : (
                       <span className="text-sm text-gray-700 dark:text-gray-300">
-                        {isHeaderLike ? '' : `$${item.rate.toFixed(2)}`}
+                        {isHeaderLike || isFlat ? '' : `$${item.rate.toFixed(2)}`}
                       </span>
                     )}
                   </td>
                   <td className="px-4 py-2.5 text-right text-sm font-medium text-gray-900 dark:text-white">
-                    {isHeaderLike ? '' : `$${item.amount.toFixed(2)}`}
+                    {isHeaderLike ? '' : isEditable && isFlat ? (
+                      <input
+                        className="w-full rounded border border-gray-200 bg-white px-2 py-1 text-right text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                        min="0"
+                        onChange={(e) => updateItem(i, 'amount', parseFloat(e.target.value) || 0)}
+                        step="0.01"
+                        type="number"
+                        value={item.amount}
+                      />
+                    ) : `$${item.amount.toFixed(2)}`}
                   </td>
                   {isEditable && (
-                    <td className="px-2 py-2.5">
-                      <div className="flex items-center gap-1">
-                        {!isSection && !isSubItem && (
-                          <button
-                            className="text-xs text-gray-400 hover:text-blue-600"
-                            onClick={() => addSubItem(i)}
-                            title="Add sub-item"
-                            type="button"
-                          >
-                            <Plus className="h-3 w-3" />
-                          </button>
-                        )}
-                        <button
-                          className="text-xs text-red-500 hover:text-red-700"
-                          onClick={() => removeItem(i)}
-                          title={isSection ? 'Remove section and its items' : 'Remove item'}
-                          type="button"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
+                    <td className="px-1 py-2.5">
+                      <button
+                        className="text-xs text-red-400 hover:text-red-600"
+                        onClick={() => removeItem(i)}
+                        title={isSection ? 'Remove section and its items' : 'Remove item'}
+                        type="button"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
                     </td>
                   )}
                 </tr>

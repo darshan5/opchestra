@@ -628,9 +628,10 @@ const MIGRATIONS = [
   // Invoice payment due days
   `ALTER TABLE "Workspace" ADD COLUMN IF NOT EXISTS "invoicePaymentDueDays" INTEGER NOT NULL DEFAULT 30`,
 
-  // Invoice item sections and sub-items
+  // Invoice item sections, sub-items, and flat pricing
   `ALTER TABLE "InvoiceItem" ADD COLUMN IF NOT EXISTS "isSection" BOOLEAN NOT NULL DEFAULT false`,
   `ALTER TABLE "InvoiceItem" ADD COLUMN IF NOT EXISTS "isSubItem" BOOLEAN NOT NULL DEFAULT false`,
+  `ALTER TABLE "InvoiceItem" ADD COLUMN IF NOT EXISTS "isFlat" BOOLEAN NOT NULL DEFAULT false`,
   `ALTER TABLE "InvoiceItem" ADD COLUMN IF NOT EXISTS "position" INTEGER NOT NULL DEFAULT 0`,
 ];
 

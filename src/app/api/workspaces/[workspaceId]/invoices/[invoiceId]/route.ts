@@ -100,7 +100,7 @@ export async function PATCH(
       await prisma.invoiceItem.deleteMany({ where: { invoiceId } });
 
       const items = body.items.map(
-        (item: { amount?: number; description: string; projectId?: string; quantity?: number; rate?: number; taskId?: string; isSection?: boolean; isSubItem?: boolean }, idx: number) => ({
+        (item: { amount?: number; description: string; projectId?: string; quantity?: number; rate?: number; taskId?: string; isSection?: boolean; isSubItem?: boolean; isFlat?: boolean }, idx: number) => ({
           amount: item.isSection ? 0 : (item.amount ?? (item.quantity ?? 1) * (item.rate ?? 0)),
           description: item.description,
           invoiceId,
@@ -110,6 +110,7 @@ export async function PATCH(
           taskId: item.taskId || null,
           isSection: item.isSection ?? false,
           isSubItem: item.isSubItem ?? false,
+          isFlat: item.isFlat ?? false,
           position: idx,
         }),
       );

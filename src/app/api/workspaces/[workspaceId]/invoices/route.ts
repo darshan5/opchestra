@@ -80,7 +80,7 @@ export async function POST(
     const invoiceNumber = await generateInvoiceNumber(workspaceId);
 
     const items = (body.items || []).map(
-      (item: { amount?: number; description: string; quantity?: number; rate?: number; taskId?: string; isSection?: boolean; isSubItem?: boolean }, idx: number) => ({
+      (item: { amount?: number; description: string; quantity?: number; rate?: number; taskId?: string; isSection?: boolean; isSubItem?: boolean; isFlat?: boolean }, idx: number) => ({
         amount: item.isSection ? 0 : (item.amount ?? (item.quantity ?? 1) * (item.rate ?? 0)),
         description: item.description,
         quantity: item.quantity ?? 1,
@@ -88,6 +88,7 @@ export async function POST(
         taskId: item.taskId || null,
         isSection: item.isSection ?? false,
         isSubItem: item.isSubItem ?? false,
+        isFlat: item.isFlat ?? false,
         position: idx,
       }),
     );
