@@ -20,13 +20,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Platform not initialized' }, { status: 404 });
     }
 
-    return NextResponse.json({
-      ...settings,
-      emailApiKey: settings.emailApiKey ? '••••••••' : null,
-      r2AccessKeyId: settings.r2AccessKeyId ? '••••••••' : null,
-      r2SecretAccessKey: settings.r2SecretAccessKey ? '••••••••' : null,
-      resendWebhookSigningSecret: settings.resendWebhookSigningSecret ? '••••••••' : null,
-    });
+    return NextResponse.json(settings);
   } catch {
     return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });
   }
@@ -64,7 +58,7 @@ export async function PATCH(request: Request) {
 
     const data: Record<string, unknown> = {};
     for (const field of allowedFields) {
-      if (body[field] !== undefined) {
+      if (body[field] !== undefined && body[field] !== '••••••••') {
         data[field] = body[field];
       }
     }
@@ -79,13 +73,7 @@ export async function PATCH(request: Request) {
     );
     await logAuditEvent('UPDATE_SETTINGS', admin.id, null, { changed: changedKeys }).catch(() => {});
 
-    return NextResponse.json({
-      ...settings,
-      emailApiKey: settings.emailApiKey ? '••••••••' : null,
-      r2AccessKeyId: settings.r2AccessKeyId ? '••••••••' : null,
-      r2SecretAccessKey: settings.r2SecretAccessKey ? '••••••••' : null,
-      resendWebhookSigningSecret: settings.resendWebhookSigningSecret ? '••••••••' : null,
-    });
+    return NextResponse.json(settings);
   } catch (e) {
     // eslint-disable-next-line no-console
     console.error('Admin settings PATCH error:', e);
