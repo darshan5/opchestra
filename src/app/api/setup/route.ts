@@ -594,6 +594,36 @@ const MIGRATIONS = [
   `ALTER TABLE "PlatformSettings" ADD COLUMN IF NOT EXISTS "inboundEmailDomain" TEXT NOT NULL DEFAULT 'ticket.opchestra.com'`,
   `ALTER TABLE "PlatformSettings" ADD COLUMN IF NOT EXISTS "resendWebhookKey" TEXT`,
   `ALTER TABLE "PlatformSettings" ADD COLUMN IF NOT EXISTS "resendWebhookSigningSecret" TEXT`,
+
+  `ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "companySize" TEXT`,
+  `ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "annualRevenue" DOUBLE PRECISION`,
+  `ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "hourlyRate" DOUBLE PRECISION`,
+  `ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "clientSince" TIMESTAMP(3)`,
+  `ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "billingAddress" TEXT`,
+  `ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "billingAddress2" TEXT`,
+  `ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "billingCity" TEXT`,
+  `ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "billingState" TEXT`,
+  `ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "billingZip" TEXT`,
+  `ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "billingCountry" TEXT NOT NULL DEFAULT 'USA'`,
+
+  `ALTER TABLE "Contact" ADD COLUMN IF NOT EXISTS "role" TEXT`,
+
+  `CREATE TABLE IF NOT EXISTS "Note" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "workspaceId" TEXT NOT NULL,
+    "entityType" TEXT NOT NULL,
+    "entityId" TEXT NOT NULL,
+    "content" TEXT NOT NULL,
+    "category" TEXT NOT NULL DEFAULT 'general',
+    "createdById" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "Note_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "Note_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "Note_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON UPDATE CASCADE
+  )`,
+  `CREATE INDEX IF NOT EXISTS "Note_entityType_entityId_idx" ON "Note"("entityType", "entityId")`,
+  `CREATE INDEX IF NOT EXISTS "Note_workspaceId_idx" ON "Note"("workspaceId")`,
 ];
 
 export async function POST() {

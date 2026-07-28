@@ -1,9 +1,10 @@
 'use client';
 
 import { format, formatDistanceToNow } from 'date-fns';
-import { ExternalLink, Plus, Send, X } from 'lucide-react';
+import { ExternalLink, Plus, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
+import { NotesSection } from '@/components/notes/notes-section';
 import { cn } from '@/lib/utils';
 
 interface TicketDetailPanelProps {
@@ -51,8 +52,6 @@ export function TicketDetailPanel({
 }: TicketDetailPanelProps) {
   const [ticket, setTicket] = useState<TicketDetail | null>(null);
   const [comments, setComments] = useState<CommentData[]>([]);
-  const [note, setNote] = useState('');
-  const [sendingNote, setSendingNote] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
   const [editingDesc, setEditingDesc] = useState(false);
@@ -60,7 +59,7 @@ export function TicketDetailPanel({
   const [creatingTask, setCreatingTask] = useState(false);
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [newTaskName, setNewTaskName] = useState('');
-  const [tab, setTab] = useState<'details' | 'activity'>('details');
+  const [tab, setTab] = useState<'details' | 'notes' | 'activity'>('details');
   const [companies, setCompanies] = useState<Array<{ id: string; name: string }>>([]);
 
   const fetchTicket = useCallback(async () => {
@@ -115,20 +114,6 @@ export function TicketDetailPanel({
     setEditingDesc(false);
   }
 
-  async function addNote() {
-    if (!note.trim()) return;
-    setSendingNote(true);
-    const res = await fetch(`/api/workspaces/${workspaceId}/tasks/${ticketId}/comments`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: { type: 'note', text: note.trim() } }),
-    });
-    if (res.ok) {
-      setNote('');
-      fetchComments();
-    }
-    setSendingNote(false);
-  }
 
   async function createTaskFromTicket() {
     if (!ticket || !newTaskName.trim()) return;
@@ -216,7 +201,7 @@ export function TicketDetailPanel({
 
         {/* Tabs */}
         <div className="flex border-b border-gray-200 px-5 dark:border-gray-800">
-          {(['details', 'activity'] as const).map((t) => (
+          {(['details', 'notes', 'activity'] as const).map((t) => (
             <button
               className={cn(
                 'px-3 py-2 text-sm font-medium transition-colors',
@@ -227,7 +212,7 @@ export function TicketDetailPanel({
               key={t}
               onClick={() => setTab(t)}
             >
-              {t === 'details' ? 'Details' : 'Activity'}
+              {t === 'details' ? 'Details' : t === 'notes' ? 'Notes' : 'Activity'}
             </button>
           ))}
         </div>
@@ -400,6 +385,16 @@ export function TicketDetailPanel({
             </div>
           )}
 
+          {tab === 'notes' && (
+            <NotesSection
+              entityId={ticketId}
+              entityType="ticket"
+              isAdmin
+              showCategories
+              workspaceId={workspaceId}
+            />
+          )}
+
           {tab === 'activity' && (
             <div className="space-y-3">
               {comments.length === 0 && (
@@ -424,27 +419,6 @@ export function TicketDetailPanel({
           )}
         </div>
 
-        {/* Note input */}
-        {tab === 'activity' && (
-          <div className="border-t border-gray-200 p-4 dark:border-gray-800">
-            <div className="flex gap-2">
-              <input
-                className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                onChange={(e) => setNote(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && addNote()}
-                placeholder="Add a note..."
-                value={note}
-              />
-              <button
-                className="rounded-lg bg-blue-600 px-3 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
-                disabled={!note.trim() || sendingNote}
-                onClick={addNote}
-              >
-                <Send className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </>
   );

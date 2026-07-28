@@ -67,7 +67,6 @@ export async function POST(
         name: body.name,
         domain: body.domain || null,
         industry: body.industry || null,
-        notes: body.notes || null,
       },
       include: { _count: { select: { contacts: true } } },
     });

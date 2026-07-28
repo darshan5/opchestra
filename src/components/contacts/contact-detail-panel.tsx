@@ -4,6 +4,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { Trash2, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
+import { NotesSection } from '@/components/notes/notes-section';
 import { Button } from '@/components/ui/button';
 
 interface CompanyOption {
@@ -24,7 +25,7 @@ interface ContactDetail {
   email: string | null;
   phone: string | null;
   title: string | null;
-  notes: string | null;
+  role: string | null;
   company: { id: string; name: string } | null;
   createdAt: string;
 }
@@ -53,7 +54,6 @@ export function ContactDetailPanel({
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [title, setTitle] = useState('');
-  const [notes, setNotes] = useState('');
   const [companyId, setCompanyId] = useState('');
   const [editingName, setEditingName] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -70,7 +70,6 @@ export function ContactDetailPanel({
         setEmail(data.email ?? '');
         setPhone(data.phone ?? '');
         setTitle(data.title ?? '');
-        setNotes(data.notes ?? '');
         setCompanyId(data.company?.id ?? '');
         if (data.tickets) {
           setTickets(data.tickets);
@@ -241,25 +240,34 @@ export function ContactDetailPanel({
               )}
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Notes</label>
-              <textarea
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Contact Role</label>
+              <select
                 className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                onBlur={() => {
-                  if (notes !== (contact.notes ?? '')) {
-                    saveField('notes', notes || null);
-                  }
-                }}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Notes about this contact..."
-                rows={3}
-                value={notes}
-              />
+                onChange={(e) => saveField('role', e.target.value || null)}
+                value={contact.role ?? ''}
+              >
+                <option value="">No role</option>
+                <option value="primary">Primary Contact</option>
+                <option value="billing">Billing Contact</option>
+                <option value="decision_maker">Decision Maker</option>
+                <option value="technical">Technical Contact</option>
+              </select>
             </div>
           </div>
           <div className="mt-3 text-xs text-gray-500 dark:text-gray-400">
             Added {formatDistanceToNow(new Date(contact.createdAt), { addSuffix: true })}
           </div>
           {saving && <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">Saving...</p>}
+        </div>
+
+        {/* Notes */}
+        <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
+          <NotesSection
+            entityId={contactId}
+            entityType="contact"
+            isAdmin
+            workspaceId={workspaceId}
+          />
         </div>
 
         {/* Tickets */}

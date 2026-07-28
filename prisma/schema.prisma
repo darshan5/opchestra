@@ -32,6 +32,7 @@ model User {
   auditLogsAsTarget   AuditLog[]         @relation("AuditTarget")
   supportTickets      SupportTicket[]
   activeTimers        ActiveTimer[]
+  notes               Note[]
 }
 
 model VerificationToken {
@@ -219,19 +220,28 @@ enum DiscountScope {
 // ─── CRM ────────────────────────────────────────────────────
 
 model Company {
-  id          String   @id @default(uuid())
-  workspaceId String
-  name        String
-  domain      String?
-  industry    String?
-  notes       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String    @id @default(uuid())
+  workspaceId     String
+  name            String
+  domain          String?
+  industry        String?
+  companySize     String?
+  annualRevenue   Float?
+  hourlyRate      Float?
+  clientSince     DateTime?
+  billingAddress  String?
+  billingAddress2 String?
+  billingCity     String?
+  billingState    String?
+  billingZip      String?
+  billingCountry  String    @default("USA")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  contacts       Contact[]
-  ticketsByCompany Task[]  @relation("TicketCompany")
-  invoices       Invoice[]
+  workspace        Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contacts         Contact[]
+  ticketsByCompany Task[]    @relation("TicketCompany")
+  invoices         Invoice[]
 
   @@index([workspaceId])
 }
@@ -244,7 +254,7 @@ model Contact {
   phone       String?
   title       String?
   companyId   String?
-  notes       String?
+  role        String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -255,6 +265,26 @@ model Contact {
 
   @@index([workspaceId])
   @@index([companyId])
+}
+
+// ─── Notes ──────────────────────────────────────────────────
+
+model Note {
+  id          String   @id @default(uuid())
+  workspaceId String
+  entityType  String
+  entityId    String
+  content     String
+  category    String   @default("general")
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy User      @relation(fields: [createdById], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([workspaceId])
 }
 
 // ─── Workspaces ─────────────────────────────────────────────
@@ -291,6 +321,7 @@ model Workspace {
   slaRules             SlaRule[]
   invoices             Invoice[]
   activeTimers         ActiveTimer[]
+  notes                Note[]
 
   settings WorkspaceSettings?
 }

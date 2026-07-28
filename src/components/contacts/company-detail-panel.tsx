@@ -4,6 +4,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { Plus, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
+import { NotesSection } from '@/components/notes/notes-section';
 import { Button } from '@/components/ui/button';
 
 interface ContactData {
@@ -12,6 +13,7 @@ interface ContactData {
   email: string | null;
   phone: string | null;
   title: string | null;
+  role: string | null;
 }
 
 interface CompanyDetail {
@@ -19,7 +21,16 @@ interface CompanyDetail {
   name: string;
   domain: string | null;
   industry: string | null;
-  notes: string | null;
+  hourlyRate: number | null;
+  clientSince: string | null;
+  companySize: string | null;
+  annualRevenue: number | null;
+  billingAddress: string | null;
+  billingAddress2: string | null;
+  billingCity: string | null;
+  billingState: string | null;
+  billingZip: string | null;
+  billingCountry: string;
   contacts: ContactData[];
   _count: { contacts: number; ticketsByCompany?: number };
   createdAt: string;
@@ -44,7 +55,16 @@ export function CompanyDetailPanel({
   const [name, setName] = useState('');
   const [domain, setDomain] = useState('');
   const [industry, setIndustry] = useState('');
-  const [notes, setNotes] = useState('');
+  const [companySize, setCompanySize] = useState('');
+  const [annualRevenue, setAnnualRevenue] = useState('');
+  const [hourlyRate, setHourlyRate] = useState('');
+  const [clientSince, setClientSince] = useState('');
+  const [billingAddress, setBillingAddress] = useState('');
+  const [billingAddress2, setBillingAddress2] = useState('');
+  const [billingCity, setBillingCity] = useState('');
+  const [billingState, setBillingState] = useState('');
+  const [billingZip, setBillingZip] = useState('');
+  const [billingCountry, setBillingCountry] = useState('USA');
   const [saving, setSaving] = useState(false);
   const [showAddContact, setShowAddContact] = useState(false);
   const [newContactName, setNewContactName] = useState('');
@@ -64,7 +84,16 @@ export function CompanyDetailPanel({
         setName(data.name);
         setDomain(data.domain ?? '');
         setIndustry(data.industry ?? '');
-        setNotes(data.notes ?? '');
+        setCompanySize(data.companySize ?? '');
+        setAnnualRevenue(data.annualRevenue ? String(data.annualRevenue) : '');
+        setHourlyRate(data.hourlyRate ? String(data.hourlyRate) : '');
+        setClientSince(data.clientSince ? data.clientSince.substring(0, 10) : '');
+        setBillingAddress(data.billingAddress ?? '');
+        setBillingAddress2(data.billingAddress2 ?? '');
+        setBillingCity(data.billingCity ?? '');
+        setBillingState(data.billingState ?? '');
+        setBillingZip(data.billingZip ?? '');
+        setBillingCountry(data.billingCountry ?? 'USA');
       }
     } finally {
       setLoading(false);
@@ -218,20 +247,45 @@ export function CompanyDetailPanel({
                 value={industry}
               />
             </div>
-            <div>
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Notes</label>
-              <textarea
-                className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                onBlur={() => {
-                  if (notes !== (company.notes ?? '')) {
-                    saveField('notes', notes);
-                  }
-                }}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Notes about this company..."
-                rows={3}
-                value={notes}
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Company Size</label>
+                <input className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                  onBlur={() => saveField('companySize', companySize)} onChange={(e) => setCompanySize(e.target.value)} placeholder="10-50" value={companySize} />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Annual Revenue</label>
+                <input className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                  onBlur={() => saveField('annualRevenue', annualRevenue)} onChange={(e) => setAnnualRevenue(e.target.value)} placeholder="500000" type="number" value={annualRevenue} />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Hourly Rate</label>
+                <input className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                  onBlur={() => saveField('hourlyRate', hourlyRate)} onChange={(e) => setHourlyRate(e.target.value)} placeholder="150" type="number" value={hourlyRate} />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Client Since</label>
+                <input className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                  onBlur={() => saveField('clientSince', clientSince ? new Date(clientSince).toISOString() : '')} onChange={(e) => setClientSince(e.target.value)} type="date" value={clientSince} />
+              </div>
+            </div>
+
+            <h4 className="mt-4 text-xs font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">Billing Address</h4>
+            <div className="mt-1 space-y-2">
+              <input className="block w-full rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                onBlur={() => saveField('billingAddress', billingAddress)} onChange={(e) => setBillingAddress(e.target.value)} placeholder="Address" value={billingAddress} />
+              <input className="block w-full rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                onBlur={() => saveField('billingAddress2', billingAddress2)} onChange={(e) => setBillingAddress2(e.target.value)} placeholder="Address 2" value={billingAddress2} />
+              <div className="grid grid-cols-3 gap-2">
+                <input className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                  onBlur={() => saveField('billingCity', billingCity)} onChange={(e) => setBillingCity(e.target.value)} placeholder="City" value={billingCity} />
+                <input className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                  onBlur={() => saveField('billingState', billingState)} onChange={(e) => setBillingState(e.target.value)} placeholder="State" value={billingState} />
+                <input className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                  onBlur={() => saveField('billingZip', billingZip)} onChange={(e) => setBillingZip(e.target.value)} placeholder="ZIP" value={billingZip} />
+              </div>
+              <input className="block w-full rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                onBlur={() => saveField('billingCountry', billingCountry)} onChange={(e) => setBillingCountry(e.target.value)} placeholder="Country" value={billingCountry} />
             </div>
           </div>
           <div className="mt-3 flex gap-4 text-xs text-gray-500 dark:text-gray-400">
@@ -242,6 +296,16 @@ export function CompanyDetailPanel({
             <span>Added {formatDistanceToNow(new Date(company.createdAt), { addSuffix: true })}</span>
           </div>
           {saving && <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">Saving...</p>}
+        </div>
+
+        {/* Notes */}
+        <div className="border-t border-gray-200 px-5 py-4 dark:border-gray-700">
+          <NotesSection
+            entityId={companyId}
+            entityType="company"
+            isAdmin
+            workspaceId={workspaceId}
+          />
         </div>
 
         {/* People */}
@@ -317,10 +381,15 @@ export function CompanyDetailPanel({
                     <p className="text-sm font-medium text-gray-900 dark:text-white">
                       {contact.name}
                     </p>
-                    <div className="flex gap-3 text-xs text-gray-500 dark:text-gray-400">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                       {contact.email && <span>{contact.email}</span>}
                       {contact.phone && <span>{contact.phone}</span>}
                       {contact.title && <span>{contact.title}</span>}
+                      {contact.role && (
+                        <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                          {contact.role === 'primary' ? 'Primary' : contact.role === 'billing' ? 'Billing' : contact.role === 'decision_maker' ? 'Decision Maker' : contact.role === 'technical' ? 'Technical' : contact.role}
+                        </span>
+                      )}
                     </div>
                   </div>
                 )}
@@ -351,6 +420,7 @@ function EditContactRow({
   const [email, setEmail] = useState(contact.email ?? '');
   const [phone, setPhone] = useState(contact.phone ?? '');
   const [title, setTitle] = useState(contact.title ?? '');
+  const [role, setRole] = useState(contact.role ?? '');
 
   return (
     <div className="space-y-2">
@@ -379,6 +449,17 @@ function EditContactRow({
           placeholder="Title"
           value={title}
         />
+        <select
+          className="col-span-2 rounded border border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+          onChange={(e) => setRole(e.target.value)}
+          value={role}
+        >
+          <option value="">No role</option>
+          <option value="primary">Primary Contact</option>
+          <option value="billing">Billing Contact</option>
+          <option value="decision_maker">Decision Maker</option>
+          <option value="technical">Technical Contact</option>
+        </select>
       </div>
       <div className="flex gap-2">
         <Button
@@ -388,6 +469,7 @@ function EditContactRow({
               email: email || null,
               phone: phone || null,
               title: title || null,
+              role: role || null,
             })
           }
           size="sm"

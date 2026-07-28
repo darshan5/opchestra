@@ -60,14 +60,30 @@ export async function PATCH(
     }
 
     const body = await request.json();
+    const data: Record<string, unknown> = {};
+    const fields = [
+      'name', 'domain', 'industry',
+      'hourlyRate', 'clientSince', 'companySize', 'annualRevenue',
+      'billingAddress', 'billingAddress2', 'billingCity',
+      'billingState', 'billingZip', 'billingCountry',
+    ];
+    for (const f of fields) {
+      if (body[f] !== undefined) {
+        if (f === 'hourlyRate' || f === 'annualRevenue') {
+          data[f] = body[f] !== null ? parseFloat(body[f]) : null;
+        } else if (f === 'clientSince') {
+          data[f] = body[f] ? new Date(body[f]) : null;
+        } else {
+          data[f] = body[f];
+        }
+      }
+    }
+    if (Object.keys(data).length === 0) {
+      return NextResponse.json(existing);
+    }
     const company = await prisma.company.update({
       where: { id: companyId },
-      data: {
-        name: body.name ?? existing.name,
-        domain: body.domain !== undefined ? body.domain : existing.domain,
-        industry: body.industry !== undefined ? body.industry : existing.industry,
-        notes: body.notes !== undefined ? body.notes : existing.notes,
-      },
+      data,
     });
 
     return NextResponse.json(company);

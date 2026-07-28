@@ -72,7 +72,7 @@ export async function PATCH(
         phone: body.phone !== undefined ? body.phone : existing.phone,
         title: body.title !== undefined ? body.title : existing.title,
         companyId: body.companyId !== undefined ? body.companyId : existing.companyId,
-        notes: body.notes !== undefined ? body.notes : existing.notes,
+        role: body.role !== undefined ? body.role : existing.role,
       },
       include: { company: { select: { id: true, name: true } } },
     });
