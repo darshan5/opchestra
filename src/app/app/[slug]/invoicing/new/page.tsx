@@ -107,14 +107,14 @@ export default function NewInvoicePage() {
     if (!workspaceId) return;
     setLoadingImport(true);
     const qp = new URLSearchParams();
-    if (importCompanyFilter) qp.set('companyId', importCompanyFilter);
+    if (companyId) qp.set('companyId', companyId);
     if (importSearch) qp.set('search', importSearch);
     const res = await fetch(`/api/workspaces/${workspaceId}/invoices/importable-tasks?${qp}`);
     if (res.ok) {
       setImportableTasks(await res.json());
     }
     setLoadingImport(false);
-  }, [workspaceId, importCompanyFilter, importSearch]);
+  }, [workspaceId, companyId, importSearch]);
 
   useEffect(() => {
     if (showImport) {
@@ -426,16 +426,6 @@ export default function NewInvoicePage() {
                   placeholder="Search tasks..."
                   value={importSearch}
                 />
-                <select
-                  className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                  onChange={(e) => setImportCompanyFilter(e.target.value)}
-                  value={importCompanyFilter}
-                >
-                  <option value="">All companies</option>
-                  {companies.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
               </div>
               <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                 Showing completed tasks from last 90 days with billable time entries
