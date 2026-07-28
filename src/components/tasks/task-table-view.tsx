@@ -275,6 +275,23 @@ function groupTasksBy(
       groups['No Company'] = [];
       colors['No Company'] = '#9CA3AF';
     }
+  } else if (mode === 'phase') {
+    for (const task of tasks) {
+      const key = task.phase?.name ?? 'No Phase Assigned';
+      if (!groups[key]) {
+        groups[key] = [];
+        colors[key] = task.phase?.color ?? '#9CA3AF';
+      }
+      groups[key].push(task);
+    }
+    if (!groups['No Phase Assigned']) {
+      groups['No Phase Assigned'] = [];
+      colors['No Phase Assigned'] = '#9CA3AF';
+    }
+    // Move "No Phase Assigned" to end
+    const noPhase = groups['No Phase Assigned'];
+    delete groups['No Phase Assigned'];
+    groups['No Phase Assigned'] = noPhase;
   } else {
     groups['All'] = [...tasks];
     colors['All'] = '#6B7280';
