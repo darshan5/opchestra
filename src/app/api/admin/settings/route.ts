@@ -35,7 +35,7 @@ export async function GET() {
 export async function PATCH(request: Request) {
   try {
     const admin = await getAdminSession();
-    if (!admin || !hasPermission(admin.role, 'settings.read')) {
+    if (!admin || !hasPermission(admin.role, 'settings.write')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -77,15 +77,18 @@ export async function PATCH(request: Request) {
     const changedKeys = Object.keys(data).filter(
       (k) => !k.toLowerCase().includes('key') && !k.toLowerCase().includes('secret'),
     );
-    await logAuditEvent('UPDATE_SETTINGS', admin.id, null, { changed: changedKeys });
+    await logAuditEvent('UPDATE_SETTINGS', admin.id, null, { changed: changedKeys }).catch(() => {});
 
     return NextResponse.json({
       ...settings,
       emailApiKey: settings.emailApiKey ? '••••••••' : null,
       r2AccessKeyId: settings.r2AccessKeyId ? '••••••••' : null,
       r2SecretAccessKey: settings.r2SecretAccessKey ? '••••••••' : null,
+      resendWebhookSigningSecret: settings.resendWebhookSigningSecret ? '••••••••' : null,
     });
-  } catch {
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error('Admin settings PATCH error:', e);
     return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });
   }
 }
