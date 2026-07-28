@@ -1,31 +1,37 @@
 import { Resend } from 'resend';
 
-let resend: Resend | null = null;
+import { prisma } from '@/lib/db';
 
-function getResend(): Resend | null {
-  if (!process.env.RESEND_API_KEY) {
+async function getEmailConfig() {
+  const settings = await prisma.platformSettings.findUnique({
+    where: { id: 'platform' },
+    select: { emailApiKey: true, emailFromAddress: true, emailFromName: true },
+  });
+
+  const apiKey = settings?.emailApiKey || process.env.RESEND_API_KEY;
+  if (!apiKey) {
     return null;
   }
-  if (!resend) {
-    resend = new Resend(process.env.RESEND_API_KEY);
-  }
-  return resend;
+
+  const fromAddress = settings?.emailFromAddress || 'noreply@opchestra.com';
+  const fromName = settings?.emailFromName || 'Opchestra';
+  const from = `${fromName} <${fromAddress}>`;
+
+  return { resend: new Resend(apiKey), from };
 }
 
-const FROM_ADDRESS = process.env.RESEND_FROM_ADDRESS || 'Opchestra <noreply@opchestra.com>';
-
 export async function sendVerificationEmail(email: string, token: string) {
-  const r = getResend();
+  const config = await getEmailConfig();
   const verifyUrl = `${process.env.NEXTAUTH_URL}/verify-email?token=${token}`;
 
-  if (!r) {
+  if (!config) {
     // eslint-disable-next-line no-console
     console.log(`[DEV] Verification email for ${email}: ${verifyUrl}`);
     return;
   }
 
-  await r.emails.send({
-    from: FROM_ADDRESS,
+  await config.resend.emails.send({
+    from: config.from,
     to: email,
     subject: 'Verify your email - Opchestra',
     html: `
@@ -38,17 +44,17 @@ export async function sendVerificationEmail(email: string, token: string) {
 }
 
 export async function sendPasswordResetEmail(email: string, token: string) {
-  const r = getResend();
+  const config = await getEmailConfig();
   const resetUrl = `${process.env.NEXTAUTH_URL}/reset-password?token=${token}`;
 
-  if (!r) {
+  if (!config) {
     // eslint-disable-next-line no-console
     console.log(`[DEV] Password reset email for ${email}: ${resetUrl}`);
     return;
   }
 
-  await r.emails.send({
-    from: FROM_ADDRESS,
+  await config.resend.emails.send({
+    from: config.from,
     to: email,
     subject: 'Reset your password - Opchestra',
     html: `
@@ -61,17 +67,17 @@ export async function sendPasswordResetEmail(email: string, token: string) {
 }
 
 export async function sendInviteEmail(email: string, token: string, workspaceName: string) {
-  const r = getResend();
+  const config = await getEmailConfig();
   const inviteUrl = `${process.env.NEXTAUTH_URL}/invite?token=${token}`;
 
-  if (!r) {
+  if (!config) {
     // eslint-disable-next-line no-console
     console.log(`[DEV] Invite email for ${email} to ${workspaceName}: ${inviteUrl}`);
     return;
   }
 
-  await r.emails.send({
-    from: FROM_ADDRESS,
+  await config.resend.emails.send({
+    from: config.from,
     to: email,
     subject: `You've been invited to ${workspaceName} on Opchestra`,
     html: `
