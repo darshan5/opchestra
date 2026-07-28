@@ -78,6 +78,7 @@ interface TaskTableViewProps {
   phases?: PhaseData[];
   groupBy?: GroupByOption;
   currentUserRole?: string;
+  initialOpenTaskId?: string;
 }
 
 const STATUS_ORDER = ['Todo', 'In Progress', 'Done'];
@@ -544,6 +545,7 @@ function BulkActionsBar({
 export function TaskTableView({
   currentUserRole,
   groupBy = 'status',
+  initialOpenTaskId,
   members,
   phases = [],
   projectId,
@@ -556,7 +558,7 @@ export function TaskTableView({
 }: TaskTableViewProps) {
   const router = useRouter();
   const [tasks, setTasks] = useState<TaskData[]>(initialTasks);
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(initialOpenTaskId ?? null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
@@ -571,6 +573,20 @@ export function TaskTableView({
   } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [bulkConfirmDelete, setBulkConfirmDelete] = useState(false);
+
+  // Auto-scroll to and highlight the initial task
+  useEffect(() => {
+    if (initialOpenTaskId) {
+      setTimeout(() => {
+        const el = document.querySelector(`[data-task-id="${initialOpenTaskId}"]`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.classList.add('ring-2', 'ring-blue-400');
+          setTimeout(() => el.classList.remove('ring-2', 'ring-blue-400'), 2000);
+        }
+      }, 500);
+    }
+  }, [initialOpenTaskId]);
 
   const { colors: groupColors, groups: grouped } = groupTasksBy(tasks, groupBy, members);
   const allVisibleTaskIds = Object.values(grouped).flat().map((t) => t.id);
@@ -798,7 +814,7 @@ export function TaskTableView({
                     const isSelected = selectedIds.has(task.id);
 
                     return (
-                      <div key={task.id}>
+                      <div data-task-id={task.id} key={task.id}>
                         <div
                           className={cn(
                             'group flex items-center border-b border-gray-100 transition-colors hover:bg-blue-50/50 dark:border-gray-800/50 dark:hover:bg-blue-950/20',

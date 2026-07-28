@@ -76,6 +76,7 @@ interface ViewSwitcherProps {
   defaultGroupBy?: GroupByOption;
   context?: 'all-tasks' | 'my-tasks' | 'project' | 'group';
   currentUserRole?: string;
+  initialOpenTaskId?: string;
 }
 
 interface FilterRow {
@@ -135,6 +136,7 @@ export function ViewSwitcher({
   context = 'all-tasks',
   currentUserRole,
   defaultGroupBy = 'status',
+  initialOpenTaskId,
   members,
   phases = [],
   projectId,
@@ -577,6 +579,7 @@ export function ViewSwitcher({
           <TaskTableView
             currentUserRole={currentUserRole}
             groupBy={groupBy}
+            initialOpenTaskId={initialOpenTaskId}
             members={members}
             phases={phases}
             projectId={projectId}

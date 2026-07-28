@@ -372,7 +372,7 @@ export default function TimeTrackingPage() {
                         </div>
                       </td>
                       <td className="px-4 py-2.5 text-sm font-medium">
-                        <a className="text-blue-600 hover:underline dark:text-blue-400" href={timer.task.project ? `/app/${params.slug}/projects/${timer.task.project.id}` : `/app/${params.slug}/all-tasks`}>{timer.task.title}</a>
+                        <a className="text-blue-600 hover:underline dark:text-blue-400" href={`/app/${params.slug}/all-tasks?task=${timer.task.id}`}>{timer.task.title}</a>
                       </td>
                       <td className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400">{timer.task.project?.name ?? '—'}</td>
                       <td className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400">{format(new Date(timer.startedAt), 'h:mm a')}</td>

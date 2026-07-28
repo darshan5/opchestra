@@ -6,8 +6,10 @@ import { prisma } from '@/lib/db';
 
 export default async function ProjectPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string; projectId: string }>;
+  searchParams: Promise<{ task?: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -15,6 +17,7 @@ export default async function ProjectPage({
   }
 
   const { slug, projectId } = await params;
+  const { task: openTaskId } = await searchParams;
 
   const workspace = await prisma.workspace.findUnique({ where: { slug } });
   if (!workspace) {
@@ -83,6 +86,7 @@ export default async function ProjectPage({
       <ViewSwitcher
         context="project"
         currentUserRole={membership.role}
+        initialOpenTaskId={openTaskId}
         members={members.map((m) => m.user)}
         phases={phases}
         projectId={projectId}

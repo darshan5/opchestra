@@ -162,8 +162,9 @@ export default async function WorkspaceHomePage({ params }: { params: Promise<{ 
                   <div>
                     <p className="text-xs font-semibold text-red-600 dark:text-red-400">OVERDUE</p>
                     {overdue.map((t) => (
-                      <div
-                        className="mt-1 flex items-center justify-between py-1"
+                      <Link
+                        className="mt-1 flex items-center justify-between rounded py-1 px-1 hover:bg-red-50 dark:hover:bg-red-950/20"
+                        href={`/app/${slug}/all-tasks?task=${t.id}`}
                         key={t.id}
                       >
                         <span className="truncate text-sm text-gray-900 dark:text-white">
@@ -172,7 +173,7 @@ export default async function WorkspaceHomePage({ params }: { params: Promise<{ 
                         <span className="ml-2 shrink-0 text-xs text-red-500">
                           {t.endDate && formatDistanceToNow(t.endDate, { addSuffix: true })}
                         </span>
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 )}
@@ -182,8 +183,9 @@ export default async function WorkspaceHomePage({ params }: { params: Promise<{ 
                       TODAY
                     </p>
                     {dueToday.map((t) => (
-                      <div
-                        className="mt-1 flex items-center justify-between py-1"
+                      <Link
+                        className="mt-1 flex items-center justify-between rounded py-1 px-1 hover:bg-orange-50 dark:hover:bg-orange-950/20"
+                        href={`/app/${slug}/all-tasks?task=${t.id}`}
                         key={t.id}
                       >
                         <span className="truncate text-sm text-gray-900 dark:text-white">
@@ -192,7 +194,7 @@ export default async function WorkspaceHomePage({ params }: { params: Promise<{ 
                         <span className="ml-2 shrink-0 text-xs text-gray-500">
                           {t.project?.name}
                         </span>
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 )}
@@ -202,8 +204,9 @@ export default async function WorkspaceHomePage({ params }: { params: Promise<{ 
                       THIS WEEK
                     </p>
                     {dueThisWeek.map((t) => (
-                      <div
-                        className="mt-1 flex items-center justify-between py-1"
+                      <Link
+                        className="mt-1 flex items-center justify-between rounded py-1 px-1 hover:bg-yellow-50 dark:hover:bg-yellow-950/20"
+                        href={`/app/${slug}/all-tasks?task=${t.id}`}
                         key={t.id}
                       >
                         <span className="truncate text-sm text-gray-900 dark:text-white">
@@ -212,7 +215,7 @@ export default async function WorkspaceHomePage({ params }: { params: Promise<{ 
                         <span className="ml-2 shrink-0 text-xs text-gray-500">
                           {t.endDate && formatDistanceToNow(t.endDate, { addSuffix: true })}
                         </span>
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 )}

@@ -4,13 +4,14 @@ import { ViewSwitcher } from '@/components/views/view-switcher';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 
-export default async function AllTasksPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function AllTasksPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ task?: string }> }) {
   const session = await auth();
   if (!session?.user?.id) {
     redirect('/login');
   }
 
   const { slug } = await params;
+  const { task: openTaskId } = await searchParams;
 
   const workspace = await prisma.workspace.findUnique({ where: { slug } });
   if (!workspace) {
@@ -69,6 +70,7 @@ export default async function AllTasksPage({ params }: { params: Promise<{ slug:
       <ViewSwitcher
         currentUserRole={membership.role}
         defaultGroupBy="group"
+        initialOpenTaskId={openTaskId}
         members={members.map((m) => m.user)}
         projects={projects}
         slug={slug}
