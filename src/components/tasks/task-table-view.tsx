@@ -550,11 +550,13 @@ function SubItemsSection({
 function BulkActionsBar({
   count,
   members,
+  companies,
   onClear,
   onDelete,
   onSetAssignee,
   onSetPriority,
   onSetStatus,
+  onSetCompany,
   onMoveToPhase,
   onMoveToGroup,
   phases,
@@ -562,23 +564,26 @@ function BulkActionsBar({
 }: {
   count: number;
   members: TaskUser[];
+  companies: Array<{ id: string; name: string }>;
   onClear: () => void;
   onDelete: () => void;
   onSetStatus: (status: string) => void;
   onSetPriority: (priority: string) => void;
   onSetAssignee: (assigneeId: string | null) => void;
+  onSetCompany: (companyId: string | null) => void;
   onMoveToPhase?: (phaseId: string) => void;
   onMoveToGroup?: (groupId: string) => void;
   phases?: PhaseData[];
   taskGroups?: TaskGroupData[];
 }) {
   return (
-    <div className="sticky top-0 z-30 flex items-center gap-3 rounded-lg bg-indigo-600 px-4 py-2 text-white shadow-lg dark:bg-indigo-700">
+    <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-white shadow-2xl dark:bg-indigo-700">
       <span className="text-sm font-semibold">{count} selected</span>
+      <div className="mx-1 h-5 w-px bg-white/20" />
 
       <div className="relative">
         <select className="rounded bg-indigo-500 px-2 py-1 text-xs font-medium text-white cursor-pointer hover:bg-indigo-400" onChange={(e) => { if (e.target.value) { onSetStatus(e.target.value); } e.target.value = ''; }} defaultValue="">
-          <option value="" disabled>Set Status</option>
+          <option value="" disabled>Status</option>
           <option value="Todo">Todo</option>
           <option value="In Progress">In Progress</option>
           <option value="Done">Done</option>
@@ -587,7 +592,7 @@ function BulkActionsBar({
 
       <div className="relative">
         <select className="rounded bg-indigo-500 px-2 py-1 text-xs font-medium text-white cursor-pointer hover:bg-indigo-400" onChange={(e) => { if (e.target.value) { onSetPriority(e.target.value); } e.target.value = ''; }} defaultValue="">
-          <option value="" disabled>Set Priority</option>
+          <option value="" disabled>Priority</option>
           <option value="URGENT">Urgent</option>
           <option value="HIGH">High</option>
           <option value="MEDIUM">Medium</option>
@@ -598,7 +603,7 @@ function BulkActionsBar({
 
       <div className="relative">
         <select className="rounded bg-indigo-500 px-2 py-1 text-xs font-medium text-white cursor-pointer hover:bg-indigo-400" onChange={(e) => { onSetAssignee(e.target.value || null); e.target.value = ''; }} defaultValue="">
-          <option value="" disabled>Set Person</option>
+          <option value="" disabled>Person</option>
           <option value="">Unassigned</option>
           {members.map((m) => (
             <option key={m.id} value={m.id}>{m.name ?? m.email}</option>
@@ -606,10 +611,20 @@ function BulkActionsBar({
         </select>
       </div>
 
+      <div className="relative">
+        <select className="rounded bg-indigo-500 px-2 py-1 text-xs font-medium text-white cursor-pointer hover:bg-indigo-400" onChange={(e) => { onSetCompany(e.target.value || null); e.target.value = ''; }} defaultValue="">
+          <option value="" disabled>Company</option>
+          <option value="">None</option>
+          {companies.map((c) => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+      </div>
+
       {phases && phases.length > 0 && onMoveToPhase && (
         <div className="relative">
           <select className="rounded bg-indigo-500 px-2 py-1 text-xs font-medium text-white cursor-pointer hover:bg-indigo-400" onChange={(e) => { onMoveToPhase(e.target.value); e.target.value = ''; }} defaultValue="">
-            <option value="" disabled>Move to Phase</option>
+            <option value="" disabled>Phase</option>
             {phases.map((p) => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
@@ -621,7 +636,7 @@ function BulkActionsBar({
       {taskGroups && taskGroups.length > 0 && onMoveToGroup && (
         <div className="relative">
           <select className="rounded bg-indigo-500 px-2 py-1 text-xs font-medium text-white cursor-pointer hover:bg-indigo-400" onChange={(e) => { onMoveToGroup(e.target.value); e.target.value = ''; }} defaultValue="">
-            <option value="" disabled>Move to Group</option>
+            <option value="" disabled>Group</option>
             <option value="">None</option>
             {taskGroups.map((g) => (
               <option key={g.id} value={g.id}>{g.name}</option>
@@ -630,7 +645,8 @@ function BulkActionsBar({
         </div>
       )}
 
-      <button className="ml-auto rounded bg-red-500 px-2 py-1 text-xs font-medium text-white hover:bg-red-400" onClick={onDelete} type="button">
+      <div className="mx-1 h-5 w-px bg-white/20" />
+      <button className="rounded bg-red-500 px-2 py-1 text-xs font-medium text-white hover:bg-red-400" onClick={onDelete} type="button">
         <Trash2 className="inline h-3 w-3 mr-1" />Delete
       </button>
       <button className="rounded p-1 text-white/70 hover:text-white" onClick={onClear} type="button">
@@ -674,6 +690,11 @@ export function TaskTableView({
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [bulkConfirmDelete, setBulkConfirmDelete] = useState(false);
   const [showColumnPicker, setShowColumnPicker] = useState(false);
+  const [companies, setCompanies] = useState<Array<{ id: string; name: string }>>([]);
+
+  useEffect(() => {
+    fetch(`/api/workspaces/${workspaceId}/companies`).then((r) => r.json()).then(setCompanies).catch(() => {});
+  }, [workspaceId]);
 
   // Column management
   const colStorageKey = `opchestra-cols-${projectId || taskGroupId || 'all'}`;
@@ -903,11 +924,13 @@ export function TaskTableView({
         <BulkActionsBar
           count={selectedIds.size}
           members={members}
+          companies={companies}
           onClear={() => setSelectedIds(new Set())}
           onDelete={() => setBulkConfirmDelete(true)}
           onSetStatus={(s) => bulkPatch({ status: s })}
           onSetPriority={(p) => bulkPatch({ priority: p })}
           onSetAssignee={(a) => bulkPatch({ assigneeId: a })}
+          onSetCompany={(c) => bulkPatch({ companyId: c })}
           onMoveToPhase={isProjectView && phases.length > 0 ? (id) => bulkPatch({ phaseId: id }) : undefined}
           onMoveToGroup={!isProjectView && taskGroups.length > 0 ? (id) => bulkPatch({ taskGroupId: id || null }) : undefined}
           phases={isProjectView ? phases : undefined}
@@ -1126,7 +1149,7 @@ export function TaskTableView({
 
                             if (colKey === 'priority') {
                               return (
-                                <div className="flex shrink-0 items-center justify-center px-0.5" key={colKey} style={style}>
+                                <div className="relative flex shrink-0 items-center justify-center px-0.5" key={colKey} style={style}>
                                   {task.priority !== 'NONE' ? (
                                     <span className={cn('w-full rounded py-1.5 text-center text-xs font-semibold', PRIORITY_CELL[task.priority])}>
                                       {task.priority.charAt(0) + task.priority.slice(1).toLowerCase()}
@@ -1134,6 +1157,17 @@ export function TaskTableView({
                                   ) : (
                                     <span className="w-full py-1.5 text-center text-xs text-gray-300 dark:text-gray-600">—</span>
                                   )}
+                                  <select
+                                    className="absolute inset-0 cursor-pointer opacity-0"
+                                    onChange={(e) => patchTask(task.id, { priority: e.target.value })}
+                                    value={task.priority}
+                                  >
+                                    <option value="URGENT">Urgent</option>
+                                    <option value="HIGH">High</option>
+                                    <option value="MEDIUM">Medium</option>
+                                    <option value="LOW">Low</option>
+                                    <option value="NONE">None</option>
+                                  </select>
                                 </div>
                               );
                             }

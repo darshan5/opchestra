@@ -242,6 +242,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
 
+    await prisma.activeTimer.deleteMany({ where: { taskId } });
     await prisma.task.delete({ where: { id: taskId } });
 
     return NextResponse.json({ message: 'Task deleted' });
