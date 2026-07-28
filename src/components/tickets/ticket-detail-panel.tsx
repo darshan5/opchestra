@@ -364,7 +364,7 @@ export function TicketDetailPanel({
                       autoFocus
                       className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-white"
                       onChange={(e) => setNewTaskName(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && createTaskFromTicket()}
+                      onKeyDown={(e) => e.key === 'Enter' && !creatingTask && createTaskFromTicket()}
                       placeholder="Task name"
                       value={newTaskName}
                     />

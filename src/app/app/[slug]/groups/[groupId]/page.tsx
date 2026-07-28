@@ -27,7 +27,7 @@ export default async function GroupPage({
   }
 
   const tasks = await prisma.task.findMany({
-    where: { workspaceId: workspace.id, taskGroupId: groupId, parentTaskId: null },
+    where: { workspaceId: workspace.id, taskGroupId: groupId, parentTaskId: null, ticketNumber: null },
     include: {
       assignee: { select: { id: true, name: true, email: true, image: true } },
       project: { select: { id: true, name: true } },

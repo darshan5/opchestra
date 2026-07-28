@@ -29,6 +29,7 @@ export default async function AllTasksPage({ params }: { params: Promise<{ slug:
     where: {
       workspaceId: workspace.id,
       parentTaskId: null,
+      ticketNumber: null,
     },
     include: {
       assignee: { select: { id: true, name: true, email: true, image: true } },

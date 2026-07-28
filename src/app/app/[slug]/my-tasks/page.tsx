@@ -30,6 +30,7 @@ export default async function MyTasksPage({ params }: { params: Promise<{ slug: 
       workspaceId: workspace.id,
       assigneeId: session.user.id,
       parentTaskId: null,
+      ticketNumber: null,
     },
     include: {
       assignee: { select: { id: true, name: true, email: true, image: true } },

@@ -32,7 +32,7 @@ export async function GET(
     const parentTaskId = searchParams.get('parentTaskId');
     const search = searchParams.get('search');
 
-    const where: Record<string, unknown> = { workspaceId };
+    const where: Record<string, unknown> = { workspaceId, ticketNumber: null };
 
     if (projectId) {
       where.projectId = projectId;
