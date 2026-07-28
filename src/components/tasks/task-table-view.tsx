@@ -787,6 +787,19 @@ export function TaskTableView({
     }
   }
 
+  function toggleSelectGroup(groupTaskIds: string[]) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      const allSelected = groupTaskIds.every((id) => next.has(id));
+      if (allSelected) {
+        groupTaskIds.forEach((id) => next.delete(id));
+      } else {
+        groupTaskIds.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  }
+
   function toggleGroup(key: string) {
     setCollapsedGroups((prev) => {
       const next = new Set(prev);
@@ -966,9 +979,9 @@ export function TaskTableView({
                     <div className="w-9 shrink-0" />
                     <div className="w-7 shrink-0 px-1">
                       <input
-                        checked={allVisibleTaskIds.length > 0 && selectedIds.size === allVisibleTaskIds.length}
+                        checked={groupTasks.length > 0 && groupTasks.every((t) => selectedIds.has(t.id))}
                         className="h-3 w-3 rounded border-gray-300 cursor-pointer"
-                        onChange={toggleSelectAll}
+                        onChange={() => toggleSelectGroup(groupTasks.map((t) => t.id))}
                         type="checkbox"
                       />
                     </div>
