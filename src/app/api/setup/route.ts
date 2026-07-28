@@ -589,6 +589,9 @@ const MIGRATIONS = [
   `CREATE INDEX IF NOT EXISTS "ActiveTimer_userId_idx" ON "ActiveTimer"("userId")`,
 
   `ALTER TABLE "Project" ADD COLUMN IF NOT EXISTS "position" INTEGER NOT NULL DEFAULT 0`,
+
+  `ALTER TABLE "Workspace" ADD COLUMN IF NOT EXISTS "inboundEmailKey" TEXT UNIQUE`,
+  `ALTER TABLE "PlatformSettings" ADD COLUMN IF NOT EXISTS "inboundEmailDomain" TEXT NOT NULL DEFAULT 'ticket.opchestra.com'`,
 ];
 
 export async function POST() {

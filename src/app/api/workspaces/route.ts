@@ -1,3 +1,5 @@
+import crypto from 'crypto';
+
 import { NextResponse } from 'next/server';
 
 import { auth } from '@/lib/auth';
@@ -15,7 +17,7 @@ export async function GET() {
       where: { userId: session.user.id },
       include: {
         workspace: {
-          select: { id: true, name: true, slug: true },
+          select: { id: true, name: true, slug: true, inboundEmailKey: true },
         },
       },
       orderBy: { createdAt: 'desc' },
@@ -55,10 +57,12 @@ export async function POST(request: Request) {
     }
 
     const workspace = await prisma.$transaction(async (tx) => {
+      const inboundEmailKey = crypto.randomBytes(8).toString('base64url').substring(0, 12);
       const ws = await tx.workspace.create({
         data: {
           name: parsed.data.name,
           slug: parsed.data.slug,
+          inboundEmailKey,
         },
       });
 

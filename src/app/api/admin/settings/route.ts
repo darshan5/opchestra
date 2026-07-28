@@ -56,6 +56,7 @@ export async function PATCH(request: Request) {
       'r2BucketName',
       'r2PublicUrl',
       'maxFreeUsers',
+      'inboundEmailDomain',
     ];
 
     const data: Record<string, unknown> = {};

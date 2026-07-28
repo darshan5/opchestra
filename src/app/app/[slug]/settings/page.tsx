@@ -95,6 +95,10 @@ export default function WorkspaceSettingsPage() {
 
   // General
   const [projects, setProjects] = useState<ProjectItem[]>([]);
+  const [inboundEmailKey, setInboundEmailKey] = useState<string | null>(null);
+  const [regeneratingKey, setRegeneratingKey] = useState(false);
+  const [confirmRegenerate, setConfirmRegenerate] = useState(false);
+  const [copiedEmail, setCopiedEmail] = useState(false);
 
   // Task Views
   const [statuses, setStatuses] = useState<StatusItem[]>([]);
@@ -129,6 +133,7 @@ export default function WorkspaceSettingsPage() {
         const ws = workspaces.find((w: { slug: string }) => w.slug === params.slug);
         if (ws) {
           setWorkspaceId(ws.id);
+          setInboundEmailKey(ws.inboundEmailKey ?? null);
         }
         setLoading(false);
       });
@@ -485,6 +490,65 @@ export default function WorkspaceSettingsPage() {
               <code className="mt-2 block rounded bg-gray-100 px-3 py-2 text-xs text-gray-800 dark:bg-gray-800 dark:text-gray-200">
                 {typeof window !== 'undefined' ? window.location.origin : ''}/submit/{params.slug}
               </code>
+            </div>
+
+            {/* Inbound Email */}
+            <div>
+              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Inbound Email</h2>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Share this address with your clients. Emails sent here will automatically create tickets.
+              </p>
+              {inboundEmailKey ? (
+                <div className="mt-2 flex items-center gap-2">
+                  <code className="flex-1 rounded bg-gray-100 px-3 py-2 text-xs text-gray-800 dark:bg-gray-800 dark:text-gray-200">
+                    support+{inboundEmailKey}@ticket.opchestra.com
+                  </code>
+                  <button
+                    className="rounded bg-gray-200 px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`support+${inboundEmailKey}@ticket.opchestra.com`);
+                      setCopiedEmail(true);
+                      setTimeout(() => setCopiedEmail(false), 2000);
+                    }}
+                  >
+                    {copiedEmail ? 'Copied!' : 'Copy'}
+                  </button>
+                </div>
+              ) : (
+                <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">No email key generated yet.</p>
+              )}
+              <div className="mt-2">
+                {confirmRegenerate ? (
+                  <div className="flex items-center gap-2 rounded bg-amber-50 px-3 py-1.5 dark:bg-amber-950">
+                    <span className="text-xs text-amber-700 dark:text-amber-300">Regenerate key? Old address will stop working.</span>
+                    <button
+                      className="text-xs font-medium text-amber-700 hover:text-amber-900 dark:text-amber-300"
+                      disabled={regeneratingKey}
+                      onClick={async () => {
+                        setRegeneratingKey(true);
+                        const res = await fetch(`/api/workspaces/${workspaceId}/regenerate-email-key`, { method: 'POST' });
+                        if (res.ok) {
+                          const data = await res.json();
+                          setInboundEmailKey(data.inboundEmailKey);
+                          setMessage('Email key regenerated');
+                        }
+                        setRegeneratingKey(false);
+                        setConfirmRegenerate(false);
+                      }}
+                    >
+                      {regeneratingKey ? 'Regenerating...' : 'Confirm'}
+                    </button>
+                    <button className="text-xs text-gray-500" onClick={() => setConfirmRegenerate(false)}>Cancel</button>
+                  </div>
+                ) : (
+                  <button
+                    className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400"
+                    onClick={() => setConfirmRegenerate(true)}
+                  >
+                    Regenerate Key
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Projects */}

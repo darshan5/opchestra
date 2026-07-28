@@ -114,6 +114,7 @@ model PlatformSettings {
   r2SecretAccessKey            String?
   r2BucketName                String  @default("opchestra")
   r2PublicUrl                 String?
+  inboundEmailDomain          String  @default("ticket.opchestra.com")
   maxFreeUsers                Int     @default(3)
   createdAt                   DateTime @default(now())
   updatedAt                   DateTime @default(now()) @updatedAt
@@ -260,6 +261,7 @@ model Workspace {
   id                  String   @id @default(uuid())
   name                String
   slug                String   @unique
+  inboundEmailKey     String?  @unique
   staleThresholdDays  Int      @default(14)
   ticketPrefix        String   @default("TKT")
   stripeCustomerId    String?
