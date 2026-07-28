@@ -20,8 +20,16 @@ export async function GET() {
       return NextResponse.json({ error: 'Platform not initialized' }, { status: 404 });
     }
 
-    return NextResponse.json(settings);
-  } catch {
+    return NextResponse.json({
+      ...settings,
+      emailFromAddress: settings.emailFromAddress || 'noreply@opchestra.com',
+      emailFromName: settings.emailFromName || 'Opchestra',
+      inboundEmailDomain: settings.inboundEmailDomain || 'ticket.opchestra.com',
+      r2BucketName: settings.r2BucketName || 'opchestra',
+    });
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error('Admin settings GET error:', e);
     return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });
   }
 }
