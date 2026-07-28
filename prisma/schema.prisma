@@ -723,6 +723,9 @@ model InvoiceItem {
   amount      Float    @default(0)
   taskId      String?
   projectId   String?
+  isSection   Boolean  @default(false)
+  isSubItem   Boolean  @default(false)
+  position    Int      @default(0)
   createdAt   DateTime @default(now())
 
   invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)

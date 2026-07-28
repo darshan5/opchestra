@@ -29,7 +29,7 @@ export async function GET(
         workspace: { select: { name: true } },
         company: { select: { id: true, name: true, domain: true } },
         contact: { select: { id: true, name: true, email: true, phone: true } },
-        items: { orderBy: { createdAt: 'asc' } },
+        items: { orderBy: { position: 'asc' } },
       },
     });
 
@@ -100,21 +100,24 @@ export async function PATCH(
       await prisma.invoiceItem.deleteMany({ where: { invoiceId } });
 
       const items = body.items.map(
-        (item: { amount?: number; description: string; projectId?: string; quantity?: number; rate?: number; taskId?: string }) => ({
-          amount: item.amount ?? (item.quantity ?? 1) * (item.rate ?? 0),
+        (item: { amount?: number; description: string; projectId?: string; quantity?: number; rate?: number; taskId?: string; isSection?: boolean; isSubItem?: boolean }, idx: number) => ({
+          amount: item.isSection ? 0 : (item.amount ?? (item.quantity ?? 1) * (item.rate ?? 0)),
           description: item.description,
           invoiceId,
           projectId: item.projectId || null,
           quantity: item.quantity ?? 1,
           rate: item.rate ?? 0,
           taskId: item.taskId || null,
+          isSection: item.isSection ?? false,
+          isSubItem: item.isSubItem ?? false,
+          position: idx,
         }),
       );
 
       await prisma.invoiceItem.createMany({ data: items });
 
       const subtotal = items.reduce(
-        (sum: number, item: { amount: number }) => sum + item.amount,
+        (sum: number, item: { amount: number; isSection: boolean }) => sum + (item.isSection ? 0 : item.amount),
         0,
       );
       const taxRate = body.taxRate ?? 0;
@@ -130,7 +133,7 @@ export async function PATCH(
       include: {
         company: { select: { id: true, name: true } },
         contact: { select: { id: true, name: true, email: true } },
-        items: { orderBy: { createdAt: 'asc' } },
+        items: { orderBy: { position: 'asc' } },
       },
     });
 

@@ -25,7 +25,7 @@ export default async function PublicInvoicePage({
       workspace: { select: { name: true } },
       company: { select: { name: true, domain: true } },
       contact: { select: { name: true, email: true, phone: true } },
-      items: { orderBy: { createdAt: 'asc' } },
+      items: { orderBy: { position: 'asc' } },
     },
   });
 
@@ -95,18 +95,42 @@ export default async function PublicInvoicePage({
           </tr>
         </thead>
         <tbody>
-          {invoice.items.map((item) => (
-            <tr className="border-b border-gray-100" key={item.id}>
-              <td className="px-4 py-2 text-sm text-gray-900">{item.description}</td>
-              <td className="px-4 py-2 text-right text-sm text-gray-700">{item.quantity}</td>
-              <td className="px-4 py-2 text-right text-sm text-gray-700">
-                ${item.rate.toFixed(2)}
-              </td>
-              <td className="px-4 py-2 text-right text-sm font-semibold text-gray-900">
-                ${item.amount.toFixed(2)}
-              </td>
-            </tr>
-          ))}
+          {invoice.items.map((item) => {
+            const isSection = item.isSection;
+            const isSubItem = item.isSubItem;
+            const isTaskHeader = !isSection && !isSubItem && item.quantity === 0 && item.rate === 0 && item.amount === 0;
+            const isHeaderLike = isSection || isTaskHeader;
+            return (
+              <tr
+                className={cn(
+                  'border-b border-gray-100',
+                  isSection && 'bg-blue-50',
+                  isTaskHeader && 'bg-gray-50',
+                )}
+                key={item.id}
+              >
+                <td className="px-4 py-2 text-sm text-gray-900">
+                  <span className={cn(
+                    isSection && 'font-bold text-blue-700',
+                    isTaskHeader && 'font-semibold',
+                    isSubItem && 'ml-6 text-gray-600',
+                  )}>
+                    {isSubItem && <span className="mr-1 text-gray-400">·</span>}
+                    {item.description}
+                  </span>
+                </td>
+                <td className="px-4 py-2 text-right text-sm text-gray-700">
+                  {isHeaderLike ? '' : item.quantity}
+                </td>
+                <td className="px-4 py-2 text-right text-sm text-gray-700">
+                  {isHeaderLike ? '' : `$${item.rate.toFixed(2)}`}
+                </td>
+                <td className="px-4 py-2 text-right text-sm font-semibold text-gray-900">
+                  {isHeaderLike ? '' : `$${item.amount.toFixed(2)}`}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
 

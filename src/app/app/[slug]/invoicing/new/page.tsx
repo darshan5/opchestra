@@ -15,6 +15,8 @@ interface LineItem {
   rate: number;
   amount: number;
   taskId?: string | null;
+  isSection?: boolean;
+  isSubItem?: boolean;
 }
 
 interface ImportableTask {
@@ -56,7 +58,7 @@ export default function NewInvoicePage() {
   const [showImport, setShowImport] = useState(false);
   const [importableTasks, setImportableTasks] = useState<ImportableTask[]>([]);
   const [importSearch, setImportSearch] = useState('');
-  const [importCompanyFilter, setImportCompanyFilter] = useState('');
+  const [importDate, setImportDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
   const [loadingImport, setLoadingImport] = useState(false);
 
@@ -91,11 +93,34 @@ export default function NewInvoicePage() {
     setItems([...items, { amount: 0, description: '', quantity: 1, rate: 0 }]);
   }
 
-  function removeItem(index: number) {
-    setItems(items.filter((_, i) => i !== index));
+  function addSection() {
+    setItems([...items, { amount: 0, description: '', quantity: 0, rate: 0, isSection: true }]);
   }
 
-  const subtotal = items.reduce((sum, item) => sum + item.amount, 0);
+  function addSubItem(parentIndex: number) {
+    const updated = [...items];
+    let insertAt = parentIndex + 1;
+    while (insertAt < updated.length && updated[insertAt].isSubItem) {
+      insertAt++;
+    }
+    updated.splice(insertAt, 0, { amount: 0, description: '', quantity: 1, rate: 0, isSubItem: true });
+    setItems(updated);
+  }
+
+  function removeItem(index: number) {
+    const item = items[index];
+    if (item.isSection) {
+      let endIdx = index + 1;
+      while (endIdx < items.length && !items[endIdx].isSection) {
+        endIdx++;
+      }
+      setItems(items.filter((_, i) => i < index || i >= endIdx));
+    } else {
+      setItems(items.filter((_, i) => i !== index));
+    }
+  }
+
+  const subtotal = items.reduce((sum, item) => sum + (item.isSection ? 0 : item.amount), 0);
   const taxAmount = subtotal * (taxRate / 100);
   const total = subtotal + taxAmount;
 
@@ -109,12 +134,13 @@ export default function NewInvoicePage() {
     const qp = new URLSearchParams();
     if (companyId) qp.set('companyId', companyId);
     if (importSearch) qp.set('search', importSearch);
+    if (importDate) qp.set('date', importDate);
     const res = await fetch(`/api/workspaces/${workspaceId}/invoices/importable-tasks?${qp}`);
     if (res.ok) {
       setImportableTasks(await res.json());
     }
     setLoadingImport(false);
-  }, [workspaceId, companyId, importSearch]);
+  }, [workspaceId, companyId, importSearch, importDate]);
 
   useEffect(() => {
     if (showImport) {
@@ -142,6 +168,7 @@ export default function NewInvoicePage() {
           rate: task.hourlyRate,
           amount: Math.round(te.hours * task.hourlyRate * 100) / 100,
           taskId: task.id,
+          isSubItem: true,
         });
       }
     }
@@ -174,12 +201,14 @@ export default function NewInvoicePage() {
           contactId,
           dueDate: dueDate || undefined,
           issueDate,
-          items: items.filter((i) => i.description.trim()).map((i) => ({
+          items: items.filter((i) => i.description.trim() || i.isSection).map((i) => ({
             description: i.description,
             quantity: i.quantity,
             rate: i.rate,
             amount: i.amount,
             taskId: i.taskId || undefined,
+            isSection: i.isSection || undefined,
+            isSubItem: i.isSubItem || undefined,
           })),
           notes: notes || undefined,
           tax: taxRate,
@@ -294,22 +323,36 @@ export default function NewInvoicePage() {
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
             {items.map((item, i) => {
-              const isHeader = item.quantity === 0 && item.rate === 0 && item.amount === 0 && !item.description.startsWith('  ·');
+              const isSection = item.isSection;
+              const isSubItem = item.isSubItem;
+              const isTaskHeader = !isSection && !isSubItem && item.quantity === 0 && item.rate === 0 && item.amount === 0 && item.taskId;
+              const isHeaderLike = isSection || isTaskHeader;
               return (
-                <tr key={i} className={isHeader ? 'bg-gray-50 dark:bg-gray-900/50' : ''}>
+                <tr
+                  key={i}
+                  className={cn(
+                    isSection && 'bg-blue-50 dark:bg-blue-950/30',
+                    isTaskHeader && 'bg-gray-50 dark:bg-gray-900/50',
+                  )}
+                >
                   <td className="px-2 py-1">
-                    <input
-                      className={cn(
-                        'w-full rounded border border-gray-200 bg-white px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white',
-                        isHeader && 'font-semibold',
-                      )}
-                      onChange={(e) => updateItem(i, 'description', e.target.value)}
-                      placeholder="Description"
-                      value={item.description}
-                    />
+                    <div className="flex items-center gap-1">
+                      {isSubItem && <span className="ml-4 text-gray-400">·</span>}
+                      <input
+                        className={cn(
+                          'w-full rounded border border-gray-200 bg-white px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white',
+                          isSection && 'font-bold text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800',
+                          isTaskHeader && 'font-semibold',
+                          isSubItem && 'text-gray-600 dark:text-gray-400',
+                        )}
+                        onChange={(e) => updateItem(i, 'description', e.target.value)}
+                        placeholder={isSection ? 'Section name' : isSubItem ? 'Sub-item description' : 'Description'}
+                        value={item.description}
+                      />
+                    </div>
                   </td>
                   <td className="px-2 py-1">
-                    {!isHeader && (
+                    {!isHeaderLike && (
                       <input
                         className="w-full rounded border border-gray-200 bg-white px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                         min="0"
@@ -321,7 +364,7 @@ export default function NewInvoicePage() {
                     )}
                   </td>
                   <td className="px-2 py-1">
-                    {!isHeader && (
+                    {!isHeaderLike && (
                       <input
                         className="w-full rounded border border-gray-200 bg-white px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                         min="0"
@@ -333,30 +376,53 @@ export default function NewInvoicePage() {
                     )}
                   </td>
                   <td className="px-2 py-1 text-right text-sm font-medium text-gray-900 dark:text-white">
-                    {isHeader ? '' : `$${item.amount.toFixed(2)}`}
+                    {isHeaderLike ? '' : `$${item.amount.toFixed(2)}`}
                   </td>
                   <td className="px-2 py-1">
-                    <button
-                      className="text-xs text-red-500 hover:text-red-700"
-                      onClick={() => removeItem(i)}
-                      type="button"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      {!isSection && !isSubItem && (
+                        <button
+                          className="text-xs text-gray-400 hover:text-blue-600"
+                          onClick={() => addSubItem(i)}
+                          title="Add sub-item"
+                          type="button"
+                        >
+                          <Plus className="h-3 w-3" />
+                        </button>
+                      )}
+                      <button
+                        className="text-xs text-red-500 hover:text-red-700"
+                        onClick={() => removeItem(i)}
+                        title={isSection ? 'Remove section and its items' : 'Remove item'}
+                        type="button"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
-        <button
-          className="mt-2 flex items-center gap-1 text-sm text-blue-600 hover:underline dark:text-blue-400"
-          onClick={addItem}
-          type="button"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Add line item
-        </button>
+        <div className="mt-2 flex items-center gap-3">
+          <button
+            className="flex items-center gap-1 text-sm text-blue-600 hover:underline dark:text-blue-400"
+            onClick={addItem}
+            type="button"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add line item
+          </button>
+          <button
+            className="flex items-center gap-1 text-sm text-gray-500 hover:underline dark:text-gray-400"
+            onClick={addSection}
+            type="button"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add section
+          </button>
+        </div>
       </div>
 
       <div className="mt-6 flex justify-end">
@@ -421,6 +487,12 @@ export default function NewInvoicePage() {
             <div className="px-6 py-3">
               <div className="flex gap-3">
                 <input
+                  className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                  onChange={(e) => setImportDate(e.target.value)}
+                  type="date"
+                  value={importDate}
+                />
+                <input
                   className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white"
                   onChange={(e) => setImportSearch(e.target.value)}
                   placeholder="Search tasks..."
@@ -428,7 +500,7 @@ export default function NewInvoicePage() {
                 />
               </div>
               <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                Showing completed tasks from last 90 days with billable time entries
+                Showing completed tasks from 90 days before the selected date with billable time entries
               </p>
             </div>
 

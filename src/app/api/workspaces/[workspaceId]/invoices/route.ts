@@ -80,16 +80,20 @@ export async function POST(
     const invoiceNumber = await generateInvoiceNumber(workspaceId);
 
     const items = (body.items || []).map(
-      (item: { amount?: number; description: string; quantity?: number; rate?: number }) => ({
-        amount: item.amount ?? (item.quantity ?? 1) * (item.rate ?? 0),
+      (item: { amount?: number; description: string; quantity?: number; rate?: number; taskId?: string; isSection?: boolean; isSubItem?: boolean }, idx: number) => ({
+        amount: item.isSection ? 0 : (item.amount ?? (item.quantity ?? 1) * (item.rate ?? 0)),
         description: item.description,
         quantity: item.quantity ?? 1,
         rate: item.rate ?? 0,
+        taskId: item.taskId || null,
+        isSection: item.isSection ?? false,
+        isSubItem: item.isSubItem ?? false,
+        position: idx,
       }),
     );
 
     const subtotal = items.reduce(
-      (sum: number, item: { amount: number }) => sum + item.amount,
+      (sum: number, item: { amount: number; isSection: boolean }) => sum + (item.isSection ? 0 : item.amount),
       0,
     );
     const taxRate = body.tax ?? 0;

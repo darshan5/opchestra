@@ -26,8 +26,10 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const companyId = searchParams.get('companyId');
     const search = searchParams.get('search');
+    const dateParam = searchParams.get('date');
 
-    const ninetyDaysAgo = new Date();
+    const endDate = dateParam ? new Date(dateParam) : new Date();
+    const ninetyDaysAgo = new Date(endDate);
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
