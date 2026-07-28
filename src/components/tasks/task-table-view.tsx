@@ -674,6 +674,7 @@ export function TaskTableView({
 }: TaskTableViewProps) {
   const router = useRouter();
   const [tasks, setTasks] = useState<TaskData[]>(initialTasks);
+  useEffect(() => { setTasks(initialTasks); }, [initialTasks]);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(initialOpenTaskId ?? null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
