@@ -96,24 +96,11 @@ export async function POST(
     });
 
     if (!contact) {
-      let company = senderDomain
-        ? await prisma.company.findFirst({
-            where: { workspaceId: workspace.id, domain: senderDomain },
-          })
-        : null;
-
-      if (!company && senderDomain) {
-        company = await prisma.company.create({
-          data: { workspaceId: workspace.id, name: senderDomain, domain: senderDomain },
-        });
-      }
-
       contact = await prisma.contact.create({
         data: {
           workspaceId: workspace.id,
           email: senderEmail,
           name: senderEmail.split('@')[0],
-          companyId: company?.id ?? null,
         },
       });
     }
@@ -153,7 +140,6 @@ export async function POST(
         ticketNumber,
         source: 'email',
         contactId: contact.id,
-        companyId: contact.companyId,
         status: 'Open',
         priority: 'MEDIUM',
       },
