@@ -636,6 +636,9 @@ const MIGRATIONS = [
 
   // Default tax rate for invoices
   `ALTER TABLE "Workspace" ADD COLUMN IF NOT EXISTS "invoiceDefaultTaxRate" DOUBLE PRECISION NOT NULL DEFAULT 0`,
+
+  // Task detail default tab setting
+  `ALTER TABLE "Workspace" ADD COLUMN IF NOT EXISTS "taskDetailDefaultTab" TEXT NOT NULL DEFAULT 'timelog'`,
 ];
 
 export async function POST() {

@@ -25,7 +25,7 @@ export async function GET(
 
     const workspace = await prisma.workspace.findUnique({
       where: { id: workspaceId },
-      select: { invoicePaymentDueDays: true, invoiceDefaultTaxRate: true },
+      select: { invoicePaymentDueDays: true, invoiceDefaultTaxRate: true, taskDetailDefaultTab: true },
     });
 
     return NextResponse.json(workspace);
@@ -71,10 +71,17 @@ export async function PATCH(
       }
     }
 
+    if (body.taskDetailDefaultTab !== undefined) {
+      const valid = ['timelog', 'details'];
+      if (valid.includes(body.taskDetailDefaultTab)) {
+        data.taskDetailDefaultTab = body.taskDetailDefaultTab;
+      }
+    }
+
     const workspace = await prisma.workspace.update({
       where: { id: workspaceId },
       data,
-      select: { invoicePaymentDueDays: true, invoiceDefaultTaxRate: true },
+      select: { invoicePaymentDueDays: true, invoiceDefaultTaxRate: true, taskDetailDefaultTab: true },
     });
 
     return NextResponse.json(workspace);

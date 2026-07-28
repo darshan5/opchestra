@@ -122,6 +122,10 @@ export default function WorkspaceSettingsPage() {
   const [inviteRole, setInviteRole] = useState('MEMBER');
   const [inviting, setInviting] = useState(false);
 
+  // Task detail default tab
+  const [taskDetailDefaultTab, setTaskDetailDefaultTab] = useState('timelog');
+  const [savingDefaultTab, setSavingDefaultTab] = useState(false);
+
   // Invoicing
   const [invoicePaymentDueDays, setInvoicePaymentDueDays] = useState(30);
   const [invoiceDefaultTaxRate, setInvoiceDefaultTaxRate] = useState(0);
@@ -185,6 +189,9 @@ export default function WorkspaceSettingsPage() {
       const data = await settingsRes.json();
       if (data.invoicePaymentDueDays !== undefined) {
         setInvoicePaymentDueDays(data.invoicePaymentDueDays);
+      }
+      if (data.taskDetailDefaultTab) {
+        setTaskDetailDefaultTab(data.taskDetailDefaultTab);
       }
       if (data.invoiceDefaultTaxRate !== undefined) {
         setInvoiceDefaultTaxRate(data.invoiceDefaultTaxRate);
@@ -577,6 +584,40 @@ export default function WorkspaceSettingsPage() {
                     Regenerate Key
                   </button>
                 )}
+              </div>
+            </div>
+
+            {/* Task Detail Default Tab */}
+            <div>
+              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Task Detail Panel</h2>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Choose which tab opens first when you click on a task.
+              </p>
+              <div className="mt-2 flex items-center gap-3">
+                <select
+                  className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                  onChange={(e) => setTaskDetailDefaultTab(e.target.value)}
+                  value={taskDetailDefaultTab}
+                >
+                  <option value="timelog">Time Log</option>
+                  <option value="details">Details</option>
+                </select>
+                <button
+                  className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                  disabled={savingDefaultTab}
+                  onClick={async () => {
+                    setSavingDefaultTab(true);
+                    await fetch(`/api/workspaces/${workspaceId}/settings`, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ taskDetailDefaultTab }),
+                    });
+                    showMsg('Default tab saved');
+                    setSavingDefaultTab(false);
+                  }}
+                >
+                  Save
+                </button>
               </div>
             </div>
 

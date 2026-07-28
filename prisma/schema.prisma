@@ -304,6 +304,7 @@ model Workspace {
   seatLimit              Int      @default(3)
   invoicePaymentDueDays  Int      @default(30)
   invoiceDefaultTaxRate  Float    @default(0)
+  taskDetailDefaultTab   String   @default("timelog")
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 

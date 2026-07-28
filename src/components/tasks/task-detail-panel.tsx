@@ -21,6 +21,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { TiptapEditor } from '@/components/editor/tiptap-editor';
 import { CustomFieldRenderer } from '@/components/tasks/custom-field-renderer';
 import { Button } from '@/components/ui/button';
+import { NotesSection } from '@/components/notes/notes-section';
 import { cn } from '@/lib/utils';
 
 interface TaskUser {
@@ -114,6 +115,7 @@ export function TaskDetailPanel({
   const [task, setTask] = useState<FullTask | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('timelog');
+  const [defaultTabLoaded, setDefaultTabLoaded] = useState(false);
   const [comments, setComments] = useState<CommentData[]>([]);
   const [newComment, setNewComment] = useState('');
   const [sendingComment, setSendingComment] = useState(false);
@@ -156,6 +158,17 @@ export function TaskDetailPanel({
         .then((r) => r.ok ? r.json() : [])
         .then((data) => setCompanies(data))
         .catch(() => {});
+      if (!defaultTabLoaded) {
+        fetch(`/api/workspaces/${workspaceId}/settings`)
+          .then((r) => r.ok ? r.json() : null)
+          .then((s) => {
+            if (s?.taskDetailDefaultTab) {
+              setActiveTab(s.taskDetailDefaultTab as Tab);
+            }
+            setDefaultTabLoaded(true);
+          })
+          .catch(() => setDefaultTabLoaded(true));
+      }
     };
     load();
   }, [fetchTask, fetchComments, workspaceId]);
@@ -405,10 +418,13 @@ function DetailsTab({
 }) {
   return (
     <div className="space-y-5 px-5 py-4">
-      {/* Description */}
-      <DescriptionEditor
-        content={task.description}
-        onSave={(content) => updateField('description', content)}
+      {/* Notes */}
+      <NotesSection
+        entityId={taskId}
+        entityType="task"
+        isAdmin={true}
+        showCategories={true}
+        workspaceId={workspaceId}
       />
 
       {/* Fields */}

@@ -129,14 +129,13 @@ export async function POST(
       return NextResponse.json({ error: 'No admin found for workspace' }, { status: 500 });
     }
 
-    const descriptionText = (text || html || '') as string;
+    const emailBody = (text || html || '') as string;
 
     const ticket = await prisma.task.create({
       data: {
         workspaceId: workspace.id,
         createdById: admin.userId,
         title: (subject as string) || 'No subject',
-        description: { type: 'text', text: descriptionText },
         ticketNumber,
         source: 'email',
         contactId: contact.id,
@@ -144,6 +143,19 @@ export async function POST(
         priority: 'MEDIUM',
       },
     });
+
+    if (emailBody.trim()) {
+      await prisma.note.create({
+        data: {
+          workspaceId: workspace.id,
+          entityType: 'ticket',
+          entityId: ticket.id,
+          content: emailBody,
+          category: 'client_comment',
+          createdById: admin.userId,
+        },
+      });
+    }
 
     return NextResponse.json({ ticketId: ticket.id, ticketNumber });
   } catch {
