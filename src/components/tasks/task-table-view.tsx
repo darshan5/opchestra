@@ -110,8 +110,8 @@ const COLUMN_DEFS: ColumnDef[] = [
 function getDefaultVisibleColumns(context: { projectId?: string; taskGroupId?: string }): string[] {
   const cols = ['task', 'person', 'status', 'priority', 'date', 'project', 'company', 'comments'];
   if (context.projectId) {
-    // In project view: hide Project (redundant), show Phase
-    return cols.filter(c => c !== 'project').concat('phase');
+    // In project view: hide Project (redundant) and Phase (shown as sections)
+    return cols.filter(c => c !== 'project');
   }
   if (context.taskGroupId) {
     // In group view: hide Group (redundant)

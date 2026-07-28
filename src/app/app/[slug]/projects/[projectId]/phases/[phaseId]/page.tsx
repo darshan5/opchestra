@@ -45,7 +45,15 @@ export default async function PhasePage({
     orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
   });
 
-  const [members, allProjects] = await Promise.all([
+  const membership = await prisma.workspaceMember.findUnique({
+    where: { workspaceId_userId: { workspaceId: workspace.id, userId: session.user.id } },
+  });
+
+  if (!membership) {
+    redirect('/app');
+  }
+
+  const [members, allProjects, phases, taskGroups] = await Promise.all([
     prisma.workspaceMember.findMany({
       where: { workspaceId: workspace.id },
       include: { user: { select: { id: true, name: true, email: true, image: true } } },
@@ -54,6 +62,16 @@ export default async function PhasePage({
       where: { workspaceId: workspace.id, status: 'ACTIVE' },
       select: { id: true, name: true },
       orderBy: { name: 'asc' },
+    }),
+    prisma.phase.findMany({
+      where: { projectId },
+      select: { id: true, name: true, color: true },
+      orderBy: { position: 'asc' },
+    }),
+    prisma.taskGroup.findMany({
+      where: { workspaceId: workspace.id },
+      select: { id: true, name: true, color: true },
+      orderBy: { position: 'asc' },
     }),
   ]);
 
@@ -67,10 +85,14 @@ export default async function PhasePage({
       </div>
       <ViewSwitcher
         context="project"
+        currentUserRole={membership.role}
+        defaultGroupBy="status"
         members={members.map((m) => m.user)}
+        phases={phases}
         projectId={projectId}
         projects={allProjects}
         slug={slug}
+        taskGroups={taskGroups}
         tasks={tasks}
         workspaceId={workspace.id}
       />

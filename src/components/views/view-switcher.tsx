@@ -153,7 +153,7 @@ export function ViewSwitcher({
   const filterFields = isProjectView ? FILTER_FIELDS_PROJECT : FILTER_FIELDS_ALL;
 
   const [layout, setLayout] = useState<Layout>('TABLE');
-  const [groupBy, setGroupBy] = useState<GroupByOption>(isProjectView ? 'phase' : defaultGroupBy);
+  const [groupBy, setGroupBy] = useState<GroupByOption>(isProjectView && defaultGroupBy === 'status' ? defaultGroupBy : isProjectView ? 'phase' : defaultGroupBy);
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
   const [activeViewId, setActiveViewId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
