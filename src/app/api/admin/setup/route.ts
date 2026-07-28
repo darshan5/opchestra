@@ -40,10 +40,14 @@ export async function POST(request: Request) {
         },
       });
 
+      const { randomBytes } = await import('crypto');
+      const webhookKey = randomBytes(16).toString('base64url');
+
+      const existing = await tx.platformSettings.findUnique({ where: { id: 'platform' } });
       await tx.platformSettings.upsert({
         where: { id: 'platform' },
-        create: { id: 'platform' },
-        update: {},
+        create: { id: 'platform', resendWebhookKey: webhookKey },
+        update: existing?.resendWebhookKey ? {} : { resendWebhookKey: webhookKey },
       });
 
       return adminUser;

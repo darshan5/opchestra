@@ -592,6 +592,8 @@ const MIGRATIONS = [
 
   `ALTER TABLE "Workspace" ADD COLUMN IF NOT EXISTS "inboundEmailKey" TEXT UNIQUE`,
   `ALTER TABLE "PlatformSettings" ADD COLUMN IF NOT EXISTS "inboundEmailDomain" TEXT NOT NULL DEFAULT 'ticket.opchestra.com'`,
+  `ALTER TABLE "PlatformSettings" ADD COLUMN IF NOT EXISTS "resendWebhookKey" TEXT`,
+  `ALTER TABLE "PlatformSettings" ADD COLUMN IF NOT EXISTS "resendWebhookSigningSecret" TEXT`,
 ];
 
 export async function POST() {

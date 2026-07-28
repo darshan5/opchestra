@@ -115,6 +115,8 @@ model PlatformSettings {
   r2BucketName                String  @default("opchestra")
   r2PublicUrl                 String?
   inboundEmailDomain          String  @default("ticket.opchestra.com")
+  resendWebhookKey            String?
+  resendWebhookSigningSecret  String?
   maxFreeUsers                Int     @default(3)
   createdAt                   DateTime @default(now())
   updatedAt                   DateTime @default(now()) @updatedAt

@@ -25,6 +25,7 @@ export async function GET() {
       emailApiKey: settings.emailApiKey ? '••••••••' : null,
       r2AccessKeyId: settings.r2AccessKeyId ? '••••••••' : null,
       r2SecretAccessKey: settings.r2SecretAccessKey ? '••••••••' : null,
+      resendWebhookSigningSecret: settings.resendWebhookSigningSecret ? '••••••••' : null,
     });
   } catch {
     return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });
@@ -57,6 +58,8 @@ export async function PATCH(request: Request) {
       'r2PublicUrl',
       'maxFreeUsers',
       'inboundEmailDomain',
+      'resendWebhookKey',
+      'resendWebhookSigningSecret',
     ];
 
     const data: Record<string, unknown> = {};

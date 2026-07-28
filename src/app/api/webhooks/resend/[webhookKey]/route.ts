@@ -1,28 +1,55 @@
 import { NextResponse } from 'next/server';
+import { Webhook } from 'svix';
 
 import { prisma } from '@/lib/db';
 
-export async function POST(request: Request) {
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ webhookKey: string }> },
+) {
   try {
-    const body = await request.json();
+    const { webhookKey } = await params;
+
+    const platformSettings = await prisma.platformSettings.findUnique({
+      where: { id: 'platform' },
+      select: { inboundEmailDomain: true, resendWebhookKey: true, resendWebhookSigningSecret: true },
+    });
+
+    if (!platformSettings?.resendWebhookKey || webhookKey !== platformSettings.resendWebhookKey) {
+      return NextResponse.json({ error: 'Invalid webhook key' }, { status: 403 });
+    }
+
+    const rawBody = await request.text();
+    let body: Record<string, unknown>;
+
+    if (platformSettings.resendWebhookSigningSecret) {
+      try {
+        const wh = new Webhook(platformSettings.resendWebhookSigningSecret);
+        const headers: Record<string, string> = {};
+        request.headers.forEach((v, k) => { headers[k] = v; });
+        body = wh.verify(rawBody, headers) as Record<string, unknown>;
+      } catch {
+        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+      }
+    } else {
+      body = JSON.parse(rawBody);
+    }
+
     const { type, data } = body;
 
     if (type !== 'email.received') {
       return NextResponse.json({ ok: true });
     }
 
-    const { to, from, subject, text, html } = data ?? {};
+    const eventData = data as Record<string, unknown>;
+    const { to, from, subject, text, html } = eventData;
     if (!to || !from) {
       return NextResponse.json({ error: 'Missing to/from' }, { status: 400 });
     }
 
-    const platformSettings = await prisma.platformSettings.findUnique({
-      where: { id: 'platform' },
-      select: { inboundEmailDomain: true },
-    });
-    const domain = platformSettings?.inboundEmailDomain ?? 'ticket.opchestra.com';
+    const domain = platformSettings.inboundEmailDomain ?? 'ticket.opchestra.com';
 
-    const recipients: string[] = Array.isArray(to) ? to : [to];
+    const recipients: string[] = Array.isArray(to) ? to : [to as string];
     const recipient = recipients.find((r: string) =>
       r.toLowerCase().includes(`@${domain.toLowerCase()}`),
     );
@@ -99,13 +126,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No admin found for workspace' }, { status: 500 });
     }
 
-    const descriptionText = text || html || '';
+    const descriptionText = (text || html || '') as string;
 
     const ticket = await prisma.task.create({
       data: {
         workspaceId: workspace.id,
         createdById: admin.userId,
-        title: subject || 'No subject',
+        title: (subject as string) || 'No subject',
         description: { type: 'text', text: descriptionText },
         ticketNumber,
         source: 'email',
