@@ -368,6 +368,15 @@ function ContextMenu({
                   {p.name}
                 </button>
               ))}
+              <div className="my-1 border-t border-gray-200 dark:border-gray-700" />
+              <button
+                className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                onClick={() => { onMoveToPhase(''); onClose(); }}
+                type="button"
+              >
+                <span className="h-2.5 w-2.5 rounded-full bg-gray-300 dark:bg-gray-600" />
+                No Phase
+              </button>
             </div>
           )}
         </div>
@@ -581,11 +590,12 @@ function BulkActionsBar({
 
       {phases && phases.length > 0 && onMoveToPhase && (
         <div className="relative">
-          <select className="rounded bg-indigo-500 px-2 py-1 text-xs font-medium text-white cursor-pointer hover:bg-indigo-400" onChange={(e) => { if (e.target.value) { onMoveToPhase(e.target.value); } e.target.value = ''; }} defaultValue="">
+          <select className="rounded bg-indigo-500 px-2 py-1 text-xs font-medium text-white cursor-pointer hover:bg-indigo-400" onChange={(e) => { onMoveToPhase(e.target.value); e.target.value = ''; }} defaultValue="">
             <option value="" disabled>Move to Phase</option>
             {phases.map((p) => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
+            <option value="">No Phase</option>
           </select>
         </div>
       )}
@@ -842,7 +852,7 @@ export function TaskTableView({
   }
 
   async function moveTaskToPhase(taskId: string, phaseId: string) {
-    await patchTask(taskId, { phaseId });
+    await patchTask(taskId, { phaseId: phaseId || null });
   }
 
   async function moveTaskToGroup(taskId: string, groupId: string) {
