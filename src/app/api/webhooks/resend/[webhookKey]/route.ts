@@ -23,13 +23,29 @@ export async function POST(
     let body: Record<string, unknown>;
 
     if (platformSettings.resendWebhookSigningSecret) {
-      try {
-        const wh = new Webhook(platformSettings.resendWebhookSigningSecret);
-        const headers: Record<string, string> = {};
-        request.headers.forEach((v, k) => { headers[k] = v; });
-        body = wh.verify(rawBody, headers) as Record<string, unknown>;
-      } catch {
-        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+      const svixHeaders: Record<string, string> = {};
+      request.headers.forEach((v, k) => { svixHeaders[k] = v; });
+
+      const hasSvixHeaders = svixHeaders['svix-id'] && svixHeaders['svix-timestamp'] && svixHeaders['svix-signature'];
+
+      if (hasSvixHeaders) {
+        try {
+          const secret = platformSettings.resendWebhookSigningSecret;
+          const wh = new Webhook(secret);
+          body = wh.verify(rawBody, svixHeaders) as Record<string, unknown>;
+        } catch {
+          try {
+            const secret = platformSettings.resendWebhookSigningSecret.startsWith('whsec_')
+              ? platformSettings.resendWebhookSigningSecret
+              : `whsec_${platformSettings.resendWebhookSigningSecret}`;
+            const wh = new Webhook(secret);
+            body = wh.verify(rawBody, svixHeaders) as Record<string, unknown>;
+          } catch {
+            return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+          }
+        }
+      } else {
+        body = JSON.parse(rawBody);
       }
     } else {
       body = JSON.parse(rawBody);
