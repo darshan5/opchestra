@@ -601,6 +601,7 @@ export default function WorkspaceSettingsPage() {
                 >
                   <option value="timelog">Time Log</option>
                   <option value="details">Details</option>
+                  <option value="notes">Notes</option>
                 </select>
                 <button
                   className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"

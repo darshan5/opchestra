@@ -307,33 +307,6 @@ export function TicketDetailPanel({
                 </div>
               )}
 
-              {/* Description */}
-              <div>
-                <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Description</label>
-                {editingDesc ? (
-                  <div className="mt-1">
-                    <textarea
-                      autoFocus
-                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                      onChange={(e) => setDescDraft(e.target.value)}
-                      rows={4}
-                      value={descDraft}
-                    />
-                    <div className="mt-1 flex gap-2">
-                      <button className="text-xs font-medium text-blue-600" onClick={saveDesc}>Save</button>
-                      <button className="text-xs text-gray-500" onClick={() => setEditingDesc(false)}>Cancel</button>
-                    </div>
-                  </div>
-                ) : (
-                  <p
-                    className="mt-1 min-h-[40px] cursor-pointer rounded-lg border border-transparent p-2 text-sm text-gray-700 hover:border-gray-300 dark:text-gray-300 dark:hover:border-gray-600"
-                    onClick={() => setEditingDesc(true)}
-                  >
-                    {descDraft || 'Click to add description...'}
-                  </p>
-                )}
-              </div>
-
               {/* Linked Tasks */}
               <div>
                 <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Linked Tasks</label>

@@ -72,7 +72,7 @@ export async function PATCH(
     }
 
     if (body.taskDetailDefaultTab !== undefined) {
-      const valid = ['timelog', 'details'];
+      const valid = ['timelog', 'details', 'notes'];
       if (valid.includes(body.taskDetailDefaultTab)) {
         data.taskDetailDefaultTab = body.taskDetailDefaultTab;
       }

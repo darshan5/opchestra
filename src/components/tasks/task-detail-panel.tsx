@@ -99,7 +99,7 @@ interface TaskDetailPanelProps {
   currentUserRole?: string;
 }
 
-type Tab = 'details' | 'activity' | 'timelog';
+type Tab = 'details' | 'notes' | 'activity' | 'timelog';
 
 export function TaskDetailPanel({
   currentUserRole,
@@ -325,7 +325,7 @@ export function TaskDetailPanel({
 
         {/* Tabs */}
         <div className="flex border-b border-gray-200 px-5 dark:border-gray-700">
-          {(['timelog', 'details', 'activity'] as Tab[]).map((tab) => (
+          {(['timelog', 'details', 'notes', 'activity'] as Tab[]).map((tab) => (
             <button
               className={cn(
                 'border-b-2 px-3 py-2 text-sm font-medium transition-colors',
@@ -337,7 +337,7 @@ export function TaskDetailPanel({
               onClick={() => setActiveTab(tab)}
               type="button"
             >
-              {tab === 'details' ? 'Details' : tab === 'activity' ? 'Activity' : 'Time Log'}
+              {{ timelog: 'Time Log', details: 'Details', notes: 'Notes', activity: 'Activity' }[tab]}
             </button>
           ))}
         </div>
@@ -359,6 +359,17 @@ export function TaskDetailPanel({
               updateField={updateField}
               workspaceId={workspaceId}
             />
+          )}
+          {activeTab === 'notes' && (
+            <div className="px-5 py-4">
+              <NotesSection
+                entityId={taskId}
+                entityType="task"
+                isAdmin={true}
+                showCategories={true}
+                workspaceId={workspaceId}
+              />
+            </div>
           )}
           {activeTab === 'activity' && (
             <ActivityTab
@@ -418,15 +429,6 @@ function DetailsTab({
 }) {
   return (
     <div className="space-y-5 px-5 py-4">
-      {/* Notes */}
-      <NotesSection
-        entityId={taskId}
-        entityType="task"
-        isAdmin={true}
-        showCategories={true}
-        workspaceId={workspaceId}
-      />
-
       {/* Fields */}
       <section>
         <h3 className="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">

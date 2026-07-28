@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { NotesSection } from '@/components/notes/notes-section';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 interface CompanyOption {
   id: string;
@@ -57,6 +58,7 @@ export function ContactDetailPanel({
   const [companyId, setCompanyId] = useState('');
   const [editingName, setEditingName] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<'details' | 'notes'>('details');
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const fetchContact = useCallback(async () => {
@@ -165,6 +167,38 @@ export function ContactDetailPanel({
           </button>
         </div>
 
+        {/* Tabs */}
+        <div className="flex border-b border-gray-200 px-5 dark:border-gray-800">
+          {(['details', 'notes'] as const).map((t) => (
+            <button
+              className={cn(
+                'border-b-2 px-3 py-2 text-sm font-medium transition-colors',
+                activeTab === t
+                  ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200',
+              )}
+              key={t}
+              onClick={() => setActiveTab(t)}
+              type="button"
+            >
+              {t === 'details' ? 'Details' : 'Notes'}
+            </button>
+          ))}
+        </div>
+
+        {activeTab === 'notes' && (
+          <div className="px-5 py-4">
+            <NotesSection
+              entityId={contactId}
+              entityType="contact"
+              isAdmin
+              showCategories
+              workspaceId={workspaceId}
+            />
+          </div>
+        )}
+
+        {activeTab === 'details' && <>
         {/* Details */}
         <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Details</h3>
@@ -260,16 +294,6 @@ export function ContactDetailPanel({
           {saving && <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">Saving...</p>}
         </div>
 
-        {/* Notes */}
-        <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
-          <NotesSection
-            entityId={contactId}
-            entityType="contact"
-            isAdmin
-            workspaceId={workspaceId}
-          />
-        </div>
-
         {/* Tickets */}
         {tickets.length > 0 && (
           <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
@@ -315,6 +339,7 @@ export function ContactDetailPanel({
             </Button>
           )}
         </div>
+        </>}
       </div>
     </>
   );
