@@ -10,6 +10,7 @@ interface WorkspaceDetail {
   id: string;
   name: string;
   slug: string;
+  inboundEmailKey: string | null;
   createdAt: string;
   members: Array<{
     id: string;
@@ -132,6 +133,29 @@ export default function WorkspaceDetailPage() {
           </p>
         </div>
       </div>
+
+      {workspace.inboundEmailKey && (
+        <div className="mt-6 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Support Email</p>
+          <div className="mt-1 flex items-center gap-2">
+            <code className="text-sm font-medium text-gray-900 dark:text-white">
+              support+{workspace.inboundEmailKey}@ticket.opchestra.com
+            </code>
+            <button
+              className="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+              onClick={() => {
+                navigator.clipboard.writeText(`support+${workspace.inboundEmailKey}@ticket.opchestra.com`);
+              }}
+              type="button"
+            >
+              Copy
+            </button>
+          </div>
+          <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+            Emails sent to this address create tickets in this workspace.
+          </p>
+        </div>
+      )}
 
       <h2 className="mt-8 text-lg font-semibold text-gray-900 dark:text-white">Members</h2>
       <div className="mt-3 overflow-x-auto">

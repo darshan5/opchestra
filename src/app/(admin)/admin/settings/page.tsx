@@ -290,9 +290,12 @@ export default function AdminSettingsPage() {
             type="text"
             value={emailFromName}
           />
-          <Button loading={saving} onClick={saveEmailSettings}>
-            Save Email Settings
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button loading={saving} onClick={saveEmailSettings}>
+              Save Email Settings
+            </Button>
+            <TestButton endpoint="/api/admin/test-email" label="Send Test Email" needsInput inputPlaceholder="Recipient email" inputType="email" />
+          </div>
         </div>
       </section>
 
@@ -342,10 +345,31 @@ export default function AdminSettingsPage() {
             type="url"
             value={r2PublicUrl}
           />
-          <Button loading={saving} onClick={saveStorageSettings}>
-            Save Storage Settings
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button loading={saving} onClick={saveStorageSettings}>
+              Save Storage Settings
+            </Button>
+            <TestButton endpoint="/api/admin/test-r2" label="Test R2 Connection" />
+          </div>
         </div>
+      </section>
+
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Stripe</h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          Stripe API key is set via the STRIPE_SECRET_KEY environment variable.
+        </p>
+        <div className="mt-4">
+          <TestButton endpoint="/api/admin/test-stripe" label="Test Stripe Connection" />
+        </div>
+      </section>
+
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Inbound Email Webhook</h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          Configure this URL in Resend to receive inbound emails and create tickets.
+        </p>
+        <WebhookUrlDisplay />
       </section>
 
       <section className="mt-10">
@@ -368,7 +392,6 @@ export default function AdminSettingsPage() {
 
       <AdminProfileSection />
       <AdminChangePasswordSection />
-      <TestEmailSection />
     </div>
   );
 }
@@ -483,47 +506,120 @@ function AdminChangePasswordSection() {
   );
 }
 
-function TestEmailSection() {
-  const [to, setTo] = useState('');
-  const [sending, setSending] = useState(false);
-  const [msg, setMsg] = useState('');
+function TestButton({
+  endpoint,
+  inputPlaceholder,
+  inputType,
+  label,
+  needsInput,
+}: {
+  endpoint: string;
+  label: string;
+  needsInput?: boolean;
+  inputPlaceholder?: string;
+  inputType?: string;
+}) {
+  const [inputVal, setInputVal] = useState('');
+  const [testing, setTesting] = useState(false);
+  const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
-  async function send() {
-    if (!to) {
+  async function test() {
+    if (needsInput && !inputVal.trim()) {
       return;
     }
-    setSending(true);
-    const res = await fetch('/api/admin/test-email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to }),
-    });
-    const data = await res.json();
-    setMsg(res.ok ? `Test email sent (${data.messageId ?? 'ok'})` : data.error || 'Failed');
-    setSending(false);
+    setTesting(true);
+    setResult(null);
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(needsInput ? { to: inputVal.trim() } : {}),
+      });
+      const data = await res.json();
+      setResult({
+        msg: res.ok ? data.message || 'Connected' : data.error || 'Failed',
+        ok: res.ok,
+      });
+    } catch {
+      setResult({ msg: 'Request failed', ok: false });
+    }
+    setTesting(false);
   }
 
   return (
-    <section className="mt-10 mb-10">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Test Email</h2>
-      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-        Test that your email integration is working. Sends a test email via Resend.
-      </p>
-      <div className="mt-4 flex items-end gap-3">
-        <div className="flex-1">
-          <Input
-            id="testEmailTo"
-            onChange={(e) => setTo(e.target.value)}
-            placeholder="Recipient email address"
-            type="email"
-            value={to}
-          />
+    <div className="flex flex-wrap items-center gap-2">
+      {needsInput && (
+        <input
+          className="rounded border border-gray-300 px-2 py-1.5 text-xs dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+          onChange={(e) => setInputVal(e.target.value)}
+          placeholder={inputPlaceholder || 'Enter value'}
+          type={inputType || 'text'}
+          value={inputVal}
+        />
+      )}
+      <button
+        className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+        disabled={testing || (needsInput && !inputVal.trim())}
+        onClick={test}
+        type="button"
+      >
+        {testing ? 'Testing...' : label}
+      </button>
+      {result && (
+        <span className={`text-xs font-medium ${result.ok ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+          {result.ok ? '✓' : '✗'} {result.msg}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function WebhookUrlDisplay() {
+  const [data, setData] = useState<{ resendWebhookKey?: string; resendWebhookSigningSecret?: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/admin/settings')
+      .then((r) => r.json())
+      .then((d) => setData(d))
+      .catch(() => {});
+  }, []);
+
+  if (!data) {
+    return null;
+  }
+
+  const webhookUrl = data.resendWebhookKey
+    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/api/webhooks/resend/${data.resendWebhookKey}`
+    : 'Not configured — run /api/admin/setup first';
+
+  return (
+    <div className="mt-4 space-y-3">
+      <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800">
+        <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Webhook URL</p>
+        <div className="mt-1 flex items-center gap-2">
+          <code className="flex-1 truncate text-xs text-gray-800 dark:text-gray-200">{webhookUrl}</code>
+          {data.resendWebhookKey && (
+            <button
+              className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+              onClick={() => {
+                navigator.clipboard.writeText(webhookUrl);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }}
+              type="button"
+            >
+              {copied ? 'Copied!' : 'Copy'}
+            </button>
+          )}
         </div>
-        <Button disabled={!to} loading={sending} onClick={send} size="sm">
-          Send Test Email
-        </Button>
       </div>
-      {msg && <p className="mt-2 text-sm text-blue-600 dark:text-blue-400">{msg}</p>}
-    </section>
+      <div className="flex items-center gap-2 text-xs">
+        <span className="text-gray-500 dark:text-gray-400">Signing Secret:</span>
+        <span className={`font-medium ${data.resendWebhookSigningSecret ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'}`}>
+          {data.resendWebhookSigningSecret ? '✓ Configured' : '⚠ Not set (webhook will accept unsigned requests)'}
+        </span>
+      </div>
+    </div>
   );
 }
