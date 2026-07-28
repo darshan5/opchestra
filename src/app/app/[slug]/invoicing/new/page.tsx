@@ -1,16 +1,39 @@
 'use client';
 
+import { format } from 'date-fns';
+import { Plus, X } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
 interface LineItem {
   description: string;
   quantity: number;
   rate: number;
   amount: number;
+  taskId?: string | null;
+}
+
+interface ImportableTask {
+  id: string;
+  title: string;
+  projectName: string | null;
+  assigneeName: string | null;
+  companyId: string | null;
+  companyName: string | null;
+  hourlyRate: number;
+  totalHours: number;
+  totalMinutes: number;
+  timeEntries: Array<{
+    id: string;
+    duration: number;
+    hours: number;
+    date: string;
+    notes: string | null;
+  }>;
 }
 
 export default function NewInvoicePage() {
@@ -29,6 +52,14 @@ export default function NewInvoicePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Import tasks
+  const [showImport, setShowImport] = useState(false);
+  const [importableTasks, setImportableTasks] = useState<ImportableTask[]>([]);
+  const [importSearch, setImportSearch] = useState('');
+  const [importCompanyFilter, setImportCompanyFilter] = useState('');
+  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
+  const [loadingImport, setLoadingImport] = useState(false);
+
   useEffect(() => {
     fetch('/api/workspaces')
       .then((r) => r.json())
@@ -38,6 +69,11 @@ export default function NewInvoicePage() {
           setWorkspaceId(ws.id);
           fetch(`/api/workspaces/${ws.id}/companies`).then((r) => r.json()).then(setCompanies);
           fetch(`/api/workspaces/${ws.id}/contacts`).then((r) => r.json()).then(setContacts);
+
+          const paymentDueDays = ws.invoicePaymentDueDays ?? 30;
+          const due = new Date();
+          due.setDate(due.getDate() + paymentDueDays);
+          setDueDate(due.toISOString().split('T')[0]);
         }
       });
   }, [params.slug]);
@@ -56,9 +92,7 @@ export default function NewInvoicePage() {
   }
 
   function removeItem(index: number) {
-    if (items.length > 1) {
-      setItems(items.filter((_, i) => i !== index));
-    }
+    setItems(items.filter((_, i) => i !== index));
   }
 
   const subtotal = items.reduce((sum, item) => sum + item.amount, 0);
@@ -69,18 +103,84 @@ export default function NewInvoicePage() {
     ? contacts.filter((c) => c.companyId === companyId)
     : contacts;
 
+  const fetchImportableTasks = useCallback(async () => {
+    if (!workspaceId) return;
+    setLoadingImport(true);
+    const qp = new URLSearchParams();
+    if (importCompanyFilter) qp.set('companyId', importCompanyFilter);
+    if (importSearch) qp.set('search', importSearch);
+    const res = await fetch(`/api/workspaces/${workspaceId}/invoices/importable-tasks?${qp}`);
+    if (res.ok) {
+      setImportableTasks(await res.json());
+    }
+    setLoadingImport(false);
+  }, [workspaceId, importCompanyFilter, importSearch]);
+
+  useEffect(() => {
+    if (showImport) {
+      fetchImportableTasks();
+    }
+  }, [showImport, fetchImportableTasks]);
+
+  function handleImportTasks() {
+    const newItems: LineItem[] = [...items.filter((i) => i.description.trim())];
+    for (const task of importableTasks.filter((t) => selectedTaskIds.has(t.id))) {
+      newItems.push({
+        description: task.title,
+        quantity: 0,
+        rate: 0,
+        amount: 0,
+        taskId: task.id,
+      });
+      for (const te of task.timeEntries) {
+        const desc = te.notes
+          ? `  · ${te.notes} (${format(new Date(te.date), 'MMM d')})`
+          : `  · Time logged on ${format(new Date(te.date), 'MMM d')}`;
+        newItems.push({
+          description: desc,
+          quantity: te.hours,
+          rate: task.hourlyRate,
+          amount: Math.round(te.hours * task.hourlyRate * 100) / 100,
+          taskId: task.id,
+        });
+      }
+    }
+    if (newItems.length === 0) {
+      newItems.push({ amount: 0, description: '', quantity: 1, rate: 0 });
+    }
+    setItems(newItems);
+    setShowImport(false);
+    setSelectedTaskIds(new Set());
+  }
+
   async function handleSubmit(sendNow: boolean) {
     setError('');
+
+    if (!companyId) {
+      setError('Company is required');
+      return;
+    }
+    if (!contactId) {
+      setError('Contact is required');
+      return;
+    }
+
     setLoading(true);
 
     try {
       const res = await fetch(`/api/workspaces/${workspaceId}/invoices`, {
         body: JSON.stringify({
-          companyId: companyId || undefined,
-          contactId: contactId || undefined,
+          companyId,
+          contactId,
           dueDate: dueDate || undefined,
           issueDate,
-          items: items.filter((i) => i.description.trim()),
+          items: items.filter((i) => i.description.trim()).map((i) => ({
+            description: i.description,
+            quantity: i.quantity,
+            rate: i.rate,
+            amount: i.amount,
+            taskId: i.taskId || undefined,
+          })),
           notes: notes || undefined,
           tax: taxRate,
         }),
@@ -113,7 +213,7 @@ export default function NewInvoicePage() {
       <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Company
+            Company <span className="text-red-500">*</span>
           </label>
           <select
             className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
@@ -131,7 +231,7 @@ export default function NewInvoicePage() {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Contact
+            Contact <span className="text-red-500">*</span>
           </label>
           <select
             className="mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
@@ -164,7 +264,16 @@ export default function NewInvoicePage() {
       </div>
 
       <div className="mt-8">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Line Items</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Line Items</h2>
+          <button
+            className="text-sm text-blue-600 hover:underline dark:text-blue-400"
+            onClick={() => setShowImport(true)}
+            type="button"
+          >
+            Import Tasks
+          </button>
+        </div>
         <table className="mt-3 w-full">
           <thead className="border-b border-gray-200 dark:border-gray-800">
             <tr>
@@ -184,58 +293,69 @@ export default function NewInvoicePage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-            {items.map((item, i) => (
-              <tr key={i}>
-                <td className="px-2 py-1">
-                  <input
-                    className="w-full rounded border border-gray-200 bg-white px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                    onChange={(e) => updateItem(i, 'description', e.target.value)}
-                    placeholder="Description"
-                    value={item.description}
-                  />
-                </td>
-                <td className="px-2 py-1">
-                  <input
-                    className="w-full rounded border border-gray-200 bg-white px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                    min="0"
-                    onChange={(e) => updateItem(i, 'quantity', parseFloat(e.target.value) || 0)}
-                    step="0.5"
-                    type="number"
-                    value={item.quantity}
-                  />
-                </td>
-                <td className="px-2 py-1">
-                  <input
-                    className="w-full rounded border border-gray-200 bg-white px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                    min="0"
-                    onChange={(e) => updateItem(i, 'rate', parseFloat(e.target.value) || 0)}
-                    step="0.01"
-                    type="number"
-                    value={item.rate}
-                  />
-                </td>
-                <td className="px-2 py-1 text-right text-sm font-medium text-gray-900 dark:text-white">
-                  ${item.amount.toFixed(2)}
-                </td>
-                <td className="px-2 py-1">
-                  <button
-                    className="text-xs text-red-500 hover:text-red-700"
-                    onClick={() => removeItem(i)}
-                    type="button"
-                  >
-                    X
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {items.map((item, i) => {
+              const isHeader = item.quantity === 0 && item.rate === 0 && item.amount === 0 && !item.description.startsWith('  ·');
+              return (
+                <tr key={i} className={isHeader ? 'bg-gray-50 dark:bg-gray-900/50' : ''}>
+                  <td className="px-2 py-1">
+                    <input
+                      className={cn(
+                        'w-full rounded border border-gray-200 bg-white px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white',
+                        isHeader && 'font-semibold',
+                      )}
+                      onChange={(e) => updateItem(i, 'description', e.target.value)}
+                      placeholder="Description"
+                      value={item.description}
+                    />
+                  </td>
+                  <td className="px-2 py-1">
+                    {!isHeader && (
+                      <input
+                        className="w-full rounded border border-gray-200 bg-white px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                        min="0"
+                        onChange={(e) => updateItem(i, 'quantity', parseFloat(e.target.value) || 0)}
+                        step="0.5"
+                        type="number"
+                        value={item.quantity}
+                      />
+                    )}
+                  </td>
+                  <td className="px-2 py-1">
+                    {!isHeader && (
+                      <input
+                        className="w-full rounded border border-gray-200 bg-white px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                        min="0"
+                        onChange={(e) => updateItem(i, 'rate', parseFloat(e.target.value) || 0)}
+                        step="0.01"
+                        type="number"
+                        value={item.rate}
+                      />
+                    )}
+                  </td>
+                  <td className="px-2 py-1 text-right text-sm font-medium text-gray-900 dark:text-white">
+                    {isHeader ? '' : `$${item.amount.toFixed(2)}`}
+                  </td>
+                  <td className="px-2 py-1">
+                    <button
+                      className="text-xs text-red-500 hover:text-red-700"
+                      onClick={() => removeItem(i)}
+                      type="button"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
         <button
-          className="mt-2 text-sm text-blue-600 hover:underline dark:text-blue-400"
+          className="mt-2 flex items-center gap-1 text-sm text-blue-600 hover:underline dark:text-blue-400"
           onClick={addItem}
           type="button"
         >
-          + Add line item
+          <Plus className="h-3.5 w-3.5" />
+          Add line item
         </button>
       </div>
 
@@ -286,6 +406,103 @@ export default function NewInvoicePage() {
           Cancel
         </Button>
       </div>
+
+      {/* Import Tasks Dialog */}
+      {showImport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="mx-4 w-full max-w-2xl rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-900">
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Import Tasks</h3>
+              <button onClick={() => setShowImport(false)} type="button">
+                <X className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+              </button>
+            </div>
+
+            <div className="px-6 py-3">
+              <div className="flex gap-3">
+                <input
+                  className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                  onChange={(e) => setImportSearch(e.target.value)}
+                  placeholder="Search tasks..."
+                  value={importSearch}
+                />
+                <select
+                  className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                  onChange={(e) => setImportCompanyFilter(e.target.value)}
+                  value={importCompanyFilter}
+                >
+                  <option value="">All companies</option>
+                  {companies.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                Showing completed tasks from last 90 days with billable time entries
+              </p>
+            </div>
+
+            <div className="max-h-80 overflow-y-auto px-6">
+              {loadingImport ? (
+                <p className="py-8 text-center text-sm text-gray-500">Loading...</p>
+              ) : importableTasks.length === 0 ? (
+                <p className="py-8 text-center text-sm text-gray-500">No importable tasks found</p>
+              ) : (
+                <div className="space-y-1">
+                  {importableTasks.map((task) => (
+                    <label
+                      className="flex cursor-pointer items-start gap-3 rounded-lg px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800"
+                      key={task.id}
+                    >
+                      <input
+                        checked={selectedTaskIds.has(task.id)}
+                        className="mt-0.5 h-4 w-4 rounded border-gray-300"
+                        onChange={(e) => {
+                          const next = new Set(selectedTaskIds);
+                          if (e.target.checked) next.add(task.id);
+                          else next.delete(task.id);
+                          setSelectedTaskIds(next);
+                        }}
+                        type="checkbox"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                          {task.title}
+                        </p>
+                        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                          {task.projectName && <span>{task.projectName}</span>}
+                          {task.companyName && <span>· {task.companyName}</span>}
+                          <span>· {task.totalHours}h logged</span>
+                          <span>· {task.timeEntries.length} entries</span>
+                          {task.hourlyRate > 0 && <span>· ${task.hourlyRate}/hr</span>}
+                        </div>
+                      </div>
+                      <span className="whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                        ${(task.totalHours * task.hourlyRate).toFixed(2)}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between border-t border-gray-200 px-6 py-4 dark:border-gray-700">
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                {selectedTaskIds.size} task{selectedTaskIds.size !== 1 ? 's' : ''} selected
+              </span>
+              <div className="flex gap-2">
+                <Button onClick={() => setShowImport(false)} variant="ghost">Cancel</Button>
+                <Button
+                  disabled={selectedTaskIds.size === 0}
+                  onClick={handleImportTasks}
+                >
+                  Import Selected
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

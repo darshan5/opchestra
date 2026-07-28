@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
-type Tab = 'general' | 'task-views' | 'members' | 'billing' | 'sla';
+type Tab = 'general' | 'task-views' | 'members' | 'invoicing' | 'billing' | 'sla';
 
 interface Member {
   id: string;
@@ -122,6 +122,10 @@ export default function WorkspaceSettingsPage() {
   const [inviteRole, setInviteRole] = useState('MEMBER');
   const [inviting, setInviting] = useState(false);
 
+  // Invoicing
+  const [invoicePaymentDueDays, setInvoicePaymentDueDays] = useState(30);
+  const [savingInvoice, setSavingInvoice] = useState(false);
+
   // SLA
   const [slaRules, setSlaRules] = useState<SlaRow[]>(SLA_DEFAULTS);
   const [savingSla, setSavingSla] = useState(false);
@@ -144,13 +148,14 @@ export default function WorkspaceSettingsPage() {
       return;
     }
 
-    const [membersRes, workflowRes, groupsRes, projectsRes, fieldsRes, slaRes] = await Promise.all([
+    const [membersRes, workflowRes, groupsRes, projectsRes, fieldsRes, slaRes, settingsRes] = await Promise.all([
       fetch(`/api/workspaces/${workspaceId}/members`),
       fetch(`/api/workspaces/${workspaceId}/workflows/default`),
       fetch(`/api/workspaces/${workspaceId}/groups`),
       fetch(`/api/workspaces/${workspaceId}/projects`),
       fetch(`/api/workspaces/${workspaceId}/custom-fields`),
       fetch(`/api/workspaces/${workspaceId}/sla-rules`),
+      fetch(`/api/workspaces/${workspaceId}/settings`),
     ]);
 
     if (membersRes.ok) {
@@ -173,6 +178,12 @@ export default function WorkspaceSettingsPage() {
       const data = await slaRes.json();
       if (data.length > 0) {
         setSlaRules(data);
+      }
+    }
+    if (settingsRes.ok) {
+      const data = await settingsRes.json();
+      if (data.invoicePaymentDueDays !== undefined) {
+        setInvoicePaymentDueDays(data.invoicePaymentDueDays);
       }
     }
   }, [workspaceId]);
@@ -424,6 +435,19 @@ export default function WorkspaceSettingsPage() {
     showMsg(`${email} removed`);
   }
 
+  // ── Invoicing handlers ──
+  async function saveInvoiceSettings() {
+    if (!workspaceId) return;
+    setSavingInvoice(true);
+    await fetch(`/api/workspaces/${workspaceId}/settings`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ invoicePaymentDueDays }),
+    });
+    showMsg('Invoice settings saved');
+    setSavingInvoice(false);
+  }
+
   // ── SLA handlers ──
   async function saveSla() {
     if (!workspaceId) {
@@ -447,6 +471,7 @@ export default function WorkspaceSettingsPage() {
     { key: 'general', label: 'General' },
     { key: 'task-views', label: 'Task Views' },
     { key: 'members', label: 'Members' },
+    { key: 'invoicing', label: 'Invoicing' },
     { key: 'billing', label: 'Billing' },
     { key: 'sla', label: 'SLA Rules' },
   ];
@@ -960,6 +985,35 @@ export default function WorkspaceSettingsPage() {
                   </tbody>
                 </table>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── INVOICING TAB ── */}
+        {tab === 'invoicing' && (
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Invoice Settings</h2>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Configure defaults for new invoices.
+            </p>
+            <div className="mt-6 space-y-4">
+              <div className="max-w-xs">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Default Payment Due (days)
+                </label>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  New invoices will default to this many days from the issue date.
+                </p>
+                <input
+                  className="mt-2 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                  min="0"
+                  max="365"
+                  onChange={(e) => setInvoicePaymentDueDays(parseInt(e.target.value) || 0)}
+                  type="number"
+                  value={invoicePaymentDueDays}
+                />
+              </div>
+              <Button loading={savingInvoice} onClick={saveInvoiceSettings}>Save</Button>
             </div>
           </div>
         )}

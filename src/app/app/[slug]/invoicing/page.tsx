@@ -104,7 +104,7 @@ export default function InvoicingPage() {
           <input
             className="flex-1 bg-transparent text-sm text-gray-900 placeholder-gray-400 focus:outline-none dark:text-white"
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by invoice # or client..."
+            placeholder="Search by invoice # or company..."
             type="text"
             value={search}
           />
@@ -119,7 +119,7 @@ export default function InvoicingPage() {
                 Invoice #
               </th>
               <th className="px-4 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
-                Client
+                Company
               </th>
               <th className="px-4 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                 Amount

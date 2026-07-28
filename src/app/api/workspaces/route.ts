@@ -17,7 +17,7 @@ export async function GET() {
       where: { userId: session.user.id },
       include: {
         workspace: {
-          select: { id: true, name: true, slug: true, inboundEmailKey: true },
+          select: { id: true, name: true, slug: true, inboundEmailKey: true, invoicePaymentDueDays: true },
         },
       },
       orderBy: { createdAt: 'desc' },

@@ -301,9 +301,10 @@ model Workspace {
   stripePlanId        String?
   subscriptionStatus  String?
   currentPeriodEnd    DateTime?
-  seatLimit           Int      @default(3)
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  seatLimit              Int      @default(3)
+  invoicePaymentDueDays  Int      @default(30)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
   members              WorkspaceMember[]
   projects             Project[]

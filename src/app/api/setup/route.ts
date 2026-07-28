@@ -624,6 +624,9 @@ const MIGRATIONS = [
   )`,
   `CREATE INDEX IF NOT EXISTS "Note_entityType_entityId_idx" ON "Note"("entityType", "entityId")`,
   `CREATE INDEX IF NOT EXISTS "Note_workspaceId_idx" ON "Note"("workspaceId")`,
+
+  // Invoice payment due days
+  `ALTER TABLE "Workspace" ADD COLUMN IF NOT EXISTS "invoicePaymentDueDays" INTEGER NOT NULL DEFAULT 30`,
 ];
 
 export async function POST() {
