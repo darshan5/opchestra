@@ -48,6 +48,7 @@ interface TaskData {
   assignee: TaskUser | null;
   project: { id: string; name: string } | null;
   taskGroup?: TaskGroupData | null;
+  ticketCompany?: { id: string; name: string } | null;
   startDate?: string | Date | null;
   endDate: string | Date | null;
   isMilestone: boolean;
@@ -64,7 +65,7 @@ interface SubTaskData {
   _count: { subTasks: number };
 }
 
-type GroupByOption = 'group' | 'status' | 'priority' | 'person' | 'project' | 'phase';
+type GroupByOption = 'group' | 'status' | 'priority' | 'person' | 'project' | 'phase' | 'company';
 
 interface TaskTableViewProps {
   tasks: TaskData[];
@@ -202,6 +203,19 @@ function groupTasksBy(
     if (!groups['No Project']) {
       groups['No Project'] = [];
       colors['No Project'] = '#9CA3AF';
+    }
+  } else if (mode === 'company') {
+    for (const task of tasks) {
+      const key = task.ticketCompany?.name ?? 'No Company';
+      if (!groups[key]) {
+        groups[key] = [];
+        colors[key] = '#8B5CF6';
+      }
+      groups[key].push(task);
+    }
+    if (!groups['No Company']) {
+      groups['No Company'] = [];
+      colors['No Company'] = '#9CA3AF';
     }
   } else {
     groups['All'] = [...tasks];

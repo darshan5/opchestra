@@ -34,6 +34,7 @@ interface TaskData {
   assignee: TaskUser | null;
   project: { id: string; name: string } | null;
   taskGroup?: TaskGroupData | null;
+  ticketCompany?: { id: string; name: string } | null;
   startDate?: string | Date | null;
   endDate: string | Date | null;
   isMilestone: boolean;
@@ -61,7 +62,7 @@ interface PhaseData {
   color: string;
 }
 
-type GroupByOption = 'group' | 'status' | 'priority' | 'person' | 'project' | 'phase';
+type GroupByOption = 'group' | 'status' | 'priority' | 'person' | 'project' | 'phase' | 'company';
 
 interface ViewSwitcherProps {
   tasks: TaskData[];
@@ -130,6 +131,7 @@ const GROUP_BY_OPTIONS: Array<{ label: string; value: GroupByOption }> = [
   { label: 'Priority', value: 'priority' },
   { label: 'Person', value: 'person' },
   { label: 'Project', value: 'project' },
+  { label: 'Company', value: 'company' },
 ];
 
 export function ViewSwitcher({

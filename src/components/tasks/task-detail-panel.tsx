@@ -3,6 +3,7 @@
 import { formatDistanceToNow } from 'date-fns';
 import {
   AlertCircle,
+  Building2,
   Calendar,
   CheckSquare,
   Clock,
@@ -14,6 +15,7 @@ import {
   Ticket,
   X,
 } from 'lucide-react';
+import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
 import { TiptapEditor } from '@/components/editor/tiptap-editor';
@@ -107,6 +109,8 @@ export function TaskDetailPanel({
   taskId,
   workspaceId,
 }: TaskDetailPanelProps) {
+  const params = useParams<{ slug: string }>();
+  const slug = params.slug || '';
   const [task, setTask] = useState<FullTask | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('timelog');
@@ -117,6 +121,7 @@ export function TaskDetailPanel({
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState('');
   const [openTickets, setOpenTickets] = useState<Array<{ id: string; ticketNumber: string; title: string }>>([]);
+  const [companies, setCompanies] = useState<Array<{ id: string; name: string }>>([]);
 
   const fetchTask = useCallback(async () => {
     const res = await fetch(`/api/workspaces/${workspaceId}/tasks/${taskId}`);
@@ -146,6 +151,10 @@ export function TaskDetailPanel({
             .filter((t) => t.status !== 'Closed' && t.status !== 'Resolved');
           setOpenTickets(open);
         })
+        .catch(() => {});
+      fetch(`/api/workspaces/${workspaceId}/companies`)
+        .then((r) => r.ok ? r.json() : [])
+        .then((data) => setCompanies(data))
         .catch(() => {});
     };
     load();
@@ -325,11 +334,13 @@ export function TaskDetailPanel({
           {activeTab === 'details' && (
             <DetailsTab
               addSubTask={addSubTask}
+              companies={companies}
               members={members}
               newSubTaskTitle={newSubTaskTitle}
               openTickets={openTickets}
               projects={projects}
               setNewSubTaskTitle={setNewSubTaskTitle}
+              slug={slug}
               task={task}
               taskId={taskId}
               updateField={updateField}
@@ -367,11 +378,13 @@ function Panel({ children, onClose }: { children: React.ReactNode; onClose: () =
 
 function DetailsTab({
   addSubTask,
+  companies,
   members,
   newSubTaskTitle,
   openTickets,
   projects,
   setNewSubTaskTitle,
+  slug,
   task,
   taskId,
   updateField,
@@ -382,6 +395,8 @@ function DetailsTab({
   projects: Array<{ id: string; name: string }>;
   members: TaskUser[];
   openTickets: Array<{ id: string; ticketNumber: string; title: string }>;
+  companies: Array<{ id: string; name: string }>;
+  slug: string;
   workspaceId: string;
   taskId: string;
   newSubTaskTitle: string;
@@ -482,6 +497,19 @@ function DetailsTab({
               <option value="">None</option>
               {openTickets.map((t) => (
                 <option key={t.id} value={t.id}>{t.ticketNumber} — {t.title}</option>
+              ))}
+            </select>
+          </FieldRow>
+
+          <FieldRow icon={Building2} label="Company">
+            <select
+              className="w-full truncate rounded border-0 bg-transparent py-0.5 text-sm text-gray-700 cursor-pointer dark:text-gray-300"
+              onChange={(e) => updateField('companyId', e.target.value || null)}
+              value={(task as unknown as { companyId?: string }).companyId ?? ''}
+            >
+              <option value="">None</option>
+              {companies.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
           </FieldRow>

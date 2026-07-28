@@ -11,6 +11,7 @@ export const createTaskSchema = z.object({
   taskGroupId: z.string().uuid().optional().nullable(),
   phaseId: z.string().uuid().optional().nullable(),
   sourceTicketId: z.string().uuid().optional().nullable(),
+  companyId: z.string().uuid().optional().nullable(),
   startDate: z.string().datetime().optional().nullable(),
   endDate: z.string().datetime().optional().nullable(),
   timeEstimate: z.number().int().min(0).optional().nullable(),

@@ -36,6 +36,7 @@ export default async function AllTasksPage({ params, searchParams }: { params: P
       assignee: { select: { id: true, name: true, email: true, image: true } },
       project: { select: { id: true, name: true } },
       taskGroup: { select: { id: true, name: true, color: true } },
+      ticketCompany: { select: { id: true, name: true } },
       taskLabels: { include: { label: true } },
       _count: { select: { subTasks: true, comments: true } },
     },

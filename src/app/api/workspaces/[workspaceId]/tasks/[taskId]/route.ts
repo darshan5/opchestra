@@ -52,6 +52,7 @@ export async function GET(
         files: true,
         linkedTasks: { select: { id: true, title: true, status: true } },
         sourceTicket: { select: { id: true, title: true, ticketNumber: true } },
+        ticketCompany: { select: { id: true, name: true } },
         _count: { select: { comments: true, subTasks: true } },
       },
     });
@@ -136,6 +137,9 @@ export async function PATCH(
     if (parsed.data.sourceTicketId !== undefined) {
       data.sourceTicketId = parsed.data.sourceTicketId;
     }
+    if (parsed.data.companyId !== undefined) {
+      data.companyId = parsed.data.companyId;
+    }
     if (parsed.data.position !== undefined) {
       data.position = parsed.data.position;
     }
@@ -201,6 +205,7 @@ export async function PATCH(
         project: { select: { id: true, name: true } },
         taskGroup: { select: { id: true, name: true, color: true } },
         phase: { select: { id: true, name: true, color: true } },
+        ticketCompany: { select: { id: true, name: true } },
         taskLabels: { include: { label: true } },
         _count: { select: { subTasks: true, comments: true } },
       },

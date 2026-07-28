@@ -33,6 +33,7 @@ export default async function GroupPage({
       project: { select: { id: true, name: true } },
       taskLabels: { include: { label: true } },
       taskGroup: { select: { id: true, name: true, color: true } },
+      ticketCompany: { select: { id: true, name: true } },
       phase: { select: { id: true, name: true, color: true } },
       _count: { select: { subTasks: true, comments: true } },
     },
