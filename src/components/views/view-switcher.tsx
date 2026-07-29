@@ -439,7 +439,7 @@ export function ViewSwitcher({
 
       {/* Row 2: Filter + Search + Views */}
       <div className="flex items-center gap-2 border-b border-gray-200 bg-gray-50/50 px-4 py-1.5 dark:border-gray-800 dark:bg-gray-900/30">
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 justify-start">
           <Filter className="h-3.5 w-3.5 shrink-0 text-gray-400" />
           {filters.map((f, idx) => (
             <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-1.5 py-0.5 dark:border-gray-700 dark:bg-gray-800" key={idx}>
@@ -481,7 +481,7 @@ export function ViewSwitcher({
         <div className="relative flex items-center">
           <Search className="absolute left-2 h-3 w-3 text-gray-400" />
           <input
-            className="w-40 rounded-lg border border-gray-200 bg-white py-1 pl-7 pr-2 text-xs text-gray-700 placeholder-gray-400 focus:border-blue-400 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:placeholder-gray-500"
+            className="w-80 rounded-lg border border-gray-200 bg-white py-1 pl-7 pr-2 text-xs text-gray-700 placeholder-gray-400 focus:border-blue-400 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:placeholder-gray-500"
             onChange={(e) => setTaskSearch(e.target.value)}
             placeholder="Search tasks..."
             value={taskSearch}
@@ -490,8 +490,35 @@ export function ViewSwitcher({
 
         <div className="mx-1 h-5 w-px bg-gray-200 dark:bg-gray-700" />
 
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex flex-1 items-center justify-end gap-1">
           <span className="text-xs text-gray-500 dark:text-gray-400">Views</span>
+          {showNewView ? (
+            <div className="flex items-center gap-1">
+              <input
+                autoFocus
+                className="w-24 rounded border border-gray-300 bg-white px-2 py-0.5 text-xs dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+                onChange={(e) => setNewViewName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') saveView();
+                  if (e.key === 'Escape') { setShowNewView(false); setNewViewName(''); }
+                }}
+                placeholder="View name..."
+                value={newViewName}
+              />
+              <button className="rounded px-1.5 py-0.5 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30" onClick={saveView}>Save</button>
+              <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" onClick={() => { setShowNewView(false); setNewViewName(''); }}>
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ) : (
+            <button
+              className="flex items-center gap-0.5 rounded-lg px-1.5 py-0.5 text-xs text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+              onClick={() => setShowNewView(true)}
+              title="Save current view"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+          )}
           {savedViews.map((v) => (
             <div className="group relative flex items-center" key={v.id}>
               {deleteConfirm === v.id ? (
@@ -523,33 +550,6 @@ export function ViewSwitcher({
               )}
             </div>
           ))}
-          {showNewView ? (
-            <div className="flex items-center gap-1">
-              <input
-                autoFocus
-                className="w-24 rounded border border-gray-300 bg-white px-2 py-0.5 text-xs dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
-                onChange={(e) => setNewViewName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') saveView();
-                  if (e.key === 'Escape') { setShowNewView(false); setNewViewName(''); }
-                }}
-                placeholder="View name..."
-                value={newViewName}
-              />
-              <button className="rounded px-1.5 py-0.5 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30" onClick={saveView}>Save</button>
-              <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" onClick={() => { setShowNewView(false); setNewViewName(''); }}>
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          ) : (
-            <button
-              className="flex items-center gap-0.5 rounded-lg px-1.5 py-0.5 text-xs text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-              onClick={() => setShowNewView(true)}
-              title="Save current view"
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </button>
-          )}
         </div>
       </div>
 
