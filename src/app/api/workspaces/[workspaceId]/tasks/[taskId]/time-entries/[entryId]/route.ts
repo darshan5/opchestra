@@ -39,6 +39,9 @@ export async function PATCH(
     if (body.duration !== undefined && body.duration > 0) {
       data.duration = body.duration;
     }
+    if (body.category !== undefined) {
+      data.category = body.category || null;
+    }
 
     const updated = await prisma.timeEntry.update({
       where: { id: entryId },

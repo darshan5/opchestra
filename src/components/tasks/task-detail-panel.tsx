@@ -1408,10 +1408,30 @@ function TimeLogTab({ currentUserRole, members, onActivityChange, taskId, worksp
             >
               $
             </button>
-            {e.category && (
-              <span className="rounded bg-purple-100 px-1.5 py-0.5 text-[10px] font-medium text-purple-700 dark:bg-purple-900/40 dark:text-purple-400">
-                {e.category}
-              </span>
+            {categories.length > 0 && (
+              <select
+                className={cn(
+                  'rounded px-1 py-0.5 text-[10px] font-medium border-0 cursor-pointer',
+                  e.category
+                    ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400'
+                    : 'bg-gray-50 text-gray-400 dark:bg-gray-800 dark:text-gray-500',
+                )}
+                onChange={async (ev) => {
+                  const val = ev.target.value;
+                  await fetch(`/api/workspaces/${workspaceId}/tasks/${taskId}/time-entries/${e.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ category: val || null }),
+                  });
+                  setEntries((prev: TimeEntryData[]) => prev.map((x: TimeEntryData) => x.id === e.id ? { ...x, category: val || null } : x));
+                }}
+                value={e.category ?? ''}
+              >
+                <option value="">—</option>
+                {categories.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
             )}
             <button
               className="text-xs text-gray-300 hover:text-red-500 dark:text-gray-600 dark:hover:text-red-400"
