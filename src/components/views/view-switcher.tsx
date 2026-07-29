@@ -6,6 +6,7 @@ import {
   Filter,
   GanttChartSquare,
   Plus,
+  Search,
   Table2,
   X,
 } from 'lucide-react';
@@ -156,11 +157,11 @@ export function ViewSwitcher({
   const [groupBy, setGroupBy] = useState<GroupByOption>(isProjectView ? 'phase' : defaultGroupBy);
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
   const [activeViewId, setActiveViewId] = useState<string | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<FilterRow[]>([]);
   const [showNewView, setShowNewView] = useState(false);
   const [newViewName, setNewViewName] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [taskSearch, setTaskSearch] = useState('');
 
   useEffect(() => {
     setGroupBy(isProjectView ? 'phase' : defaultGroupBy);
@@ -217,7 +218,6 @@ export function ViewSwitcher({
 
   function addFilter() {
     setFilters([...filters, { field: 'status', operator: 'is', value: '' }]);
-    setShowFilters(true);
   }
 
   function removeFilter(idx: number) {
@@ -263,9 +263,6 @@ export function ViewSwitcher({
     const config = view.config as { filters?: FilterRow[]; groupBy?: GroupByOption };
     if (config.filters) {
       setFilters(config.filters);
-      if (config.filters.length > 0) {
-        setShowFilters(true);
-      }
     } else {
       setFilters([]);
     }
@@ -363,12 +360,24 @@ export function ViewSwitcher({
     );
   }
 
-  const filteredTasks = applyFilters(tasks);
+  const filteredTasks = (() => {
+    let result = applyFilters(tasks);
+    if (taskSearch.trim()) {
+      const q = taskSearch.toLowerCase();
+      result = result.filter((t) =>
+        t.title.toLowerCase().includes(q) ||
+        t.assignee?.name?.toLowerCase().includes(q) ||
+        t.project?.name?.toLowerCase().includes(q) ||
+        t.ticketCompany?.name?.toLowerCase().includes(q)
+      );
+    }
+    return result;
+  })();
 
   return (
     <div className="flex h-full flex-col">
-      {/* Layout switcher + Views + Organize + Filter */}
-      <div className="flex items-center justify-between border-b border-gray-200 px-4 py-2 dark:border-gray-800">
+      {/* Row 1: Layout switcher + Organize */}
+      <div className="flex items-center border-b border-gray-200 px-4 py-2 dark:border-gray-800">
         <div className="flex items-center gap-1">
           {layoutItems.map((l) => (
             <button
@@ -388,68 +397,6 @@ export function ViewSwitcher({
               {l.label}
             </button>
           ))}
-
-          {/* Divider + Views */}
-          <div className="mx-1 h-5 w-px bg-gray-300 dark:bg-gray-600" />
-          <span className="text-xs text-gray-500 dark:text-gray-400">Views</span>
-          {savedViews.map((v) => (
-            <div className="group relative flex items-center" key={v.id}>
-              {deleteConfirm === v.id ? (
-                <div className="flex items-center gap-1 rounded-lg border border-red-300 bg-red-50 px-2 py-1 dark:border-red-800 dark:bg-red-900/30">
-                  <span className="text-xs text-red-700 dark:text-red-300">Delete?</span>
-                  <button className="rounded px-1 text-xs font-medium text-red-700 hover:bg-red-100 dark:text-red-300 dark:hover:bg-red-900" onClick={() => deleteView(v.id)}>Yes</button>
-                  <button className="rounded px-1 text-xs text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800" onClick={() => setDeleteConfirm(null)}>No</button>
-                </div>
-              ) : (
-                <button
-                  className={cn(
-                    'flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors',
-                    activeViewId === v.id
-                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
-                      : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800',
-                  )}
-                  onClick={() => loadView(v)}
-                >
-                  {v.name}
-                  <span
-                    className="ml-0.5 hidden rounded-full p-0.5 text-gray-400 hover:bg-gray-200 hover:text-red-500 group-hover:inline-flex dark:hover:bg-gray-700"
-                    onClick={(e) => { e.stopPropagation(); setDeleteConfirm(v.id); }}
-                    role="button"
-                    tabIndex={0}
-                  >
-                    <X className="h-2.5 w-2.5" />
-                  </span>
-                </button>
-              )}
-            </div>
-          ))}
-          {showNewView ? (
-            <div className="flex items-center gap-1">
-              <input
-                autoFocus
-                className="w-28 rounded border border-gray-300 bg-white px-2 py-0.5 text-xs dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
-                onChange={(e) => setNewViewName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') saveView();
-                  if (e.key === 'Escape') { setShowNewView(false); setNewViewName(''); }
-                }}
-                placeholder="View name..."
-                value={newViewName}
-              />
-              <button className="rounded px-1.5 py-0.5 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30" onClick={saveView}>Save</button>
-              <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" onClick={() => { setShowNewView(false); setNewViewName(''); }}>
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          ) : (
-            <button
-              className="flex items-center gap-0.5 rounded-lg px-1.5 py-1 text-xs text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-              onClick={() => setShowNewView(true)}
-              title="Save current view"
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </button>
-          )}
 
           {/* Divider + Organize */}
           {layout === 'TABLE' && !isProjectView && (
@@ -488,67 +435,123 @@ export function ViewSwitcher({
             </>
           )}
         </div>
-
-        <button
-          className={cn(
-            'flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs transition-colors',
-            filters.length > 0
-              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
-              : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800',
-          )}
-          onClick={() => setShowFilters(!showFilters)}
-        >
-          <Filter className="h-3.5 w-3.5" />
-          Filter
-          {filters.length > 0 && (
-            <span className="rounded-full bg-blue-600 px-1 text-[10px] text-white">
-              {filters.length}
-            </span>
-          )}
-        </button>
       </div>
 
-      {/* Filters panel */}
-      {showFilters && (
-        <div className="border-b border-gray-200 bg-gray-50 px-4 py-2 dark:border-gray-800 dark:bg-gray-900">
+      {/* Row 2: Filter + Search + Views */}
+      <div className="flex items-center gap-2 border-b border-gray-200 bg-gray-50/50 px-4 py-1.5 dark:border-gray-800 dark:bg-gray-900/30">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+          <Filter className="h-3.5 w-3.5 shrink-0 text-gray-400" />
           {filters.map((f, idx) => (
-            <div className="mb-1 flex items-center gap-2" key={idx}>
+            <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-1.5 py-0.5 dark:border-gray-700 dark:bg-gray-800" key={idx}>
               <select
-                className="rounded border border-gray-300 bg-white px-2 py-1 text-xs dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+                className="rounded border-0 bg-transparent px-0.5 py-0 text-xs text-gray-700 focus:ring-0 dark:text-gray-300"
                 onChange={(e) => updateFilter(idx, { field: e.target.value })}
                 value={f.field}
               >
                 {filterFields.map((ff) => (
-                  <option key={ff.value} value={ff.value}>
-                    {ff.label}
-                  </option>
+                  <option key={ff.value} value={ff.value}>{ff.label}</option>
                 ))}
               </select>
               <select
-                className="rounded border border-gray-300 bg-white px-2 py-1 text-xs dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+                className="rounded border-0 bg-transparent px-0.5 py-0 text-xs text-gray-500 focus:ring-0 dark:text-gray-400"
                 onChange={(e) => updateFilter(idx, { operator: e.target.value })}
                 value={f.operator}
               >
                 {FILTER_OPS.map((op) => (
-                  <option key={op.value} value={op.value}>
-                    {op.label}
-                  </option>
+                  <option key={op.value} value={op.value}>{op.label}</option>
                 ))}
               </select>
               {renderFilterValueInput(f, idx)}
-              <button className="text-gray-400 hover:text-red-500" onClick={() => removeFilter(idx)}>
-                <X className="h-3.5 w-3.5" />
+              <button className="text-gray-300 hover:text-red-500 dark:text-gray-600" onClick={() => removeFilter(idx)}>
+                <X className="h-3 w-3" />
               </button>
             </div>
           ))}
           <button
-            className="mt-1 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400"
+            className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400"
             onClick={addFilter}
           >
-            + Add filter
+            <Plus className="h-3 w-3" />
+            Add Filter
           </button>
         </div>
-      )}
+
+        <div className="mx-1 h-5 w-px bg-gray-200 dark:bg-gray-700" />
+
+        <div className="relative flex items-center">
+          <Search className="absolute left-2 h-3 w-3 text-gray-400" />
+          <input
+            className="w-40 rounded-lg border border-gray-200 bg-white py-1 pl-7 pr-2 text-xs text-gray-700 placeholder-gray-400 focus:border-blue-400 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:placeholder-gray-500"
+            onChange={(e) => setTaskSearch(e.target.value)}
+            placeholder="Search tasks..."
+            value={taskSearch}
+          />
+        </div>
+
+        <div className="mx-1 h-5 w-px bg-gray-200 dark:bg-gray-700" />
+
+        <div className="flex shrink-0 items-center gap-1">
+          <span className="text-xs text-gray-500 dark:text-gray-400">Views</span>
+          {savedViews.map((v) => (
+            <div className="group relative flex items-center" key={v.id}>
+              {deleteConfirm === v.id ? (
+                <div className="flex items-center gap-1 rounded-lg border border-red-300 bg-red-50 px-2 py-0.5 dark:border-red-800 dark:bg-red-900/30">
+                  <span className="text-xs text-red-700 dark:text-red-300">Delete?</span>
+                  <button className="rounded px-1 text-xs font-medium text-red-700 hover:bg-red-100 dark:text-red-300 dark:hover:bg-red-900" onClick={() => deleteView(v.id)}>Yes</button>
+                  <button className="rounded px-1 text-xs text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800" onClick={() => setDeleteConfirm(null)}>No</button>
+                </div>
+              ) : (
+                <button
+                  className={cn(
+                    'flex items-center gap-1 rounded-lg px-2 py-0.5 text-xs font-medium transition-colors',
+                    activeViewId === v.id
+                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                      : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800',
+                  )}
+                  onClick={() => loadView(v)}
+                >
+                  {v.name}
+                  <span
+                    className="ml-0.5 hidden rounded-full p-0.5 text-gray-400 hover:bg-gray-200 hover:text-red-500 group-hover:inline-flex dark:hover:bg-gray-700"
+                    onClick={(e) => { e.stopPropagation(); setDeleteConfirm(v.id); }}
+                    role="button"
+                    tabIndex={0}
+                  >
+                    <X className="h-2.5 w-2.5" />
+                  </span>
+                </button>
+              )}
+            </div>
+          ))}
+          {showNewView ? (
+            <div className="flex items-center gap-1">
+              <input
+                autoFocus
+                className="w-24 rounded border border-gray-300 bg-white px-2 py-0.5 text-xs dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+                onChange={(e) => setNewViewName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') saveView();
+                  if (e.key === 'Escape') { setShowNewView(false); setNewViewName(''); }
+                }}
+                placeholder="View name..."
+                value={newViewName}
+              />
+              <button className="rounded px-1.5 py-0.5 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30" onClick={saveView}>Save</button>
+              <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" onClick={() => { setShowNewView(false); setNewViewName(''); }}>
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ) : (
+            <button
+              className="flex items-center gap-0.5 rounded-lg px-1.5 py-0.5 text-xs text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+              onClick={() => setShowNewView(true)}
+              title="Save current view"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* View content */}
       <div className="flex-1 overflow-auto">
