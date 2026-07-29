@@ -490,7 +490,7 @@ export function ViewSwitcher({
 
         <div className="mx-1 h-5 w-px bg-gray-200 dark:bg-gray-700" />
 
-        <div className="flex flex-1 items-center justify-end gap-1">
+        <div className="flex flex-1 items-center justify-start gap-1">
           <span className="text-xs text-gray-500 dark:text-gray-400">Views</span>
           {showNewView ? (
             <div className="flex items-center gap-1">
