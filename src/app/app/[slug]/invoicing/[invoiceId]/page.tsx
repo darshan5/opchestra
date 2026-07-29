@@ -56,6 +56,7 @@ interface ImportableTask {
     hours: number;
     date: string;
     notes: string | null;
+    category: string | null;
   }>;
 }
 
@@ -329,9 +330,10 @@ export default function InvoiceDetailPage() {
         taskId: task.id,
       });
       for (const te of task.timeEntries) {
+        const catLabel = te.category ? `[${te.category}] ` : '';
         const desc = te.notes
-          ? `  · ${te.notes} (${format(new Date(te.date), 'MMM d')})`
-          : `  · Time logged on ${format(new Date(te.date), 'MMM d')}`;
+          ? `  · ${catLabel}${te.notes} (${format(new Date(te.date), 'MMM d')})`
+          : `  · ${catLabel}Time logged on ${format(new Date(te.date), 'MMM d')}`;
         newItems.push({
           description: desc,
           quantity: te.hours,

@@ -126,6 +126,11 @@ export default function WorkspaceSettingsPage() {
   const [taskDetailDefaultTab, setTaskDetailDefaultTab] = useState('timelog');
   const [savingDefaultTab, setSavingDefaultTab] = useState(false);
 
+  // Time log categories
+  const [timeLogCategories, setTimeLogCategories] = useState<string[]>([]);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [savingCategories, setSavingCategories] = useState(false);
+
   // Invoicing
   const [invoicePaymentDueDays, setInvoicePaymentDueDays] = useState(30);
   const [invoiceDefaultTaxRate, setInvoiceDefaultTaxRate] = useState(0);
@@ -192,6 +197,9 @@ export default function WorkspaceSettingsPage() {
       }
       if (data.taskDetailDefaultTab) {
         setTaskDetailDefaultTab(data.taskDetailDefaultTab);
+      }
+      if (data.timeLogCategories && Array.isArray(data.timeLogCategories)) {
+        setTimeLogCategories(data.timeLogCategories);
       }
       if (data.invoiceDefaultTaxRate !== undefined) {
         setInvoiceDefaultTaxRate(data.invoiceDefaultTaxRate);
@@ -730,6 +738,73 @@ export default function WorkspaceSettingsPage() {
               title="Task Groups"
               description="Cross-project task grouping"
             />
+
+            {/* Time Log Categories */}
+            <div className="rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+              <div className="px-4 py-3">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Time Log Categories</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Categories for time entries (e.g. Planning, Coding, QA, Design)</p>
+              </div>
+              <div className="border-t border-gray-200 px-4 py-3 dark:border-gray-800">
+                <div className="flex flex-wrap gap-2">
+                  {timeLogCategories.map((cat, i) => (
+                    <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs dark:border-gray-700 dark:bg-gray-800" key={i}>
+                      <span className="text-gray-700 dark:text-gray-300">{cat}</span>
+                      <button
+                        className="text-gray-400 hover:text-red-500"
+                        onClick={async () => {
+                          const updated = timeLogCategories.filter((_, idx) => idx !== i);
+                          setTimeLogCategories(updated);
+                          setSavingCategories(true);
+                          await fetch(`/api/workspaces/${workspaceId}/settings`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ timeLogCategories: updated }),
+                          });
+                          setSavingCategories(false);
+                          showMsg('Category removed');
+                        }}
+                        type="button"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <form
+                  className="mt-2 flex items-center gap-2"
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (!newCategoryName.trim()) return;
+                    const updated = [...timeLogCategories, newCategoryName.trim()];
+                    setTimeLogCategories(updated);
+                    setNewCategoryName('');
+                    setSavingCategories(true);
+                    await fetch(`/api/workspaces/${workspaceId}/settings`, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ timeLogCategories: updated }),
+                    });
+                    setSavingCategories(false);
+                    showMsg('Category added');
+                  }}
+                >
+                  <input
+                    className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    placeholder="New category name..."
+                    value={newCategoryName}
+                  />
+                  <button
+                    className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                    disabled={!newCategoryName.trim() || savingCategories}
+                    type="submit"
+                  >
+                    Add
+                  </button>
+                </form>
+              </div>
+            </div>
 
             {/* Custom Fields */}
             <div className="rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">

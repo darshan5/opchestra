@@ -305,6 +305,7 @@ model Workspace {
   invoicePaymentDueDays  Int      @default(30)
   invoiceDefaultTaxRate  Float    @default(0)
   taskDetailDefaultTab   String   @default("timelog")
+  timeLogCategories      Json     @default("[]")
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 
@@ -574,6 +575,7 @@ model TimeEntry {
   duration  Int
   date      DateTime
   notes     String?
+  category  String?
   billable  Boolean   @default(true)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -809,6 +811,7 @@ model ActiveTimer {
   pausedAt    DateTime?
   totalPaused Int       @default(0)
   notes       String?
+  category    String?
   billable    Boolean   @default(true)
   createdAt   DateTime  @default(now())
 

@@ -26,6 +26,7 @@ export async function POST(
     const body = await request.json().catch(() => ({}));
     const notes = body.notes ?? timer.notes;
     const billable = body.billable ?? timer.billable;
+    const category = body.category ?? timer.category;
 
     const now = Date.now();
     let pausedMs = timer.totalPaused * 1000;
@@ -46,6 +47,7 @@ export async function POST(
           duration: durationMin,
           date: timer.startedAt,
           notes: notes || undefined,
+          category: category || null,
           billable,
         },
       }),

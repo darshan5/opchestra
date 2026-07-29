@@ -64,6 +64,7 @@ export async function GET(
             duration: true,
             date: true,
             notes: true,
+            category: true,
           },
           orderBy: { date: 'asc' },
         },
@@ -85,12 +86,13 @@ export async function GET(
         hourlyRate: task.ticketCompany?.hourlyRate ?? 0,
         totalHours,
         totalMinutes,
-        timeEntries: task.timeEntries.map((te: { id: string; duration: number; date: Date; notes: string | null }) => ({
+        timeEntries: task.timeEntries.map((te: { id: string; duration: number; date: Date; notes: string | null; category: string | null }) => ({
           id: te.id,
           duration: te.duration,
           hours: Math.round((te.duration / 60) * 100) / 100,
           date: te.date,
           notes: te.notes,
+          category: te.category,
         })),
       };
     });

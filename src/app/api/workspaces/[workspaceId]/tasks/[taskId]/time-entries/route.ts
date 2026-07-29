@@ -54,7 +54,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { duration, date, notes, billable, startTime, endTime } = body;
+    const { duration, date, notes, billable, startTime, endTime, category } = body;
 
     if (!duration || duration <= 0) {
       return NextResponse.json({ error: 'Duration is required' }, { status: 400 });
@@ -67,6 +67,7 @@ export async function POST(
         duration,
         date: date ? new Date(date) : new Date(),
         notes: notes || null,
+        category: category || null,
         billable: billable ?? true,
         startTime: startTime ? new Date(startTime) : null,
         endTime: endTime ? new Date(endTime) : null,

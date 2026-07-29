@@ -58,6 +58,9 @@ export async function PATCH(
     if (body.billable !== undefined) {
       data.billable = body.billable;
     }
+    if (body.category !== undefined) {
+      data.category = body.category || null;
+    }
 
     const updated = await prisma.activeTimer.update({
       where: { id: timer.id },

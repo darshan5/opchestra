@@ -808,12 +808,14 @@ function ActivityTab({
 function TimeLogTab({ currentUserRole, members, onActivityChange, taskId, workspaceId }: { taskId: string; workspaceId: string; currentUserRole?: string; members: TaskUser[]; onActivityChange?: () => void }) {
   const isAdmin = currentUserRole === 'SUPER_ADMIN' || currentUserRole === 'ADMIN' || currentUserRole === 'MANAGER';
   const [personFilter, setPersonFilter] = useState<string>('all');
+  const [categories, setCategories] = useState<string[]>([]);
   interface TimeEntryData {
     id: string;
     duration: number;
     date: string;
     startTime: string | null;
     notes: string | null;
+    category: string | null;
     billable: boolean;
     user: { name: string | null; email: string };
   }
@@ -838,6 +840,7 @@ function TimeLogTab({ currentUserRole, members, onActivityChange, taskId, worksp
   const [elapsed, setElapsed] = useState(0);
   const [timerNotes, setTimerNotes] = useState('');
   const [timerBillable, setTimerBillable] = useState(true);
+  const [timerCategory, setTimerCategory] = useState('');
   const [autoStopped, setAutoStopped] = useState(false);
 
   // Manual entry state
@@ -846,6 +849,7 @@ function TimeLogTab({ currentUserRole, members, onActivityChange, taskId, worksp
   const [manualMinutes, setManualMinutes] = useState('');
   const [manualNotes, setManualNotes] = useState('');
   const [manualBillable, setManualBillable] = useState(true);
+  const [manualCategory, setManualCategory] = useState('');
   const [adding, setAdding] = useState(false);
 
   // Editing state
@@ -925,7 +929,15 @@ function TimeLogTab({ currentUserRole, members, onActivityChange, taskId, worksp
   useEffect(() => {
     fetchEntries();
     fetchActiveTimer();
-  }, [fetchEntries, fetchActiveTimer]);
+    fetch(`/api/workspaces/${workspaceId}/settings`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((s) => {
+        if (s?.timeLogCategories && Array.isArray(s.timeLogCategories)) {
+          setCategories(s.timeLogCategories);
+        }
+      })
+      .catch(() => {});
+  }, [fetchEntries, fetchActiveTimer, workspaceId]);
 
   // Timer tick — derives elapsed from server startedAt
   useEffect(() => {
@@ -1021,7 +1033,7 @@ function TimeLogTab({ currentUserRole, members, onActivityChange, taskId, worksp
     const res = await fetch(`/api/workspaces/${workspaceId}/tasks/${taskId}/timer/stop`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ notes: timerNotes || null, billable: timerBillable }),
+      body: JSON.stringify({ notes: timerNotes || null, billable: timerBillable, category: timerCategory || null }),
     });
     if (res.ok) {
       setActiveTimer(null);
@@ -1037,7 +1049,7 @@ function TimeLogTab({ currentUserRole, members, onActivityChange, taskId, worksp
     }
   }
 
-  async function updateActiveTimerField(field: 'notes' | 'billable', value: string | boolean) {
+  async function updateActiveTimerField(field: 'notes' | 'billable' | 'category', value: string | boolean) {
     if (!activeTimer) {
       return;
     }
@@ -1064,6 +1076,7 @@ function TimeLogTab({ currentUserRole, members, onActivityChange, taskId, worksp
         date: new Date(manualDate).toISOString(),
         startTime,
         notes: manualNotes || null,
+        category: manualCategory || null,
         billable: manualBillable,
       }),
     });
@@ -1193,6 +1206,21 @@ function TimeLogTab({ currentUserRole, members, onActivityChange, taskId, worksp
             >
               $
             </button>
+            {categories.length > 0 && (
+              <select
+                className="rounded border border-gray-200 bg-white px-1 py-0.5 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                onChange={(e) => {
+                  setTimerCategory(e.target.value);
+                  if (activeTimer) updateActiveTimerField('category', e.target.value);
+                }}
+                value={timerCategory}
+              >
+                <option value="">No category</option>
+                {categories.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            )}
             <input
               className="flex-1 rounded border border-gray-200 bg-white px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-800 dark:text-white"
               onBlur={() => {
@@ -1247,6 +1275,18 @@ function TimeLogTab({ currentUserRole, members, onActivityChange, taskId, worksp
           >
             $
           </button>
+          {categories.length > 0 && (
+            <select
+              className="rounded border border-gray-200 bg-white px-1 py-0.5 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+              onChange={(e) => setManualCategory(e.target.value)}
+              value={manualCategory}
+            >
+              <option value="">No category</option>
+              {categories.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          )}
           <Button disabled={!manualMinutes || !manualDate} loading={adding} onClick={addManual} size="sm">
             Add
           </Button>
@@ -1368,6 +1408,11 @@ function TimeLogTab({ currentUserRole, members, onActivityChange, taskId, worksp
             >
               $
             </button>
+            {e.category && (
+              <span className="rounded bg-purple-100 px-1.5 py-0.5 text-[10px] font-medium text-purple-700 dark:bg-purple-900/40 dark:text-purple-400">
+                {e.category}
+              </span>
+            )}
             <button
               className="text-xs text-gray-300 hover:text-red-500 dark:text-gray-600 dark:hover:text-red-400"
               onClick={() => deleteEntry(e.id)}
