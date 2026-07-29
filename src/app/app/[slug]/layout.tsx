@@ -1,7 +1,6 @@
 import { notFound, redirect } from 'next/navigation';
 
 import { Sidebar } from '@/components/layout/sidebar';
-import { TopBar } from '@/components/layout/top-bar';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 
@@ -73,12 +72,12 @@ export default async function WorkspaceLayout({
         projects={workspace.projects}
         slug={slug}
         taskGroups={workspace.taskGroups}
+        userName={session.user.name}
         views={views}
         workspaceId={workspace.id}
         workspaceName={workspace.name}
       />
       <div className="flex flex-1 flex-col lg:pl-64">
-        <TopBar slug={slug} userName={session.user.name} workspaceId={workspace.id} />
         <main className="flex-1 overflow-auto">{children}</main>
       </div>
     </div>

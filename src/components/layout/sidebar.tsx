@@ -13,17 +13,22 @@ import {
   Home,
   Layers,
   LayoutList,
+  LogOut,
   Menu,
+  Moon,
   Plus,
   Receipt,
   Search,
   Settings,
+  Sun,
   Ticket,
 } from 'lucide-react';
+import { signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
+import { NotificationBell } from '@/components/layout/notification-bell';
 import { cn } from '@/lib/utils';
 
 interface PhaseData {
@@ -48,12 +53,13 @@ interface SidebarProps {
   slug: string;
   workspaceName: string;
   workspaceId: string;
+  userName?: string | null;
   projects: ProjectData[];
   taskGroups?: TaskGroupData[];
   views?: Array<{ id: string; name: string }>;
 }
 
-export function Sidebar({ projects, slug, taskGroups = [], views = [], workspaceId, workspaceName }: SidebarProps) {
+export function Sidebar({ projects, slug, taskGroups = [], userName, views = [], workspaceId, workspaceName }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
@@ -63,6 +69,25 @@ export function Sidebar({ projects, slug, taskGroups = [], views = [], workspace
   const [newPhaseName, setNewPhaseName] = useState('');
   const [newGroupName, setNewGroupName] = useState('');
   const [showNewGroup, setShowNewGroup] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('theme');
+    setTheme(stored === 'dark' ? 'dark' : 'light');
+    setMounted(true);
+  }, []);
+
+  function toggleTheme() {
+    const next = theme === 'light' ? 'dark' : 'light';
+    setTheme(next);
+    localStorage.setItem('theme', next);
+    if (next === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }
 
   const base = `/app/${slug}`;
 
@@ -158,20 +183,31 @@ export function Sidebar({ projects, slug, taskGroups = [], views = [], workspace
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
         )}
       >
-        <div className="flex h-14 items-center justify-between border-b border-gray-200 px-4 dark:border-gray-800">
+        <div className="flex h-12 items-center justify-between px-3 dark:border-gray-800">
           {!collapsed && (
             <Link className="text-sm font-semibold text-gray-900 dark:text-white" href={base}>
               {workspaceName}
             </Link>
           )}
-          <button
-            className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-            onClick={() => setCollapsed(!collapsed)}
-          >
-            <ChevronLeft
-              className={cn('h-4 w-4 transition-transform', collapsed && 'rotate-180')}
-            />
-          </button>
+          <div className="flex items-center gap-0.5">
+            {mounted && (
+              <button
+                className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                onClick={toggleTheme}
+              >
+                {theme === 'dark' ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+              </button>
+            )}
+            <NotificationBell workspaceId={workspaceId} />
+            <button
+              className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+              onClick={() => setCollapsed(!collapsed)}
+            >
+              <ChevronLeft
+                className={cn('h-3.5 w-3.5 transition-transform', collapsed && 'rotate-180')}
+              />
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto px-2 py-3">
@@ -437,7 +473,7 @@ export function Sidebar({ projects, slug, taskGroups = [], views = [], workspace
           )}
         </div>
 
-        <div className="border-t border-gray-200 px-2 py-3 dark:border-gray-800">
+        <div className="border-t border-gray-200 px-2 py-2 dark:border-gray-800">
           <nav className="space-y-0.5">
             {bottomItems.map((item) => (
               <Link
@@ -455,6 +491,20 @@ export function Sidebar({ projects, slug, taskGroups = [], views = [], workspace
               </Link>
             ))}
           </nav>
+          <div className="mt-2 flex items-center gap-2 border-t border-gray-200 px-2 pt-2 dark:border-gray-800">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-medium text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+              {userName?.charAt(0)?.toUpperCase() ?? '?'}
+            </div>
+            {!collapsed && (
+              <button
+                className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                onClick={() => signOut({ callbackUrl: '/login' })}
+                title="Sign out"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            )}
+          </div>
         </div>
       </aside>
     </>
