@@ -59,9 +59,6 @@ export default async function GroupPage({
         <h1 className="text-xl font-bold dark:text-white" style={{ color: group.color }}>
           {group.name}
         </h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Tasks from all projects in this group
-        </p>
       </div>
       <ViewSwitcher
         context="group"
