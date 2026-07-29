@@ -2,6 +2,7 @@
 
 import {
   BarChart3,
+  Bell,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -18,7 +19,6 @@ import {
   Moon,
   Plus,
   Receipt,
-  Search,
   Settings,
   Sun,
   Ticket,
@@ -28,7 +28,6 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-import { NotificationBell } from '@/components/layout/notification-bell';
 import { cn } from '@/lib/utils';
 
 interface PhaseData {
@@ -93,6 +92,7 @@ export function Sidebar({ projects, slug, taskGroups = [], userName, views = [],
 
   const navItems = [
     { href: base, icon: Home, label: 'Home' },
+    { href: `${base}/notifications`, icon: Bell, label: 'Notifications' },
     { href: `${base}/my-tasks`, icon: LayoutList, label: 'My Tasks' },
     { href: `${base}/tickets`, icon: Ticket, label: 'Tickets' },
     { href: `${base}/contacts`, icon: Contact, label: 'Contacts' },
@@ -183,44 +183,23 @@ export function Sidebar({ projects, slug, taskGroups = [], userName, views = [],
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
         )}
       >
-        <div className="flex h-12 items-center justify-between px-3 dark:border-gray-800">
+        <div className="flex h-12 items-center justify-between px-3">
           {!collapsed && (
             <Link className="text-sm font-semibold text-gray-900 dark:text-white" href={base}>
               {workspaceName}
             </Link>
           )}
-          <div className="flex items-center gap-0.5">
-            {mounted && (
-              <button
-                className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-                onClick={toggleTheme}
-              >
-                {theme === 'dark' ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
-              </button>
-            )}
-            <NotificationBell workspaceId={workspaceId} />
-            <button
-              className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-              onClick={() => setCollapsed(!collapsed)}
-            >
-              <ChevronLeft
-                className={cn('h-3.5 w-3.5 transition-transform', collapsed && 'rotate-180')}
-              />
-            </button>
-          </div>
+          <button
+            className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+            onClick={() => setCollapsed(!collapsed)}
+          >
+            <ChevronLeft
+              className={cn('h-3.5 w-3.5 transition-transform', collapsed && 'rotate-180')}
+            />
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-2 py-3">
-          <div className="mb-1 px-2">
-            <Link
-              className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
-              href={`${base}/search`}
-            >
-              <Search className="h-4 w-4 shrink-0" />
-              {!collapsed && <span>Search</span>}
-            </Link>
-          </div>
-
           <nav className="space-y-0.5">
             {navItems.map((item) => (
               <Link
@@ -491,19 +470,27 @@ export function Sidebar({ projects, slug, taskGroups = [], userName, views = [],
               </Link>
             ))}
           </nav>
-          <div className="mt-2 flex items-center gap-2 border-t border-gray-200 px-2 pt-2 dark:border-gray-800">
+          <div className="mt-2 flex items-center gap-1 border-t border-gray-200 px-2 pt-2 dark:border-gray-800">
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-medium text-blue-700 dark:bg-blue-900 dark:text-blue-300">
               {userName?.charAt(0)?.toUpperCase() ?? '?'}
             </div>
-            {!collapsed && (
+            {!collapsed && <span className="ml-auto" />}
+            {mounted && (
               <button
                 className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-                onClick={() => signOut({ callbackUrl: '/login' })}
-                title="Sign out"
+                onClick={toggleTheme}
+                title={`Theme: ${theme}`}
               >
-                <LogOut className="h-4 w-4" />
+                {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </button>
             )}
+            <button
+              className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+              onClick={() => signOut({ callbackUrl: '/login' })}
+              title="Sign out"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
         </div>
       </aside>
