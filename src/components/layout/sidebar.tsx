@@ -2,7 +2,6 @@
 
 import {
   BarChart3,
-  Bell,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -92,7 +91,6 @@ export function Sidebar({ projects, slug, taskGroups = [], userName, views = [],
 
   const navItems = [
     { href: base, icon: Home, label: 'Home' },
-    { href: `${base}/notifications`, icon: Bell, label: 'Notifications' },
     { href: `${base}/my-tasks`, icon: LayoutList, label: 'My Tasks' },
     { href: `${base}/tickets`, icon: Ticket, label: 'Tickets' },
     { href: `${base}/contacts`, icon: Contact, label: 'Contacts' },
