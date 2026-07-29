@@ -114,6 +114,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
 
+    await prisma.note.deleteMany({ where: { entityType: 'company', entityId: companyId } });
     await prisma.company.delete({ where: { id: companyId } });
     return NextResponse.json({ message: 'Deleted' });
   } catch {

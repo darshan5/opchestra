@@ -243,6 +243,7 @@ export async function DELETE(
     }
 
     await prisma.activeTimer.deleteMany({ where: { taskId } });
+    await prisma.note.deleteMany({ where: { entityType: 'task', entityId: taskId } });
     await prisma.task.delete({ where: { id: taskId } });
 
     return NextResponse.json({ message: 'Task deleted' });
