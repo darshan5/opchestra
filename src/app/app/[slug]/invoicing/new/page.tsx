@@ -583,7 +583,7 @@ export default function NewInvoicePage() {
                 />
               </div>
               <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                Showing completed tasks from 90 days before the selected date with billable time entries
+                Showing tasks completed within 90 days of the selected date
               </p>
             </div>
 

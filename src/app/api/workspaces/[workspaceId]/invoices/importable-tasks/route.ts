@@ -37,10 +37,10 @@ export async function GET(
       workspaceId,
       ticketNumber: null,
       status: 'Done',
-      timeEntries: {
-        some: { billable: true },
-      },
-      updatedAt: { gte: ninetyDaysAgo },
+      OR: [
+        { completedAt: { gte: ninetyDaysAgo } },
+        { completedAt: null, updatedAt: { gte: ninetyDaysAgo } },
+      ],
     };
 
     if (companyId) {
@@ -58,13 +58,13 @@ export async function GET(
         project: { select: { id: true, name: true } },
         assignee: { select: { id: true, name: true } },
         timeEntries: {
-          where: { billable: true },
           select: {
             id: true,
             duration: true,
             date: true,
             notes: true,
             category: true,
+            billable: true,
           },
           orderBy: { date: 'asc' },
         },
@@ -74,7 +74,8 @@ export async function GET(
     });
 
     const result = tasks.map((task) => {
-      const totalMinutes = task.timeEntries.reduce((sum: number, te: { duration: number }) => sum + te.duration, 0);
+      const billableEntries = task.timeEntries.filter((te: { billable: boolean }) => te.billable);
+      const totalMinutes = billableEntries.reduce((sum: number, te: { duration: number }) => sum + te.duration, 0);
       const totalHours = Math.round((totalMinutes / 60) * 100) / 100;
       return {
         id: task.id,
@@ -86,7 +87,8 @@ export async function GET(
         hourlyRate: task.ticketCompany?.hourlyRate ?? 0,
         totalHours,
         totalMinutes,
-        timeEntries: task.timeEntries.map((te: { id: string; duration: number; date: Date; notes: string | null; category: string | null }) => ({
+        completedAt: task.completedAt,
+        timeEntries: billableEntries.map((te: { id: string; duration: number; date: Date; notes: string | null; category: string | null }) => ({
           id: te.id,
           duration: te.duration,
           hours: Math.round((te.duration / 60) * 100) / 100,
