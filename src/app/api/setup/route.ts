@@ -643,6 +643,24 @@ const MIGRATIONS = [
   // Task visibility
   `ALTER TABLE "Task" ADD COLUMN IF NOT EXISTS "isPrivate" BOOLEAN NOT NULL DEFAULT false`,
 
+  // Task reminders
+  `CREATE TABLE IF NOT EXISTS "TaskReminder" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "taskId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "workspaceId" TEXT NOT NULL,
+    "reminderType" TEXT NOT NULL,
+    "triggerAt" TIMESTAMP(3) NOT NULL,
+    "sent" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "TaskReminder_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "TaskReminder_taskId_fkey" FOREIGN KEY ("taskId") REFERENCES "Task"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "TaskReminder_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "TaskReminder_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE
+  )`,
+  `CREATE INDEX IF NOT EXISTS "TaskReminder_triggerAt_sent_idx" ON "TaskReminder"("triggerAt", "sent")`,
+  `CREATE INDEX IF NOT EXISTS "TaskReminder_taskId_idx" ON "TaskReminder"("taskId")`,
+
   // Time log categories
   `ALTER TABLE "Workspace" ADD COLUMN IF NOT EXISTS "timeLogCategories" JSONB NOT NULL DEFAULT '[]'`,
   `ALTER TABLE "TimeEntry" ADD COLUMN IF NOT EXISTS "category" TEXT`,

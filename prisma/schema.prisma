@@ -32,6 +32,7 @@ model User {
   auditLogsAsTarget   AuditLog[]         @relation("AuditTarget")
   supportTickets      SupportTicket[]
   activeTimers        ActiveTimer[]
+  taskReminders       TaskReminder[]
   notes               Note[]
 }
 
@@ -325,6 +326,7 @@ model Workspace {
   slaRules             SlaRule[]
   invoices             Invoice[]
   activeTimers         ActiveTimer[]
+  taskReminders        TaskReminder[]
   notes                Note[]
 
   settings WorkspaceSettings?
@@ -428,6 +430,7 @@ model Task {
   workspaceId    String
   projectId      String?
   isPrivate      Boolean   @default(false)
+  reminders      TaskReminder[]
   parentTaskId   String?
   assigneeId     String?
   createdById    String
@@ -799,6 +802,26 @@ enum NotificationType {
   TASK_COMMENTED
   TASK_MENTIONED
   TASK_DUE_SOON
+}
+
+// ─── Task Reminders ─────────────────────────────────────────
+
+model TaskReminder {
+  id           String   @id @default(uuid())
+  taskId       String
+  userId       String
+  workspaceId  String
+  reminderType String
+  triggerAt    DateTime
+  sent         Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([triggerAt, sent])
+  @@index([taskId])
 }
 
 // ─── Active Timers ──────────────────────────────────────────

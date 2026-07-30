@@ -66,6 +66,42 @@ export async function sendPasswordResetEmail(email: string, token: string) {
   });
 }
 
+export async function sendTaskReminderEmail(
+  email: string,
+  taskTitle: string,
+  reminderType: string,
+  workspaceName: string,
+  taskUrl: string,
+) {
+  const config = await getEmailConfig();
+
+  const labels: Record<string, string> = {
+    on_due_date: 'is due today',
+    '1_day_before': 'is due tomorrow',
+    '3_days_before': 'is due in 3 days',
+    '1_week_before': 'is due in 1 week',
+  };
+  const label = labels[reminderType] ?? 'has an upcoming deadline';
+
+  if (!config) {
+    // eslint-disable-next-line no-console
+    console.log(`[DEV] Task reminder for ${email}: "${taskTitle}" ${label}`);
+    return;
+  }
+
+  await config.resend.emails.send({
+    from: config.from,
+    to: email,
+    subject: `Reminder: "${taskTitle}" ${label} — ${workspaceName}`,
+    html: `
+      <h2>Task Reminder</h2>
+      <p>Your task <strong>${taskTitle}</strong> ${label}.</p>
+      <p><a href="${taskUrl}">View Task</a></p>
+      <p style="color:#999;font-size:12px">— ${workspaceName} on Opchestra</p>
+    `,
+  });
+}
+
 export async function sendInviteEmail(email: string, token: string, workspaceName: string) {
   const config = await getEmailConfig();
   const inviteUrl = `${process.env.NEXTAUTH_URL}/invite?token=${token}`;

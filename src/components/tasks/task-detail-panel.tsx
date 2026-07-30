@@ -496,6 +496,9 @@ function DetailsTab({
               value={task.endDate ? task.endDate.split('T')[0] : ''}
             />
           </FieldRow>
+          {task.endDate && task.assignee && (
+            <ReminderSection taskId={taskId} workspaceId={workspaceId} />
+          )}
           <FieldRow icon={Diamond} label="Milestone">
             <button
               className={cn(
@@ -688,6 +691,80 @@ function FieldRow({
       </div>
       <div className="flex flex-1 items-center gap-1">{children}</div>
     </div>
+  );
+}
+
+const REMINDER_OPTIONS = [
+  { label: 'On due date', value: 'on_due_date' },
+  { label: '1 day before', value: '1_day_before' },
+  { label: '3 days before', value: '3_days_before' },
+  { label: '1 week before', value: '1_week_before' },
+];
+
+function ReminderSection({ taskId, workspaceId }: { taskId: string; workspaceId: string }) {
+  const [reminders, setReminders] = useState<Array<{ id: string; reminderType: string; triggerAt: string; sent: boolean }>>([]);
+  const [adding, setAdding] = useState(false);
+
+  useEffect(() => {
+    fetch(`/api/workspaces/${workspaceId}/tasks/${taskId}/reminders`)
+      .then((r) => r.ok ? r.json() : [])
+      .then(setReminders)
+      .catch(() => {});
+  }, [workspaceId, taskId]);
+
+  async function addReminder(type: string) {
+    setAdding(true);
+    const res = await fetch(`/api/workspaces/${workspaceId}/tasks/${taskId}/reminders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reminderType: type }),
+    });
+    if (res.ok) {
+      const r = await res.json();
+      setReminders([...reminders, r]);
+      toast('Reminder set');
+    } else {
+      const data = await res.json();
+      toast(data.error ?? 'Failed', 'error');
+    }
+    setAdding(false);
+  }
+
+  async function removeReminder(id: string) {
+    await fetch(`/api/workspaces/${workspaceId}/tasks/${taskId}/reminders?id=${id}`, { method: 'DELETE' });
+    setReminders(reminders.filter((r) => r.id !== id));
+    toast('Reminder removed');
+  }
+
+  const activeTypes = new Set(reminders.filter((r) => !r.sent).map((r) => r.reminderType));
+
+  return (
+    <FieldRow icon={Bell} label="Reminders">
+      <div className="flex flex-wrap items-center gap-1">
+        {reminders.filter((r) => !r.sent).map((r) => {
+          const opt = REMINDER_OPTIONS.find((o) => o.value === r.reminderType);
+          return (
+            <span className="flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-400" key={r.id}>
+              {opt?.label ?? r.reminderType}
+              <button className="text-amber-500 hover:text-red-500" onClick={() => removeReminder(r.id)} type="button">
+                <X className="h-2.5 w-2.5" />
+              </button>
+            </span>
+          );
+        })}
+        <select
+          className="rounded border-0 bg-transparent px-0.5 py-0.5 text-xs text-blue-600 focus:ring-0 dark:text-blue-400"
+          disabled={adding}
+          onChange={(e) => { if (e.target.value) { addReminder(e.target.value); e.target.value = ''; } }}
+          value=""
+        >
+          <option value="">+ Add</option>
+          {REMINDER_OPTIONS.filter((o) => !activeTypes.has(o.value)).map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+      </div>
+    </FieldRow>
   );
 }
 
