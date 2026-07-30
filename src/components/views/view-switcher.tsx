@@ -39,6 +39,7 @@ interface TaskData {
   startDate?: string | Date | null;
   endDate: string | Date | null;
   isMilestone: boolean;
+  isPrivate: boolean;
   taskLabels: Array<{ label: { id: string; name: string; color: string } }>;
   _count: { subTasks: number; comments: number };
 }

@@ -128,6 +128,9 @@ export async function PATCH(
     if (parsed.data.isMilestone !== undefined) {
       data.isMilestone = parsed.data.isMilestone;
     }
+    if (parsed.data.isPrivate !== undefined) {
+      data.isPrivate = parsed.data.isPrivate;
+    }
     if (parsed.data.taskGroupId !== undefined) {
       data.taskGroupId = parsed.data.taskGroupId;
     }

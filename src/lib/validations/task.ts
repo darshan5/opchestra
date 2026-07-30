@@ -16,6 +16,7 @@ export const createTaskSchema = z.object({
   endDate: z.string().datetime().optional().nullable(),
   timeEstimate: z.number().int().min(0).optional().nullable(),
   isMilestone: z.boolean().optional(),
+  isPrivate: z.boolean().optional(),
   labels: z.array(z.string()).optional(),
 });
 

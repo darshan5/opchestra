@@ -640,6 +640,9 @@ const MIGRATIONS = [
   // Task detail default tab setting
   `ALTER TABLE "Workspace" ADD COLUMN IF NOT EXISTS "taskDetailDefaultTab" TEXT NOT NULL DEFAULT 'timelog'`,
 
+  // Task visibility
+  `ALTER TABLE "Task" ADD COLUMN IF NOT EXISTS "isPrivate" BOOLEAN NOT NULL DEFAULT false`,
+
   // Time log categories
   `ALTER TABLE "Workspace" ADD COLUMN IF NOT EXISTS "timeLogCategories" JSONB NOT NULL DEFAULT '[]'`,
   `ALTER TABLE "TimeEntry" ADD COLUMN IF NOT EXISTS "category" TEXT`,

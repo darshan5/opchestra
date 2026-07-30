@@ -10,6 +10,7 @@ import {
   Diamond,
   FileIcon,
   FolderKanban,
+  Bell,
   Plus,
   Send,
   Ticket,
@@ -22,6 +23,7 @@ import { TiptapEditor } from '@/components/editor/tiptap-editor';
 import { CustomFieldRenderer } from '@/components/tasks/custom-field-renderer';
 import { Button } from '@/components/ui/button';
 import { NotesSection } from '@/components/notes/notes-section';
+import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
 
 interface TaskUser {
@@ -320,6 +322,25 @@ export function TaskDetailPanel({
                 </option>
               ))}
             </select>
+            {task.assignee && (
+              <button
+                className="flex items-center gap-1 rounded-full border border-gray-200 px-2 py-1 text-xs text-gray-500 hover:border-blue-400 hover:text-blue-600 dark:border-gray-700 dark:text-gray-400 dark:hover:border-blue-500 dark:hover:text-blue-400"
+                onClick={async () => {
+                  const res = await fetch(`/api/workspaces/${workspaceId}/tasks/${taskId}/notify`, { method: 'POST' });
+                  if (res.ok) {
+                    toast('Notification sent to ' + (task.assignee?.name ?? task.assignee?.email));
+                  } else {
+                    const data = await res.json();
+                    toast(data.error ?? 'Failed to notify', 'error');
+                  }
+                }}
+                title="Send notification to assignee"
+                type="button"
+              >
+                <Bell className="h-3 w-3" />
+                Notify
+              </button>
+            )}
           </div>
         </div>
 

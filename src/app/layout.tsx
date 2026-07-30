@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 
 import { Inter } from 'next/font/google';
 
+import { ToastContainer } from '@/components/ui/toast';
+
 import './globals.css';
 
 const inter = Inter({
@@ -43,6 +45,7 @@ export default function RootLayout({
       </head>
       <body className="h-full bg-white font-sans text-gray-900 antialiased dark:bg-gray-950 dark:text-gray-100">
         {children}
+        <ToastContainer />
       </body>
     </html>
   );

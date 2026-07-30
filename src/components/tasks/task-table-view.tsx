@@ -6,6 +6,8 @@ import {
   ChevronDown,
   ChevronRight,
   Copy,
+  Eye,
+  EyeOff,
   GripVertical,
   Info,
   MessageSquare,
@@ -19,6 +21,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { TaskDetailPanel } from '@/components/tasks/task-detail-panel';
+import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
 
 interface TaskUser {
@@ -53,6 +56,7 @@ interface TaskData {
   startDate?: string | Date | null;
   endDate: string | Date | null;
   isMilestone: boolean;
+  isPrivate: boolean;
   taskLabels: Array<{ label: { id: string; name: string; color: string } }>;
   _count: { subTasks: number; comments: number };
 }
@@ -1176,6 +1180,21 @@ export function TaskTableView({
                               {task.isMilestone && <span className="shrink-0 text-xs text-purple-500">◆</span>}
                               <button className="shrink-0 rounded-full border border-gray-300 opacity-0 transition-opacity hover:border-blue-400 hover:text-blue-500 group-hover:opacity-100 dark:border-gray-600" onClick={() => setSelectedTaskId(task.id)} title="Open Task page" type="button">
                                 <Info className="h-3.5 w-3.5 text-gray-400 hover:text-blue-500" />
+                              </button>
+                              <button
+                                className={cn('shrink-0 opacity-0 transition-opacity group-hover:opacity-100', task.isPrivate && 'opacity-100')}
+                                onClick={async () => {
+                                  const newVal = !task.isPrivate;
+                                  await patchTask(task.id, { isPrivate: newVal });
+                                  toast(newVal ? 'Task set to private' : 'Task set to public');
+                                }}
+                                title={task.isPrivate ? 'Private — click to make public' : 'Public — click to make private'}
+                                type="button"
+                              >
+                                {task.isPrivate
+                                  ? <EyeOff className="h-3.5 w-3.5 text-red-400 hover:text-red-500" />
+                                  : <Eye className="h-3.5 w-3.5 text-gray-300 hover:text-gray-500 dark:text-gray-600" />
+                                }
                               </button>
                               <button className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100" onClick={() => setExpandedTasks((p) => new Set(p).add(task.id))} title="Add subitem" type="button">
                                 <PlusCircle className="h-3.5 w-3.5 text-gray-400 hover:text-green-500" />

@@ -427,6 +427,7 @@ model Task {
   id             String       @id @default(uuid())
   workspaceId    String
   projectId      String?
+  isPrivate      Boolean   @default(false)
   parentTaskId   String?
   assigneeId     String?
   createdById    String
