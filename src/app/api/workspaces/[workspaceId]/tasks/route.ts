@@ -114,6 +114,10 @@ export async function POST(
         );
       }
       depth = parent.depth + 1;
+      if (!parsed.data.projectId) parsed.data.projectId = parent.projectId;
+      if (!parsed.data.taskGroupId) parsed.data.taskGroupId = parent.taskGroupId;
+      if (!parsed.data.phaseId) parsed.data.phaseId = parent.phaseId;
+      if (!parsed.data.companyId) parsed.data.companyId = parent.companyId;
     }
 
     const lastTask = await prisma.task.findFirst({

@@ -61,9 +61,10 @@ interface SubTaskData {
   id: string;
   title: string;
   status: string;
+  priority: string;
   assignee: TaskUser | null;
   endDate: string | Date | null;
-  _count: { subTasks: number };
+  _count: { subTasks: number; comments: number };
 }
 
 type GroupByOption = 'group' | 'status' | 'priority' | 'person' | 'project' | 'phase' | 'company';
@@ -445,16 +446,18 @@ function ContextMenu({
   );
 }
 
-// ── Sub-items Section ────────────────────────────────────────
+// ── Subtasks Section ────────────────────────────────────────
 
 function SubItemsSection({
   members,
+  onOpenTask,
   parentTaskId,
   workspaceId,
 }: {
   parentTaskId: string;
   workspaceId: string;
   members: TaskUser[];
+  onOpenTask: (taskId: string) => void;
 }) {
   const [subTasks, setSubTasks] = useState<SubTaskData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -477,9 +480,7 @@ function SubItemsSection({
   }, [fetchSubs]);
 
   async function addSubItem() {
-    if (!newTitle.trim()) {
-      return;
-    }
+    if (!newTitle.trim()) return;
     const res = await fetch(`/api/workspaces/${workspaceId}/tasks`, {
       body: JSON.stringify({ parentTaskId, title: newTitle.trim() }),
       headers: { 'Content-Type': 'application/json' },
@@ -487,9 +488,21 @@ function SubItemsSection({
     });
     if (res.ok) {
       const task = await res.json();
-      setSubTasks([...subTasks, task]);
+      setSubTasks([task, ...subTasks]);
       setNewTitle('');
       setAdding(false);
+    }
+  }
+
+  async function patchSub(subId: string, data: Record<string, unknown>) {
+    const res = await fetch(`/api/workspaces/${workspaceId}/tasks/${subId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setSubTasks((prev) => prev.map((s) => (s.id === subId ? { ...s, ...updated } : s)));
     }
   }
 
@@ -504,41 +517,84 @@ function SubItemsSection({
   return (
     <div className="ml-10 border-l-2 border-green-400 bg-blue-50/60 dark:bg-blue-950/20">
       <div className="flex items-center border-b border-blue-100 text-[10px] font-semibold tracking-wider text-gray-400 uppercase dark:border-blue-900/40">
-        <div className="w-7 shrink-0 px-1"><input className="h-3 w-3 rounded border-gray-300" disabled type="checkbox" /></div>
-        <div className="min-w-0 flex-1 px-2 py-1.5">Subitem</div>
-        <div className="w-20 shrink-0 px-1 text-center">Owner</div>
+        <div className="w-7 shrink-0 px-1" />
+        <div className="min-w-0 flex-1 px-2 py-1.5">Subtask</div>
+        <div className="w-20 shrink-0 px-1 text-center">Person</div>
         <div className="w-24 shrink-0 px-1 text-center">Status</div>
-        <div className="w-24 shrink-0 px-1 text-center">Date</div>
+        <div className="w-20 shrink-0 px-1 text-center">Priority</div>
+        <div className="w-20 shrink-0 px-1 text-center">Date</div>
         <div className="w-8 shrink-0" />
       </div>
       {subTasks.map((sub) => (
-        <div className="flex items-center border-b border-blue-100/60 hover:bg-blue-100/40 dark:border-blue-900/30 dark:hover:bg-blue-900/20" key={sub.id}>
-          <div className="w-7 shrink-0 px-1"><input className="h-3 w-3 rounded border-gray-300" type="checkbox" /></div>
-          <div className="min-w-0 flex-1 px-2 py-1.5 text-sm text-gray-800 dark:text-gray-200">{sub.title}</div>
-          <div className="flex w-20 shrink-0 items-center justify-center px-1">
-            {sub.assignee && (
+        <div className="group flex items-center border-b border-blue-100/60 hover:bg-blue-100/40 dark:border-blue-900/30 dark:hover:bg-blue-900/20" key={sub.id}>
+          <div className="w-7 shrink-0 px-1" />
+          <div className="min-w-0 flex-1 px-2 py-1.5">
+            <div className="flex items-center gap-1">
+              <span className="min-w-0 truncate text-sm text-gray-800 dark:text-gray-200">{sub.title}</span>
+              <button
+                className="shrink-0 rounded-full border border-gray-300 p-0.5 opacity-0 transition-opacity hover:border-blue-400 hover:text-blue-500 group-hover:opacity-100 dark:border-gray-600"
+                onClick={() => onOpenTask(sub.id)}
+                title="Open subtask"
+                type="button"
+              >
+                <Info className="h-3 w-3" />
+              </button>
+              {sub._count.comments > 0 && (
+                <span className="flex items-center gap-0.5 text-[10px] text-gray-400">
+                  <MessageSquare className="h-2.5 w-2.5" />{sub._count.comments}
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="relative flex w-20 shrink-0 items-center justify-center px-1">
+            {sub.assignee ? (
               <div className={cn('flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold text-white', getAvatarColor(sub.assignee.name || sub.assignee.email))} title={sub.assignee.name ?? sub.assignee.email}>
                 {initials(sub.assignee.name || sub.assignee.email)}
               </div>
+            ) : (
+              <span className="text-xs text-gray-300 dark:text-gray-600">—</span>
             )}
+            <select className="absolute inset-0 cursor-pointer opacity-0" onChange={(e) => patchSub(sub.id, { assigneeId: e.target.value || null })} value={sub.assignee?.id ?? ''}>
+              <option value="">Unassigned</option>
+              {members.map((m) => (<option key={m.id} value={m.id}>{m.name ?? m.email}</option>))}
+            </select>
           </div>
-          <div className="flex w-24 shrink-0 items-center justify-center px-1">
+          <div className="relative flex w-24 shrink-0 items-center justify-center px-1">
             <span className={cn('w-full rounded py-0.5 text-center text-[11px] font-semibold', STATUS_CELL[sub.status] ?? STATUS_CELL.Todo)}>{sub.status}</span>
+            <select className="absolute inset-0 cursor-pointer opacity-0" onChange={(e) => patchSub(sub.id, { status: e.target.value })} value={sub.status}>
+              <option value="Todo">Todo</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Done">Done</option>
+            </select>
           </div>
-          <div className="w-24 shrink-0 px-1 text-center text-xs text-gray-500">{sub.endDate ? format(new Date(sub.endDate), 'MMM d') : ''}</div>
+          <div className="relative flex w-20 shrink-0 items-center justify-center px-0.5">
+            {sub.priority !== 'NONE' ? (
+              <span className={cn('w-full rounded py-0.5 text-center text-[10px] font-semibold', PRIORITY_CELL[sub.priority])}>{sub.priority.charAt(0) + sub.priority.slice(1).toLowerCase()}</span>
+            ) : (
+              <span className="w-full py-0.5 text-center text-[10px] text-gray-300 dark:text-gray-600">—</span>
+            )}
+            <select className="absolute inset-0 cursor-pointer opacity-0" onChange={(e) => patchSub(sub.id, { priority: e.target.value })} value={sub.priority}>
+              <option value="URGENT">Urgent</option>
+              <option value="HIGH">High</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="LOW">Low</option>
+              <option value="NONE">None</option>
+            </select>
+          </div>
+          <div className="w-20 shrink-0 px-1 text-center text-xs text-gray-500">{sub.endDate ? format(new Date(sub.endDate), 'MMM d') : ''}</div>
           <div className="w-8 shrink-0" />
         </div>
       ))}
       {adding ? (
         <form className="flex items-center px-2 py-1" onSubmit={(e) => { e.preventDefault(); addSubItem(); }}>
           <div className="w-7 shrink-0" />
-          <input autoFocus className="min-w-0 flex-1 rounded border border-gray-300 bg-white px-2 py-1 text-sm focus:border-blue-400 focus:outline-none dark:border-gray-600 dark:bg-gray-800" onChange={(e) => setNewTitle(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') { setAdding(false); setNewTitle(''); } }} placeholder="Subitem name..." value={newTitle} />
+          <input autoFocus className="min-w-0 flex-1 rounded border border-gray-300 bg-white px-2 py-1 text-sm focus:border-blue-400 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-white" onChange={(e) => setNewTitle(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') { setAdding(false); setNewTitle(''); } }} placeholder="Subtask name..." value={newTitle} />
           <button className="ml-1 rounded bg-blue-500 px-2 py-1 text-xs text-white hover:bg-blue-600" type="submit">Add</button>
           <button className="ml-1 text-xs text-gray-400 hover:text-gray-600" onClick={() => { setAdding(false); setNewTitle(''); }} type="button">Cancel</button>
         </form>
       ) : (
         <button className="flex w-full items-center gap-1 px-4 py-1.5 text-xs text-gray-400 hover:text-blue-500" onClick={() => setAdding(true)} type="button">
-          <Plus className="h-3 w-3" /> Add subitem
+          <Plus className="h-3 w-3" /> Add subtask
         </button>
       )}
     </div>
@@ -1272,7 +1328,7 @@ export function TaskTableView({
                           })}
                           <div className="w-8 shrink-0" />
                         </div>
-                        {isExpanded && <SubItemsSection members={members} parentTaskId={task.id} workspaceId={workspaceId} />}
+                        {isExpanded && <SubItemsSection members={members} onOpenTask={(id) => setSelectedTaskId(id)} parentTaskId={task.id} workspaceId={workspaceId} />}
                       </div>
                     );
                   })}
