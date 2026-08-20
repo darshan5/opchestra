@@ -1,9 +1,8 @@
 'use client';
 
-import { format } from 'date-fns';
-import { Info, ListChecks, MessageSquare, Plus } from 'lucide-react';
+import { GripVertical, Info, ListChecks, MessageSquare, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { TaskDetailPanel } from '@/components/tasks/task-detail-panel';
 import { cn } from '@/lib/utils';
@@ -146,10 +145,110 @@ export function KanbanView({
     }
   }
 
+  // Drag-and-drop state
+  const [dragTaskId, setDragTaskId] = useState<string | null>(null);
+  const [dragSourceCol, setDragSourceCol] = useState<string | null>(null);
+  const [dropTargetCol, setDropTargetCol] = useState<string | null>(null);
+  const [dropTargetTaskId, setDropTargetTaskId] = useState<string | null>(null);
+  const [dropPosition, setDropPosition] = useState<'above' | 'below' | null>(null);
+  const dragCountRef = useRef<Record<string, number>>({});
+
+  async function patchTask(taskId: string, data: Record<string, unknown>) {
+    const res = await fetch(`/api/workspaces/${workspaceId}/tasks/${taskId}`, {
+      body: JSON.stringify(data),
+      headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH',
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setTasks((prev) => prev.map((t) => (t.id === taskId ? updated : t)));
+    }
+  }
+
+  async function reorderColumn(colTasks: TaskData[], fromIndex: number, toIndex: number) {
+    const reordered = [...colTasks];
+    const [moved] = reordered.splice(fromIndex, 1);
+    reordered.splice(toIndex, 0, moved);
+    const orderedIds = reordered.map((t) => t.id);
+
+    const orderMap = new Map(orderedIds.map((id, i) => [id, i]));
+    setTasks((prev) => {
+      const others = prev.filter((t) => !orderMap.has(t.id));
+      const sorted = [...prev.filter((t) => orderMap.has(t.id))].sort(
+        (a, b) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0),
+      );
+      return [...sorted, ...others];
+    });
+
+    await fetch(`/api/workspaces/${workspaceId}/tasks/reorder`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderedIds }),
+    });
+  }
+
+  function handleDrop(targetColName: string, targetColTasks: TaskData[], targetIndex: number | null) {
+    if (!dragTaskId) return;
+
+    const sameCol = dragSourceCol === targetColName;
+    const fromIndex = targetColTasks.findIndex((t) => t.id === dragTaskId);
+
+    if (sameCol && fromIndex !== -1) {
+      let toIndex = targetIndex ?? targetColTasks.length - 1;
+      if (dropPosition === 'below' && targetIndex !== null) toIndex += 1;
+      if (fromIndex < toIndex) toIndex -= 1;
+      if (fromIndex !== toIndex) {
+        reorderColumn(targetColTasks, fromIndex, toIndex);
+      }
+    } else if (!sameCol) {
+      setTasks((prev) => prev.map((t) => (t.id === dragTaskId ? { ...t, status: targetColName } : t)));
+      patchTask(dragTaskId, { status: targetColName });
+    }
+
+    setDragTaskId(null);
+    setDragSourceCol(null);
+    setDropTargetCol(null);
+    setDropTargetTaskId(null);
+    setDropPosition(null);
+  }
+
   return (
     <div className="flex h-full gap-3 overflow-x-auto p-4">
       {columns.map((col) => (
-        <div className="flex w-80 shrink-0 flex-col rounded-lg" key={col.name}>
+        <div
+          className={cn(
+            'flex w-80 shrink-0 flex-col rounded-lg transition-shadow',
+            dropTargetCol === col.name && dragSourceCol !== col.name && 'ring-2 ring-blue-400',
+          )}
+          key={col.name}
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            setDropTargetCol(col.name);
+          }}
+          onDragEnter={(e) => {
+            e.preventDefault();
+            dragCountRef.current[col.name] = (dragCountRef.current[col.name] || 0) + 1;
+            setDropTargetCol(col.name);
+          }}
+          onDragLeave={() => {
+            dragCountRef.current[col.name] = (dragCountRef.current[col.name] || 0) - 1;
+            if (dragCountRef.current[col.name] <= 0) {
+              dragCountRef.current[col.name] = 0;
+              if (dropTargetCol === col.name) {
+                setDropTargetCol(null);
+              }
+            }
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            dragCountRef.current[col.name] = 0;
+            const targetIndex = dropTargetTaskId
+              ? col.tasks.findIndex((t) => t.id === dropTargetTaskId)
+              : null;
+            handleDrop(col.name, col.tasks, targetIndex);
+          }}
+        >
           {/* Column header */}
           <div
             className="flex items-center gap-2 rounded-t-lg px-4 py-2.5"
@@ -160,17 +259,66 @@ export function KanbanView({
           </div>
 
           {/* Cards */}
-          <div className="flex-1 space-y-2 overflow-y-auto bg-gray-50 p-2 dark:bg-gray-900/50">
-            {col.tasks.map((task) => (
+          <div className={cn(
+            'flex-1 space-y-2 overflow-y-auto bg-gray-50 p-2 dark:bg-gray-900/50',
+            col.tasks.length === 0 && dropTargetCol === col.name && 'min-h-[60px] ring-2 ring-inset ring-blue-300 rounded',
+          )}>
+            {col.tasks.map((task) => {
+              const isDragging = dragTaskId === task.id;
+              const isDropTarget = dropTargetTaskId === task.id && dragTaskId !== task.id;
+
+              return (
               <div
-                className="group cursor-pointer rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800"
+                className={cn(
+                  'group cursor-pointer rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800',
+                  isDragging && 'opacity-40',
+                  isDropTarget && dropPosition === 'above' && 'border-t-2 border-t-blue-500',
+                  isDropTarget && dropPosition === 'below' && 'border-b-2 border-b-blue-500',
+                )}
+                draggable
                 key={task.id}
                 onClick={() => setSelectedTaskId(task.id)}
+                onDragStart={(e) => {
+                  e.stopPropagation();
+                  setDragTaskId(task.id);
+                  setDragSourceCol(col.name);
+                  e.dataTransfer.effectAllowed = 'move';
+                  e.dataTransfer.setData('text/plain', task.id);
+                }}
+                onDragEnd={() => {
+                  setDragTaskId(null);
+                  setDragSourceCol(null);
+                  setDropTargetCol(null);
+                  setDropTargetTaskId(null);
+                  setDropPosition(null);
+                  dragCountRef.current = {};
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (dragTaskId === task.id) return;
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const midY = rect.top + rect.height / 2;
+                  setDropTargetTaskId(task.id);
+                  setDropPosition(e.clientY < midY ? 'above' : 'below');
+                }}
+                onDragLeave={(e) => {
+                  e.stopPropagation();
+                  if (dropTargetTaskId === task.id) {
+                    setDropTargetTaskId(null);
+                    setDropPosition(null);
+                  }
+                }}
               >
-                {/* Title */}
-                <p className="text-sm font-semibold text-gray-900 leading-snug dark:text-white">
-                  {task.title}
-                </p>
+                {/* Title row with drag handle */}
+                <div className="flex items-start gap-1">
+                  <div className="mt-0.5 shrink-0 cursor-grab text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 active:cursor-grabbing dark:text-gray-600">
+                    <GripVertical className="h-3.5 w-3.5" />
+                  </div>
+                  <p className="min-w-0 flex-1 text-sm font-semibold text-gray-900 leading-snug dark:text-white">
+                    {task.title}
+                  </p>
+                </div>
 
                 {/* Tags: status + project */}
                 <div className="mt-2 flex flex-wrap items-center gap-1.5">
@@ -241,7 +389,8 @@ export function KanbanView({
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Add task */}
