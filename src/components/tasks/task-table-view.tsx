@@ -824,6 +824,34 @@ export function TaskTableView({
     }
   }, [initialOpenTaskId]);
 
+  // Drag-and-drop state
+  const [dragTaskId, setDragTaskId] = useState<string | null>(null);
+  const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
+  const [dragOverPosition, setDragOverPosition] = useState<'above' | 'below' | null>(null);
+
+  async function reorderTasks(groupTasks: TaskData[], fromIndex: number, toIndex: number) {
+    const reordered = [...groupTasks];
+    const [moved] = reordered.splice(fromIndex, 1);
+    reordered.splice(toIndex, 0, moved);
+    const orderedIds = reordered.map((t) => t.id);
+
+    // Optimistic update — rebuild full task list with new order
+    const orderMap = new Map(orderedIds.map((id, i) => [id, i]));
+    setTasks((prev) => {
+      const others = prev.filter((t) => !orderMap.has(t.id));
+      const sorted = [...prev.filter((t) => orderMap.has(t.id))].sort(
+        (a, b) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0),
+      );
+      return [...sorted, ...others];
+    });
+
+    await fetch(`/api/workspaces/${workspaceId}/tasks/reorder`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderedIds }),
+    });
+  }
+
   const { colors: groupColors, groups: grouped } = groupTasksBy(tasks, groupBy, members);
   const allVisibleTaskIds = Object.values(grouped).flat().map((t) => t.id);
   const isProjectView = !!projectId;
@@ -1114,10 +1142,12 @@ export function TaskTableView({
                   </div>
 
                   {/* Task Rows */}
-                  {groupTasks.map((task) => {
+                  {groupTasks.map((task, taskIndex) => {
                     const isExpanded = expandedTasks.has(task.id);
                     const hasSubs = task._count.subTasks > 0;
                     const isSelected = selectedIds.has(task.id);
+                    const isDragging = dragTaskId === task.id;
+                    const isDropTarget = dragOverTaskId === task.id;
 
                     return (
                       <div data-task-id={task.id} key={task.id}>
@@ -1125,9 +1155,52 @@ export function TaskTableView({
                           className={cn(
                             'group flex items-center border-b border-gray-100 transition-colors hover:bg-blue-50/50 dark:border-gray-800/50 dark:hover:bg-blue-950/20',
                             isSelected && 'bg-blue-100/60 dark:bg-blue-900/30',
+                            isDragging && 'opacity-40',
+                            isDropTarget && dragOverPosition === 'above' && 'border-t-2 border-t-blue-500',
+                            isDropTarget && dragOverPosition === 'below' && 'border-b-2 border-b-blue-500',
                           )}
+                          draggable
+                          onDragStart={(e) => {
+                            setDragTaskId(task.id);
+                            e.dataTransfer.effectAllowed = 'move';
+                            e.dataTransfer.setData('text/plain', task.id);
+                          }}
+                          onDragEnd={() => {
+                            setDragTaskId(null);
+                            setDragOverTaskId(null);
+                            setDragOverPosition(null);
+                          }}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            if (dragTaskId === task.id) return;
+                            e.dataTransfer.dropEffect = 'move';
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const midY = rect.top + rect.height / 2;
+                            setDragOverTaskId(task.id);
+                            setDragOverPosition(e.clientY < midY ? 'above' : 'below');
+                          }}
+                          onDragLeave={() => {
+                            if (dragOverTaskId === task.id) {
+                              setDragOverTaskId(null);
+                              setDragOverPosition(null);
+                            }
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            if (!dragTaskId || dragTaskId === task.id) return;
+                            const fromIndex = groupTasks.findIndex((t) => t.id === dragTaskId);
+                            let toIndex = taskIndex;
+                            if (dragOverPosition === 'below') toIndex += 1;
+                            if (fromIndex < toIndex) toIndex -= 1;
+                            if (fromIndex !== -1 && fromIndex !== toIndex) {
+                              reorderTasks(groupTasks, fromIndex, toIndex);
+                            }
+                            setDragTaskId(null);
+                            setDragOverTaskId(null);
+                            setDragOverPosition(null);
+                          }}
                         >
-                          <div className="flex w-6 shrink-0 cursor-grab items-center justify-center">
+                          <div className="flex w-6 shrink-0 cursor-grab items-center justify-center active:cursor-grabbing">
                             <GripVertical className="h-3.5 w-3.5 text-gray-300 transition-colors hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400" />
                           </div>
                           <div className="flex w-9 shrink-0 items-center justify-center">
