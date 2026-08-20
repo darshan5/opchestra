@@ -15,7 +15,7 @@ import {
 } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { TaskDetailPanel } from '@/components/tasks/task-detail-panel';
 import { cn } from '@/lib/utils';
@@ -60,12 +60,23 @@ const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 export function CalendarView({
   members,
   projects = [],
-  tasks,
+  tasks: initialTasks,
   workspaceId,
 }: CalendarViewProps) {
   const router = useRouter();
+  const [tasks, setTasks] = useState<TaskData[]>(initialTasks);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [dragTaskId, setDragTaskId] = useState<string | null>(null);
+  const [dropTargetDay, setDropTargetDay] = useState<string | null>(null);
+  const dragCountRef = useRef<Record<string, number>>({});
+
+  // Sync with parent when initialTasks changes
+  const [prevTasks, setPrevTasks] = useState(initialTasks);
+  if (initialTasks !== prevTasks) {
+    setPrevTasks(initialTasks);
+    setTasks(initialTasks);
+  }
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -81,6 +92,20 @@ export function CalendarView({
         return false;
       }
       return isSameDay(new Date(t.endDate), day);
+    });
+  }
+
+  async function moveTaskToDay(taskId: string, day: Date) {
+    const newDate = day.toISOString();
+
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, endDate: newDate } : t)),
+    );
+
+    await fetch(`/api/workspaces/${workspaceId}/tasks/${taskId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ endDate: newDate }),
     });
   }
 
@@ -134,18 +159,53 @@ export function CalendarView({
         style={{ gridTemplateRows: `repeat(${weeks}, minmax(100px, 1fr))` }}
       >
         {days.map((day) => {
+          const dayKey = day.toISOString();
           const dayTasks = tasksForDay(day);
           const inMonth = isSameMonth(day, currentMonth);
           const today = isToday(day);
+          const isDropTarget = dropTargetDay === dayKey;
 
           return (
             <div
               className={cn(
-                'border-b border-r border-gray-200 p-1.5 dark:border-gray-700',
+                'border-b border-r border-gray-200 p-1.5 transition-colors dark:border-gray-700',
                 !inMonth && 'bg-gray-50/50 dark:bg-gray-900/30',
                 today && 'bg-blue-50/50 dark:bg-blue-950/20',
+                isDropTarget && 'bg-blue-100 ring-2 ring-inset ring-blue-400 dark:bg-blue-900/40',
               )}
-              key={day.toISOString()}
+              key={dayKey}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                setDropTargetDay(dayKey);
+              }}
+              onDragEnter={(e) => {
+                e.preventDefault();
+                dragCountRef.current[dayKey] = (dragCountRef.current[dayKey] || 0) + 1;
+                setDropTargetDay(dayKey);
+              }}
+              onDragLeave={() => {
+                dragCountRef.current[dayKey] = (dragCountRef.current[dayKey] || 0) - 1;
+                if (dragCountRef.current[dayKey] <= 0) {
+                  dragCountRef.current[dayKey] = 0;
+                  if (dropTargetDay === dayKey) {
+                    setDropTargetDay(null);
+                  }
+                }
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                dragCountRef.current[dayKey] = 0;
+                if (dragTaskId) {
+                  const task = tasks.find((t) => t.id === dragTaskId);
+                  const alreadyOnDay = task?.endDate && isSameDay(new Date(task.endDate), day);
+                  if (!alreadyOnDay) {
+                    moveTaskToDay(dragTaskId, day);
+                  }
+                }
+                setDragTaskId(null);
+                setDropTargetDay(null);
+              }}
             >
               <div className="mb-1 flex justify-end">
                 <span
@@ -164,9 +224,24 @@ export function CalendarView({
               <div className="space-y-0.5 overflow-y-auto" style={{ maxHeight: '80px' }}>
                 {dayTasks.map((task) => (
                   <button
-                    className="flex w-full items-center gap-1 rounded px-1 py-0.5 text-left text-[10px] leading-tight text-gray-800 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
+                    className={cn(
+                      'flex w-full items-center gap-1 rounded px-1 py-0.5 text-left text-[10px] leading-tight text-gray-800 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700 cursor-grab active:cursor-grabbing',
+                      dragTaskId === task.id && 'opacity-40',
+                    )}
+                    draggable
                     key={task.id}
                     onClick={() => setSelectedTaskId(task.id)}
+                    onDragStart={(e) => {
+                      e.stopPropagation();
+                      setDragTaskId(task.id);
+                      e.dataTransfer.effectAllowed = 'move';
+                      e.dataTransfer.setData('text/plain', task.id);
+                    }}
+                    onDragEnd={() => {
+                      setDragTaskId(null);
+                      setDropTargetDay(null);
+                      dragCountRef.current = {};
+                    }}
                     type="button"
                   >
                     <span
