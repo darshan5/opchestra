@@ -20,5 +20,11 @@ export default async function AppPage() {
     redirect('/app/onboarding');
   }
 
-  redirect(`/app/${memberships[0].workspace.slug}`);
+  const firstMembership = memberships[0];
+
+  if (firstMembership.role === 'CLIENT') {
+    redirect(`/portal/${firstMembership.workspace.slug}`);
+  }
+
+  redirect(`/app/${firstMembership.workspace.slug}`);
 }

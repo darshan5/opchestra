@@ -1,10 +1,10 @@
 import { notFound, redirect } from 'next/navigation';
 
-import { Sidebar } from '@/components/layout/sidebar';
+import { PortalSidebar } from '@/components/portal/portal-sidebar';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 
-export default async function WorkspaceLayout({
+export default async function PortalLayout({
   children,
   params,
 }: {
@@ -21,22 +21,7 @@ export default async function WorkspaceLayout({
   const workspace = await prisma.workspace.findUnique({
     where: { slug },
     include: {
-      projects: {
-        where: { status: 'ACTIVE' },
-        orderBy: { name: 'asc' },
-        select: {
-          id: true,
-          name: true,
-          phases: {
-            select: { id: true, name: true, color: true },
-            orderBy: { position: 'asc' },
-          },
-        },
-      },
-      taskGroups: {
-        select: { id: true, name: true, color: true },
-        orderBy: { position: 'asc' },
-      },
+      portalSettings: true,
     },
   });
 
@@ -57,28 +42,19 @@ export default async function WorkspaceLayout({
     redirect('/app');
   }
 
-  if (membership.role === 'CLIENT') {
-    redirect(`/portal/${slug}`);
+  if (membership.role !== 'CLIENT') {
+    redirect(`/app/${slug}`);
   }
 
-  const views = await prisma.view.findMany({
-    where: {
-      workspaceId: workspace.id,
-      isShared: true,
-    },
-    select: { id: true, name: true },
-    orderBy: { name: 'asc' },
-  });
+  const portal = workspace.portalSettings;
 
   return (
     <div className="flex h-full">
-      <Sidebar
-        projects={workspace.projects}
+      <PortalSidebar
+        logoUrl={portal?.logoUrl}
+        primaryColor={portal?.primaryColor ?? '#6366f1'}
         slug={slug}
-        taskGroups={workspace.taskGroups}
         userName={session.user.name}
-        views={views}
-        workspaceId={workspace.id}
         workspaceName={workspace.name}
       />
       <div className="flex flex-1 flex-col lg:pl-64">

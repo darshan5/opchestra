@@ -20,6 +20,10 @@ model User {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
+  isClient           Boolean  @default(false)
+  accountBalance     Float    @default(0)
+  referralCode       String?  @unique
+
   memberships         WorkspaceMember[]
   assignedTasks       Task[]             @relation("TaskAssignee")
   createdTasks        Task[]             @relation("TaskCreator")
@@ -329,7 +333,8 @@ model Workspace {
   taskReminders        TaskReminder[]
   notes                Note[]
 
-  settings WorkspaceSettings?
+  settings       WorkspaceSettings?
+  portalSettings PortalSettings?
 }
 
 model WorkspaceSettings {
@@ -339,6 +344,22 @@ model WorkspaceSettings {
   emailProvider    String?
   emailApiKey      String?
   emailFromAddress String?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model PortalSettings {
+  id              String    @id @default(uuid())
+  workspaceId     String    @unique
+  enabled         Boolean   @default(false)
+  customDomain    String?
+  logoUrl         String?
+  primaryColor    String    @default("#6366f1")
+  accentColor     String    @default("#8b5cf6")
+  welcomeMessage  String?
+  loginPageHtml   String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
@@ -362,6 +383,7 @@ enum WorkspaceRole {
   ADMIN
   MANAGER
   MEMBER
+  CLIENT
 }
 
 // ─── Projects ───────────────────────────────────────────────

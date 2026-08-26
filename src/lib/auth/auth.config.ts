@@ -28,6 +28,10 @@ export const authConfig: NextAuthConfig = {
         return isLoggedIn || Response.redirect(new URL('/admin-login', nextUrl));
       }
 
+      if (nextUrl.pathname.startsWith('/portal')) {
+        return isLoggedIn || Response.redirect(new URL('/login', nextUrl));
+      }
+
       if (nextUrl.pathname.startsWith('/app')) {
         return isLoggedIn || Response.redirect(new URL('/login', nextUrl));
       }

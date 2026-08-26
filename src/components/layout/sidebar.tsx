@@ -10,6 +10,7 @@ import {
   Contact,
   Eye,
   FolderKanban,
+  Globe,
   Home,
   Layers,
   LayoutList,
@@ -21,6 +22,7 @@ import {
   Settings,
   Sun,
   Ticket,
+  Users,
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import Link from 'next/link';
@@ -100,12 +102,17 @@ export function Sidebar({ projects, slug, taskGroups = [], userName, views = [],
     { href: `${base}/time-tracking`, icon: Clock, label: 'Time Tracking' },
     { href: `${base}/reports`, icon: BarChart3, label: 'Reports' },
     { href: `${base}/invoicing`, icon: Receipt, label: 'Invoicing' },
+    { href: `${base}/clients`, icon: Users, label: 'Clients' },
+    { href: `${base}/settings/portal`, icon: Globe, label: 'Portal' },
     { href: `${base}/settings`, icon: Settings, label: 'Settings' },
   ];
 
   function isActive(href: string) {
     if (href === base) {
       return pathname === base;
+    }
+    if (href === `${base}/settings`) {
+      return pathname === `${base}/settings` || (pathname.startsWith(`${base}/settings/`) && !pathname.startsWith(`${base}/settings/portal`));
     }
     return pathname.startsWith(href);
   }
