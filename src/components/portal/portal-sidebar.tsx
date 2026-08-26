@@ -7,6 +7,7 @@ import {
   Menu,
   Moon,
   ShoppingBag,
+  Store,
   Sun,
   Ticket,
   User,
@@ -59,6 +60,7 @@ export function PortalSidebar({
 
   const navItems = [
     { href: base, icon: Home, label: 'Dashboard' },
+    { href: `${base}/services`, icon: Store, label: 'Services' },
     { href: `${base}/orders`, icon: ShoppingBag, label: 'Orders' },
     { href: `${base}/tickets`, icon: Ticket, label: 'Tickets' },
     { href: `${base}/invoices`, icon: FileText, label: 'Invoices' },

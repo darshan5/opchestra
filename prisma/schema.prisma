@@ -333,8 +333,11 @@ model Workspace {
   taskReminders        TaskReminder[]
   notes                Note[]
 
-  settings       WorkspaceSettings?
-  portalSettings PortalSettings?
+  settings           WorkspaceSettings?
+  portalSettings     PortalSettings?
+  services           Service[]
+  serviceCategories  ServiceCategory[]
+  formTemplates      FormTemplate[]
 }
 
 model WorkspaceSettings {
@@ -694,6 +697,169 @@ model CustomFieldValue {
 
   @@unique([taskId, customFieldDefinitionId])
   @@index([taskId])
+}
+
+// ─── Services & Catalog ─────────────────────────────────────
+
+model Service {
+  id                String             @id @default(uuid())
+  workspaceId       String
+  name              String
+  description       String?
+  descriptionHtml   String?
+  price             Float              @default(0)
+  currency          String             @default("USD")
+  pricingType       PricingType        @default(ONE_TIME)
+  recurringInterval RecurringInterval?
+  recurringBehavior RecurringBehavior  @default(NO_ACTION)
+  trialDays         Int?
+  setupFee          Float?
+  maxRequests       Int?
+  deadline          Int?
+  autoAssigneeId    String?
+  published         Boolean            @default(false)
+  position          Int                @default(0)
+  categoryId        String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  workspace      Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  category       ServiceCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  variants       ServiceVariant[]
+  addOns         ServiceAddOn[]   @relation("ParentServiceAddOns")
+  addOnOf        ServiceAddOn[]   @relation("ChildServiceAddOns")
+  taskTemplates  TaskTemplate[]
+  formLinks      ServiceForm[]
+
+  @@index([workspaceId])
+  @@index([categoryId])
+}
+
+enum PricingType {
+  ONE_TIME
+  RECURRING
+}
+
+enum RecurringInterval {
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum RecurringBehavior {
+  NO_ACTION
+  REOPEN
+  NEW_ORDER
+  SERVICE_REQUESTS
+}
+
+model ServiceVariant {
+  id        String @id @default(uuid())
+  serviceId String
+  name      String
+  price     Float
+  options   Json   @default("{}")
+  position  Int    @default(0)
+
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@index([serviceId])
+}
+
+model ServiceAddOn {
+  id              String  @id @default(uuid())
+  parentServiceId String
+  childServiceId  String
+  required        Boolean @default(false)
+
+  parentService Service @relation("ParentServiceAddOns", fields: [parentServiceId], references: [id], onDelete: Cascade)
+  childService  Service @relation("ChildServiceAddOns", fields: [childServiceId], references: [id], onDelete: Cascade)
+
+  @@unique([parentServiceId, childServiceId])
+}
+
+model ServiceCategory {
+  id          String   @id @default(uuid())
+  workspaceId String
+  name        String
+  position    Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  services  Service[]
+
+  @@index([workspaceId])
+}
+
+model TaskTemplate {
+  id               String  @id @default(uuid())
+  serviceId        String
+  name             String
+  description      String?
+  position         Int     @default(0)
+  assigneeId       String?
+  deadlineDays     Int?
+  visibleToClient  Boolean @default(false)
+  assignedToClient Boolean @default(false)
+
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@index([serviceId])
+}
+
+model ServiceForm {
+  id        String @id @default(uuid())
+  serviceId String
+  formId    String
+  linkType  String
+
+  service Service      @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  form    FormTemplate @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@unique([serviceId, formId, linkType])
+}
+
+// ─── Forms ──────────────────────────────────────────────────
+
+model FormTemplate {
+  id          String    @id @default(uuid())
+  workspaceId String
+  name        String
+  type        FormType
+  fields      Json      @default("[]")
+  rules       Json?
+  published   Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  submissions FormSubmission[]
+  serviceLinks ServiceForm[]
+
+  @@index([workspaceId])
+}
+
+enum FormType {
+  ORDER
+  INTAKE
+  ONBOARDING
+  CONTACT
+}
+
+model FormSubmission {
+  id        String   @id @default(uuid())
+  formId    String
+  clientId  String?
+  orderId   String?
+  data      Json     @default("{}")
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  form FormTemplate @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@index([formId])
 }
 
 // ─── Plans (SaaS Billing) ───────────────────────────────────
