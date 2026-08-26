@@ -13,6 +13,7 @@ import {
   FolderKanban,
   Globe,
   Home,
+  Package,
   Layers,
   LayoutList,
   LogOut,
@@ -99,6 +100,7 @@ export function Sidebar({ projects, slug, taskGroups = [], userName, views = [],
     { href: `${base}/tickets`, icon: Ticket, label: 'Tickets' },
     { href: `${base}/contacts`, icon: Contact, label: 'Contacts' },
     { href: `${base}/services`, icon: ShoppingBag, label: 'Services' },
+    { href: `${base}/orders`, icon: Package, label: 'Orders' },
   ];
 
   const bottomItems = [

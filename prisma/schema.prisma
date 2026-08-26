@@ -38,6 +38,8 @@ model User {
   activeTimers        ActiveTimer[]
   taskReminders       TaskReminder[]
   notes               Note[]
+  orders              Order[]        @relation("OrderClient")
+  orderMessages       OrderMessage[] @relation("OrderMessageAuthor")
 }
 
 model VerificationToken {
@@ -338,6 +340,7 @@ model Workspace {
   services           Service[]
   serviceCategories  ServiceCategory[]
   formTemplates      FormTemplate[]
+  orders             Order[]
 }
 
 model WorkspaceSettings {
@@ -405,6 +408,7 @@ model Project {
   workspace  Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   tasks      Task[]
   phases     Phase[]
+  orders     Order[]
 
   @@index([workspaceId])
 }
@@ -482,6 +486,7 @@ model Task {
   taskGroupId       String?
   phaseId           String?
   sourceTicketId    String?
+  orderId           String?
 
   workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   sourceTicket   Task?     @relation("TicketToTask", fields: [sourceTicketId], references: [id], onDelete: SetNull)
@@ -495,6 +500,7 @@ model Task {
   createdBy      User      @relation("TaskCreator", fields: [createdById], references: [id])
   contact        Contact?  @relation("TicketContact", fields: [contactId], references: [id], onDelete: SetNull)
   ticketCompany  Company?  @relation("TicketCompany", fields: [companyId], references: [id], onDelete: SetNull)
+  order          Order?    @relation("OrderTasks", fields: [orderId], references: [id], onDelete: SetNull)
 
   comments     Comment[]
   timeEntries  TimeEntry[]
@@ -514,6 +520,7 @@ model Task {
   @@index([ticketNumber])
   @@index([taskGroupId])
   @@index([phaseId])
+  @@index([orderId])
 }
 
 enum TaskPriority {
@@ -730,6 +737,7 @@ model Service {
   addOnOf        ServiceAddOn[]   @relation("ChildServiceAddOns")
   taskTemplates  TaskTemplate[]
   formLinks      ServiceForm[]
+  orders         Order[]
 
   @@index([workspaceId])
   @@index([categoryId])
@@ -857,9 +865,72 @@ model FormSubmission {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  form FormTemplate @relation(fields: [formId], references: [id], onDelete: Cascade)
+  form  FormTemplate @relation(fields: [formId], references: [id], onDelete: Cascade)
+  order Order?       @relation("OrderSubmissions", fields: [orderId], references: [id], onDelete: SetNull)
 
   @@index([formId])
+  @@index([orderId])
+}
+
+// ─── Orders ─────────────────────────────────────────────────
+
+model Order {
+  id              String      @id @default(uuid())
+  workspaceId     String
+  clientId        String
+  serviceId       String
+  invoiceId       String?
+  status          OrderStatus @default(PENDING)
+  dueDate         DateTime?
+  priority        Int         @default(0)
+  assigneeId      String?
+  intakeComplete  Boolean     @default(false)
+  variantId       String?
+  quantity        Int         @default(1)
+  projectId       String?
+  totalPrice      Float       @default(0)
+  notes           String?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  client    User      @relation("OrderClient", fields: [clientId], references: [id])
+  service   Service   @relation(fields: [serviceId], references: [id])
+  invoice   Invoice?  @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  project   Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  messages        OrderMessage[]
+  tasks           Task[]          @relation("OrderTasks")
+  formSubmissions FormSubmission[] @relation("OrderSubmissions")
+
+  @@index([workspaceId])
+  @@index([clientId])
+  @@index([serviceId])
+  @@index([status])
+}
+
+enum OrderStatus {
+  PENDING
+  SUBMITTED
+  WORKING
+  COMPLETE
+  CANCELED
+}
+
+model OrderMessage {
+  id        String   @id @default(uuid())
+  orderId   String
+  authorId  String
+  content   String
+  teamOnly  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  order  Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  author User  @relation("OrderMessageAuthor", fields: [authorId], references: [id])
+
+  @@index([orderId])
 }
 
 // ─── Plans (SaaS Billing) ───────────────────────────────────
@@ -905,6 +976,7 @@ model Invoice {
   company   Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
   contact   Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
   items     InvoiceItem[]
+  orders    Order[]
 
   @@index([workspaceId])
   @@index([publicKey])
