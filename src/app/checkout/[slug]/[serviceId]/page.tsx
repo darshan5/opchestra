@@ -37,6 +37,7 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
+  const [workspaceId, setWorkspaceId] = useState('');
 
   useEffect(() => {
     async function load() {
@@ -45,6 +46,7 @@ export default function CheckoutPage() {
         const workspaces = await wsRes.json();
         const ws = workspaces.find((w: { slug: string }) => w.slug === slug);
         if (!ws) return;
+        setWorkspaceId(ws.id);
 
         const res = await fetch(`/api/workspaces/${ws.id}/services/${serviceId}`);
         if (res.ok) {
@@ -86,12 +88,29 @@ export default function CheckoutPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim()) return;
+    if (!email.trim() || !workspaceId) return;
     setSubmitting(true);
     setError('');
 
     try {
-      setSubmitted(true);
+      const res = await fetch(`/api/workspaces/${workspaceId}/checkout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          serviceId,
+          variantId: selectedVariant,
+          quantity,
+          email: email.trim(),
+          name: name.trim() || undefined,
+        }),
+      });
+
+      if (res.ok) {
+        setSubmitted(true);
+      } else {
+        const data = await res.json();
+        setError(data.error ?? 'Something went wrong. Please try again.');
+      }
     } catch {
       setError('Something went wrong. Please try again.');
     } finally {

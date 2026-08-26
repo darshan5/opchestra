@@ -40,6 +40,7 @@ model User {
   notes               Note[]
   orders              Order[]        @relation("OrderClient")
   orderMessages       OrderMessage[] @relation("OrderMessageAuthor")
+  subscriptions       Subscription[] @relation("SubscriptionClient")
 }
 
 model VerificationToken {
@@ -308,6 +309,7 @@ model Workspace {
   stripePlanId        String?
   subscriptionStatus  String?
   currentPeriodEnd    DateTime?
+  stripeConnectId     String?
   seatLimit              Int      @default(3)
   invoicePaymentDueDays  Int      @default(30)
   invoiceDefaultTaxRate  Float    @default(0)
@@ -341,6 +343,7 @@ model Workspace {
   serviceCategories  ServiceCategory[]
   formTemplates      FormTemplate[]
   orders             Order[]
+  subscriptions      Subscription[]
 }
 
 model WorkspaceSettings {
@@ -738,6 +741,7 @@ model Service {
   taskTemplates  TaskTemplate[]
   formLinks      ServiceForm[]
   orders         Order[]
+  subscriptions  Subscription[]
 
   @@index([workspaceId])
   @@index([categoryId])
@@ -880,6 +884,7 @@ model Order {
   clientId        String
   serviceId       String
   invoiceId       String?
+  subscriptionId  String?
   status          OrderStatus @default(PENDING)
   dueDate         DateTime?
   priority        Int         @default(0)
@@ -898,8 +903,9 @@ model Order {
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   client    User      @relation("OrderClient", fields: [clientId], references: [id])
   service   Service   @relation(fields: [serviceId], references: [id])
-  invoice   Invoice?  @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
-  project   Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  invoice      Invoice?      @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  project      Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
   messages        OrderMessage[]
   tasks           Task[]          @relation("OrderTasks")
@@ -933,6 +939,39 @@ model OrderMessage {
   @@index([orderId])
 }
 
+// ─── Subscriptions ──────────────────────────────────────────
+
+model Subscription {
+  id                    String             @id @default(uuid())
+  workspaceId           String
+  clientId              String
+  serviceId             String
+  stripeSubscriptionId  String?            @unique
+  status                SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart    DateTime
+  currentPeriodEnd      DateTime
+  cancelAtPeriodEnd     Boolean            @default(false)
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  client    User      @relation("SubscriptionClient", fields: [clientId], references: [id])
+  service   Service   @relation(fields: [serviceId], references: [id])
+  orders    Order[]
+
+  @@index([workspaceId])
+  @@index([clientId])
+  @@index([status])
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  PAUSED
+  PENDING_CANCEL
+  CANCELED
+}
+
 // ─── Plans (SaaS Billing) ───────────────────────────────────
 
 model Plan {
@@ -959,6 +998,7 @@ model Invoice {
   invoiceNumber String
   companyId     String?
   contactId     String?
+  clientId      String?
   status        InvoiceStatus @default(DRAFT)
   issueDate     DateTime      @default(now())
   dueDate       DateTime?
@@ -968,6 +1008,8 @@ model Invoice {
   total         Float         @default(0)
   paidAt        DateTime?
   sentAt        DateTime?
+  paymentUrl    String?
+  stripePaymentIntentId String?
   publicKey     String        @unique @default(uuid())
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt

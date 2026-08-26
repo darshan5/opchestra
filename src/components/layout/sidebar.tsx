@@ -8,6 +8,7 @@ import {
   Circle,
   Clock,
   Contact,
+  CreditCard,
   Eye,
   FileText,
   FolderKanban,
@@ -21,6 +22,7 @@ import {
   Moon,
   Plus,
   Receipt,
+  Repeat,
   Settings,
   ShoppingBag,
   Sun,
@@ -107,8 +109,10 @@ export function Sidebar({ projects, slug, taskGroups = [], userName, views = [],
     { href: `${base}/time-tracking`, icon: Clock, label: 'Time Tracking' },
     { href: `${base}/reports`, icon: BarChart3, label: 'Reports' },
     { href: `${base}/invoicing`, icon: Receipt, label: 'Invoicing' },
+    { href: `${base}/subscriptions`, icon: Repeat, label: 'Subscriptions' },
     { href: `${base}/forms`, icon: FileText, label: 'Forms' },
     { href: `${base}/clients`, icon: Users, label: 'Clients' },
+    { href: `${base}/settings/payments`, icon: CreditCard, label: 'Payments' },
     { href: `${base}/settings/portal`, icon: Globe, label: 'Portal' },
     { href: `${base}/settings`, icon: Settings, label: 'Settings' },
   ];
@@ -118,7 +122,7 @@ export function Sidebar({ projects, slug, taskGroups = [], userName, views = [],
       return pathname === base;
     }
     if (href === `${base}/settings`) {
-      return pathname === `${base}/settings` || (pathname.startsWith(`${base}/settings/`) && !pathname.startsWith(`${base}/settings/portal`));
+      return pathname === `${base}/settings` || (pathname.startsWith(`${base}/settings/`) && !pathname.startsWith(`${base}/settings/portal`) && !pathname.startsWith(`${base}/settings/payments`));
     }
     return pathname.startsWith(href);
   }
