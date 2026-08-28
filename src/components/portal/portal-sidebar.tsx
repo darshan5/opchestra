@@ -2,6 +2,7 @@
 
 import {
   FileText,
+  Gift,
   Home,
   LogOut,
   Menu,
@@ -64,6 +65,7 @@ export function PortalSidebar({
     { href: `${base}/services`, icon: Store, label: 'Services' },
     { href: `${base}/orders`, icon: ShoppingBag, label: 'Orders' },
     { href: `${base}/subscriptions`, icon: Repeat, label: 'Subscriptions' },
+    { href: `${base}/referrals`, icon: Gift, label: 'Referrals' },
     { href: `${base}/tickets`, icon: Ticket, label: 'Tickets' },
     { href: `${base}/invoices`, icon: FileText, label: 'Invoices' },
     { href: `${base}/profile`, icon: User, label: 'Profile' },

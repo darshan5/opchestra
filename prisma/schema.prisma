@@ -41,6 +41,7 @@ model User {
   orders              Order[]        @relation("OrderClient")
   orderMessages       OrderMessage[] @relation("OrderMessageAuthor")
   subscriptions       Subscription[] @relation("SubscriptionClient")
+  affiliates          Affiliate[]    @relation("AffiliateUser")
 }
 
 model VerificationToken {
@@ -428,6 +429,11 @@ model Workspace {
   subscriptions      Subscription[]
   pipelines          Pipeline[]
   activities         Activity[]
+  referralProgram    ReferralProgram?
+  apiKeys            ApiKey[]
+  webhookEndpoints   WebhookEndpoint[]
+  portalPages        PortalPage[]
+  emailTemplates     EmailTemplate[]
 }
 
 model WorkspaceSettings {
@@ -1231,4 +1237,181 @@ model ActiveTimer {
 
   @@unique([userId, taskId])
   @@index([userId])
+}
+
+// ─── Referrals & Affiliates ─────────────────────────────────
+
+model ReferralProgram {
+  id                     String   @id @default(uuid())
+  workspaceId            String   @unique
+  enabled                Boolean  @default(false)
+  cookieDays             Int      @default(30)
+  autoApproveAffiliates  Boolean  @default(true)
+  autoApproveCommissions Boolean  @default(true)
+  redirectUrl            String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  workspace       Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  commissionRules CommissionRule[]
+  affiliates      Affiliate[]
+}
+
+model CommissionRule {
+  id        String         @id @default(uuid())
+  programId String
+  serviceId String?
+  type      CommissionType
+  value     Float
+  perpetual Boolean        @default(false)
+  duration  Int?
+
+  program ReferralProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@index([programId])
+}
+
+enum CommissionType {
+  PERCENTAGE
+  FIXED
+}
+
+model Affiliate {
+  id             String   @id @default(uuid())
+  programId      String
+  clientId       String
+  code           String   @unique
+  approved       Boolean  @default(true)
+  linkedCouponId String?
+  createdAt      DateTime @default(now())
+
+  program     ReferralProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  client      User            @relation("AffiliateUser", fields: [clientId], references: [id])
+  commissions Commission[]
+  clicks      AffiliateClick[]
+
+  @@index([programId])
+  @@index([clientId])
+}
+
+model Commission {
+  id          String           @id @default(uuid())
+  affiliateId String
+  orderId     String
+  amount      Float
+  status      CommissionStatus @default(UNAPPROVED)
+  paidAt      DateTime?
+  createdAt   DateTime         @default(now())
+
+  affiliate Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+
+  @@index([affiliateId])
+  @@index([status])
+}
+
+enum CommissionStatus {
+  UNAPPROVED
+  UNPAID
+  PAID
+}
+
+model AffiliateClick {
+  id          String   @id @default(uuid())
+  affiliateId String
+  ip          String?
+  referrer    String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  affiliate Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+
+  @@index([affiliateId])
+}
+
+// ─── API Keys & Webhooks ────────────────────────────────────
+
+model ApiKey {
+  id          String    @id @default(uuid())
+  workspaceId String
+  name        String
+  keyHash     String    @unique
+  keyPrefix   String
+  scopes      String[]
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+}
+
+model WebhookEndpoint {
+  id           String    @id @default(uuid())
+  workspaceId  String
+  url          String
+  events       String[]
+  secret       String
+  active       Boolean   @default(true)
+  lastCalledAt DateTime?
+  lastStatus   Int?
+  createdAt    DateTime  @default(now())
+
+  workspace  Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  deliveries WebhookDelivery[]
+
+  @@index([workspaceId])
+}
+
+model WebhookDelivery {
+  id          String    @id @default(uuid())
+  endpointId  String
+  event       String
+  payload     Json
+  statusCode  Int?
+  response    String?
+  attempts    Int       @default(0)
+  deliveredAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  @@index([endpointId])
+}
+
+// ─── Custom Portal Pages ────────────────────────────────────
+
+model PortalPage {
+  id          String   @id @default(uuid())
+  workspaceId String
+  title       String
+  slug        String
+  content     String
+  published   Boolean  @default(false)
+  position    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, slug])
+  @@index([workspaceId])
+}
+
+// ─── Email Templates ────────────────────────────────────────
+
+model EmailTemplate {
+  id          String   @id @default(uuid())
+  workspaceId String
+  name        String
+  subject     String
+  body        String
+  variables   Json     @default("[]")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId])
 }
