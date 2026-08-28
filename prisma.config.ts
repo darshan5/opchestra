@@ -9,4 +9,4 @@ export default defineConfig({
   datasource: {
     url: process.env.DATABASE_URL!,
   },
-});
+} as Parameters<typeof defineConfig>[0]);
