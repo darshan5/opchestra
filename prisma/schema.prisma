@@ -246,12 +246,17 @@ model Company {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  workspace        Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  pipelineStageId String?
+
+  workspace        Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   contacts         Contact[]
-  ticketsByCompany Task[]    @relation("TicketCompany")
+  ticketsByCompany Task[]         @relation("TicketCompany")
   invoices         Invoice[]
+  pipelineStage    PipelineStage? @relation(fields: [pipelineStageId], references: [id], onDelete: SetNull)
+  activities       Activity[]     @relation("CompanyActivities")
 
   @@index([workspaceId])
+  @@index([pipelineStageId])
 }
 
 model Contact {
@@ -266,13 +271,18 @@ model Contact {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  company   Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  tickets   Task[]    @relation("TicketContact")
-  invoices  Invoice[]
+  pipelineStageId String?
+
+  workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  company       Company?       @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  pipelineStage PipelineStage? @relation(fields: [pipelineStageId], references: [id], onDelete: SetNull)
+  tickets       Task[]         @relation("TicketContact")
+  invoices      Invoice[]
+  activities    Activity[]     @relation("ContactActivities")
 
   @@index([workspaceId])
   @@index([companyId])
+  @@index([pipelineStageId])
 }
 
 // ─── Notes ──────────────────────────────────────────────────
@@ -293,6 +303,78 @@ model Note {
 
   @@index([entityType, entityId])
   @@index([workspaceId])
+}
+
+// ─── Pipelines ─────────────────────────────────────────────
+
+model Pipeline {
+  id          String         @id @default(uuid())
+  workspaceId String
+  name        String
+  type        PipelineType
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  workspace Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  stages    PipelineStage[]
+
+  @@index([workspaceId])
+}
+
+enum PipelineType {
+  SALES
+  PRODUCTION
+}
+
+model PipelineStage {
+  id          String   @id @default(uuid())
+  pipelineId  String
+  name        String
+  color       String   @default("#6366f1")
+  position    Int      @default(0)
+  automations Json?
+  createdAt   DateTime @default(now())
+
+  pipeline  Pipeline  @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  contacts  Contact[]
+  companies Company[]
+
+  @@index([pipelineId])
+}
+
+// ─── Activities ─────────────────────────────────────────────
+
+model Activity {
+  id          String       @id @default(uuid())
+  workspaceId String
+  contactId   String?
+  companyId   String?
+  type        ActivityType
+  title       String
+  notes       String?
+  dueDate     DateTime?
+  assigneeId  String?
+  completed   Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contact   Contact?  @relation("ContactActivities", fields: [contactId], references: [id], onDelete: SetNull)
+  company   Company?  @relation("CompanyActivities", fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId])
+  @@index([contactId])
+  @@index([companyId])
+  @@index([dueDate, completed])
+}
+
+enum ActivityType {
+  CALL
+  NOTE
+  EMAIL
+  MEETING
+  FOLLOW_UP
+  CUSTOM
 }
 
 // ─── Workspaces ─────────────────────────────────────────────
@@ -344,6 +426,8 @@ model Workspace {
   formTemplates      FormTemplate[]
   orders             Order[]
   subscriptions      Subscription[]
+  pipelines          Pipeline[]
+  activities         Activity[]
 }
 
 model WorkspaceSettings {

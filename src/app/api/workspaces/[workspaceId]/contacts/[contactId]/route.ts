@@ -73,6 +73,7 @@ export async function PATCH(
         title: body.title !== undefined ? body.title : existing.title,
         companyId: body.companyId !== undefined ? body.companyId : existing.companyId,
         role: body.role !== undefined ? body.role : existing.role,
+        pipelineStageId: body.pipelineStageId !== undefined ? body.pipelineStageId : existing.pipelineStageId,
       },
       include: { company: { select: { id: true, name: true } } },
     });

@@ -2,6 +2,7 @@
 
 import {
   BarChart3,
+  CheckSquare,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -12,6 +13,7 @@ import {
   Eye,
   FileText,
   FolderKanban,
+  GitBranch,
   Globe,
   Home,
   Package,
@@ -103,6 +105,8 @@ export function Sidebar({ projects, slug, taskGroups = [], userName, views = [],
     { href: `${base}/contacts`, icon: Contact, label: 'Contacts' },
     { href: `${base}/services`, icon: ShoppingBag, label: 'Services' },
     { href: `${base}/orders`, icon: Package, label: 'Orders' },
+    { href: `${base}/pipeline`, icon: GitBranch, label: 'Pipeline' },
+    { href: `${base}/activities`, icon: CheckSquare, label: 'Activities' },
   ];
 
   const bottomItems = [

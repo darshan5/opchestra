@@ -66,6 +66,7 @@ export async function PATCH(
       'hourlyRate', 'clientSince', 'companySize', 'annualRevenue',
       'billingAddress', 'billingAddress2', 'billingCity',
       'billingState', 'billingZip', 'billingCountry',
+      'pipelineStageId',
     ];
     for (const f of fields) {
       if (body[f] !== undefined) {

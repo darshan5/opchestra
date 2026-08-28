@@ -64,8 +64,7 @@ export default async function PortalTicketsPage({
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Tickets</h1>
         <Link
           className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
-          href={`/submit/${slug}`}
-          target="_blank"
+          href={`/portal/${slug}/tickets/new`}
         >
           <Plus className="h-4 w-4" />
           New Ticket
@@ -90,11 +89,15 @@ export default async function PortalTicketsPage({
             <tbody className="divide-y divide-gray-100 bg-white dark:divide-gray-800 dark:bg-gray-950">
               {tickets.map((ticket) => (
                 <tr className="hover:bg-gray-50 dark:hover:bg-gray-900" key={ticket.id}>
-                  <td className="px-4 py-3 font-mono text-xs text-gray-500 dark:text-gray-400">
-                    {ticket.ticketNumber}
+                  <td className="px-4 py-3">
+                    <Link className="font-mono text-xs text-blue-600 hover:underline dark:text-blue-400" href={`/portal/${slug}/tickets/${ticket.id}`}>
+                      {ticket.ticketNumber}
+                    </Link>
                   </td>
-                  <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
-                    {ticket.title}
+                  <td className="px-4 py-3">
+                    <Link className="font-medium text-gray-900 hover:text-blue-600 dark:text-white dark:hover:text-blue-400" href={`/portal/${slug}/tickets/${ticket.id}`}>
+                      {ticket.title}
+                    </Link>
                   </td>
                   <td className="px-4 py-3">
                     <span
