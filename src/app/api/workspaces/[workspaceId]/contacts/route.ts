@@ -73,6 +73,7 @@ export async function POST(
         phone: body.phone || null,
         title: body.title || null,
         companyId: body.companyId || null,
+        pipelineStageId: body.pipelineStageId || null,
       },
       include: { company: { select: { id: true, name: true } } },
     });
