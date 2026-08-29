@@ -1,9 +1,9 @@
 'use client';
 
 import { formatDistanceToNow } from 'date-fns';
-import { ChevronDown, MessageSquare, Plus, Send, X } from 'lucide-react';
+import { ChevronDown, GripVertical, MessageSquare, Plus, Send } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { cn } from '@/lib/utils';
 
@@ -52,6 +52,10 @@ export default function SalesPipelinePage() {
   const [notes, setNotes] = useState<Record<string, NoteData[]>>({});
   const [newNote, setNewNote] = useState('');
   const [addingNote, setAddingNote] = useState(false);
+
+  const [dragContactId, setDragContactId] = useState<string | null>(null);
+  const [dragOverStage, setDragOverStage] = useState<string | null>(null);
+  const dragCountRef = useRef<Record<string, number>>({});
 
   const fetchData = useCallback(async () => {
     try {
@@ -113,12 +117,61 @@ export default function SalesPipelinePage() {
   async function moveContact(contactId: string, stageId: string) {
     if (!workspaceId) return;
     setMovingContact(null);
+    setContacts((prev) => prev.map((c) => c.id === contactId ? { ...c, pipelineStageId: stageId } : c));
     await fetch(`/api/workspaces/${workspaceId}/contacts/${contactId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ pipelineStageId: stageId }),
     });
-    setContacts((prev) => prev.map((c) => c.id === contactId ? { ...c, pipelineStageId: stageId } : c));
+  }
+
+  function handleDragStart(e: React.DragEvent, contactId: string) {
+    setDragContactId(contactId);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', contactId);
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '0.4';
+    }
+  }
+
+  function handleDragEnd(e: React.DragEvent) {
+    setDragContactId(null);
+    setDragOverStage(null);
+    dragCountRef.current = {};
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '1';
+    }
+  }
+
+  function handleColumnDragEnter(e: React.DragEvent, stageId: string) {
+    e.preventDefault();
+    dragCountRef.current[stageId] = (dragCountRef.current[stageId] ?? 0) + 1;
+    setDragOverStage(stageId);
+  }
+
+  function handleColumnDragLeave(stageId: string) {
+    dragCountRef.current[stageId] = (dragCountRef.current[stageId] ?? 0) - 1;
+    if (dragCountRef.current[stageId] <= 0) {
+      dragCountRef.current[stageId] = 0;
+      if (dragOverStage === stageId) setDragOverStage(null);
+    }
+  }
+
+  function handleColumnDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  }
+
+  function handleColumnDrop(e: React.DragEvent, stageId: string) {
+    e.preventDefault();
+    setDragOverStage(null);
+    dragCountRef.current = {};
+    if (!dragContactId) return;
+    const contact = contacts.find((c) => c.id === dragContactId);
+    if (contact && contact.pipelineStageId !== stageId) {
+      moveContact(dragContactId, stageId);
+    }
+    setDragContactId(null);
   }
 
   async function addContactToStage(stageId: string) {
@@ -216,8 +269,22 @@ export default function SalesPipelinePage() {
       <div className="flex flex-1 gap-4 overflow-x-auto p-4">
         {stages.map((stage) => {
           const stageContacts = contacts.filter((c) => c.pipelineStageId === stage.id);
+          const isDropTarget = dragOverStage === stage.id && dragContactId !== null;
+
           return (
-            <div className="flex w-72 shrink-0 flex-col rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-900/50" key={stage.id}>
+            <div
+              className={cn(
+                'flex w-72 shrink-0 flex-col rounded-lg border bg-gray-50 transition-colors dark:bg-gray-900/50',
+                isDropTarget
+                  ? 'border-blue-400 bg-blue-50/50 dark:border-blue-600 dark:bg-blue-900/20'
+                  : 'border-gray-200 dark:border-gray-800',
+              )}
+              key={stage.id}
+              onDragEnter={(e) => handleColumnDragEnter(e, stage.id)}
+              onDragLeave={() => handleColumnDragLeave(stage.id)}
+              onDragOver={handleColumnDragOver}
+              onDrop={(e) => handleColumnDrop(e, stage.id)}
+            >
               <div className="flex items-center gap-2 border-b border-gray-200 px-3 py-2.5 dark:border-gray-800">
                 <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: stage.color }} />
                 <span className="text-sm font-semibold text-gray-900 dark:text-white">{stage.name}</span>
@@ -278,11 +345,22 @@ export default function SalesPipelinePage() {
                 {stageContacts.map((contact) => {
                   const contactNotes = notes[contact.id] ?? [];
                   const isNotesOpen = notesOpen === contact.id;
+                  const isDragging = dragContactId === contact.id;
 
                   return (
-                    <div className="rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900" key={contact.id}>
+                    <div
+                      className={cn(
+                        'rounded-lg border border-gray-200 bg-white transition-opacity dark:border-gray-700 dark:bg-gray-900',
+                        isDragging && 'opacity-40',
+                      )}
+                      draggable
+                      key={contact.id}
+                      onDragEnd={handleDragEnd}
+                      onDragStart={(e) => handleDragStart(e, contact.id)}
+                    >
                       <div className="relative p-3">
-                        <div className="flex items-start justify-between">
+                        <div className="flex items-start gap-1.5">
+                          <GripVertical className="mt-0.5 h-3.5 w-3.5 shrink-0 cursor-grab text-gray-300 active:cursor-grabbing dark:text-gray-600" />
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-medium text-gray-900 dark:text-white">{contact.name}</p>
                             {contact.email && <p className="truncate text-xs text-gray-500">{contact.email}</p>}
